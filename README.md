@@ -2,6 +2,9 @@
 
 GitHub Analyzer is a tool that analyzes GitHub repositories to extract information about the code and the commit history. It can be used to generate a report of the code and the commit history, or to generate a report of the code and the commit history for a specific repository.
 
+## 비고
+- .env 파일은 gitignore에 추가하는 것이 기본이지만, PoC 프로젝트이므로 github에 파일을 업데이트 합니다.
+
 ## Installation
 
 ```bash
@@ -27,7 +30,13 @@ pnpm add -D typescript ts-node @types/node
 npx tsc --init # tsconfig.json 생성
 ```
 
+- (GitHub API SDK)[https://docs.github.com/ko/rest/guides/scripting-with-the-rest-api-and-javascript?apiVersion=2022-11-28]
 
+```bash
+pnpm add @octokit/rest
+pnpm add -D @types/node-fetch
+pnpm add node-fetch dotenv
+```
 
 ## GitHub API로 커밋 목록 가져오기 코드 작성
 
