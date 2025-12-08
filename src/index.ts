@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { fetchAllCommits } from "./github/fetchCommit.js";
 import { fetchFiles } from "./github/fetchFiles.js";
 import { parseLog } from "./git/parseLog.js";
+import { extractDiff } from "./git/extractDiff.js";
 
 dotenv.config();
 
@@ -60,21 +61,56 @@ async function main() {
         }
 
         console.log("✅ All commits and files processed.");
+
+        // 로컬 커밋 로그 가져오기 및 diff 추출
+        console.log("\n📊 Extracting local commit diffs...\n");
+        const localCommits = await parseLog(10);
+        const diffs = await extractDiff(localCommits);
+        console.log('✅ Local diffs extracted:', JSON.stringify(diffs, null, 2));
+
+        // files 모드 로직을 각 커밋 SHA에 대해 실행
+        console.log("\n📂 Running files mode for each commit...\n");
+        for (let i = 0; i < commits.length; i++) {
+            const commit = commits[i];
+            if (!commit) continue;
+
+            console.log(`\n[${i + 1}/${commits.length}] Files mode for commit: ${commit.sha.substring(0, 7)}`);
+
+            try {
+                const files = await fetchFiles({ owner, repo, sha: commit.sha });
+                console.log("📌 FetchFiles 상세 결과:");
+                console.log("Commit:", commit.sha);
+                console.log("File Count:", files.length);
+                console.log(JSON.stringify(files, null, 2));
+            } catch (err) {
+                console.error(`❌ fetchFiles 실행 실패 for ${commit.sha}`);
+                console.error(err);
+            }
+        }
+
+        console.log("\n✅ All files mode processing completed.");
+
         return;
     }
 
-    // 새로운 테스트: 특정 커밋 SHA로 파일 가져오기
-    if (mode === "files") {
+    // 특정 커밋 SHA로 파일 가져오기 (commits 모드 이후에도 실행 가능)
+    if (mode === "files" || (mode === "commits" && process.argv[3])) {
         const sha = process.argv[3];
 
         if (!sha) {
-            console.error("❌ 커밋 SHA를 입력하세요.");
-            console.error("예: pnpm ts-node src/index.ts files a1b2c3d4");
-            return;
+            if (mode === "files") {
+                console.error("❌ 커밋 SHA를 입력하세요.");
+                console.error("예: pnpm ts-node src/index.ts files a1b2c3d4");
+                return;
+            }
+            // commits 모드에서 SHA가 없으면 정상 종료
+            if (mode === "commits") {
+                return;
+            }
         }
 
-        const owner = process.env.GITHUB_OWNER;
-        const repo = process.env.GITHUB_REPO;
+        const owner = process.env.GITHUB_OWNER || process.env.TARGET_REPO_OWNER;
+        const repo = process.env.GITHUB_REPO || process.env.TARGET_REPO_NAME;
 
         if (!owner || !repo) {
             console.error("❌ .env 파일에 GITHUB_OWNER, GITHUB_REPO를 설정하세요.");
@@ -82,11 +118,11 @@ async function main() {
         }
 
         try {
-            const files = await fetchFiles({ owner, repo, sha });
-            console.log("📌 FetchFiles 결과:");
+            const files = await fetchFiles({ owner: owner!, repo: repo!, sha: sha! });
+            console.log("📌 FetchFiles 상세 결과:");
             console.log("Commit:", sha);
             console.log("File Count:", files.length);
-            console.log(files);
+            console.log(JSON.stringify(files, null, 2));
         } catch (err) {
             console.error("❌ fetchFiles 실행 실패");
             console.error(err);
@@ -96,10 +132,6 @@ async function main() {
     }
 
     console.error("❌ 알 수 없는 모드:", mode);
-
-    // 로컬 커밋 로그 가져오기
-    const logs = await parseLog(10);
-    console.log(logs);
 }
 
 main();
