@@ -10,7 +10,7 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "pipeline": "tsx src/pipeline/runPipeline.ts",
-    "fetch:all": "tsx src/index.ts commits",
+    "fetch:all": "tsx src/index.ts commits"
   },
   "keywords": [],
   "author": "bongseok.sa",

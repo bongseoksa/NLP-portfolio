@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { fetchAllCommits } from "./github/fetchCommit.js";
 import { fetchFiles } from "./github/fetchFiles.js";
+import { parseLog } from "./git/parseLog.js";
 
 dotenv.config();
 
@@ -95,6 +96,10 @@ async function main() {
     }
 
     console.error("❌ 알 수 없는 모드:", mode);
+
+    // 로컬 커밋 로그 가져오기
+    const logs = await parseLog(10);
+    console.log(logs);
 }
 
 main();
