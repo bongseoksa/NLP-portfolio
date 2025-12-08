@@ -1,7 +1,7 @@
 import "dotenv/config";
 import fetch from "node-fetch";
 
-interface CommitItem {
+export interface CommitItem {
     sha: string;
     author: string | null;
     date: string;
