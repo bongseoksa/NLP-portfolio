@@ -2,3 +2,15 @@ node_modules
 
 # build files
 dist
+
+# System & Logs
+.DS_Store
+*.log
+npm-debug.log*
+
+# Output & Data
+output/
+chroma_data/
+
+# Dependencies
+.chroma_venv/

@@ -11,7 +11,11 @@ pnpm install
 ## Usage
 
 ```bash
+# 파이프라인 실행 (데이터 수집 및 적재)
 pnpm run start
+
+# 질의응답 (QA) 모드 실행
+pnpm run ask "이 프로젝트의 최근 변경사항은 무엇인가요?"
 ```
 
 ## 프로젝트 구조 (Project Structure)
@@ -50,6 +54,31 @@ OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
 
 > [!WARNING]
 > API 키는 외부에 노출되지 않도록 주의하세요. GitHub 등 공개 저장소에 `.env` 파일이 업로드되지 않도록 확인해야 합니다.
+
+## ChromaDB 설정 및 실행 (ChromaDB Setup & Run)
+
+이 프로젝트는 벡터 저장을 위해 [ChromaDB](https://www.trychroma.com/)를 사용합니다. 로컬에서 Chroma 서버를 실행해야 `start` 및 `ask` 명령어가 정상 동작합니다.
+
+### 실행 방법 1: Python (권장)
+
+Python 환경이 있다면 다음 명령어로 설치 및 실행할 수 있습니다.
+
+```bash
+pip install chromadb
+chroma run --path ./chroma_data
+```
+서버는 기본적으로 `http://localhost:8000`에서 실행됩니다.
+
+### 실행 방법 2: Docker
+
+Docker를 사용하는 경우 다음과 같이 실행하세요.
+
+```bash
+docker run -p 8000:8000 chromadb/chroma
+```
+
+> [!NOTE]
+> 서버가 실행 중인 상태에서 `pnpm run start` 또는 `pnpm run ask`를 실행해야 합니다.
 
 ## 전처리 과정 프로세스 (Preprocessing Process)
 
