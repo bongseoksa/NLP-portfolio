@@ -4,7 +4,7 @@ import { fetchAllCommits, type CommitItem } from "../github/fetchCommit.js";
 import { fetchFiles } from "../github/fetchFiles.js";
 import { parseLog, type LocalCommitLog } from "../git/parseLog.js";
 import { extractDiff, type CommitDiff } from "../git/extractDiff.js";
-import type { FileModel } from "../models/fileModel.js";
+import type { FileModel } from "../types/fileModel.js";
 
 export async function runPipeline() {
     console.log("🚀 Pipeline started\n");
