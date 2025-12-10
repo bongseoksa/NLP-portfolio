@@ -59,26 +59,29 @@ OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
 
 이 프로젝트는 벡터 저장을 위해 [ChromaDB](https://www.trychroma.com/)를 사용합니다. 로컬에서 Chroma 서버를 실행해야 `start` 및 `ask` 명령어가 정상 동작합니다.
 
-### 실행 방법 1: Python (권장)
+### 실행 방법 (Recommended)
 
-Python 환경이 있다면 다음 명령어로 설치 및 실행할 수 있습니다.
+프로젝트에 포함된 스크립트를 사용하여 간편하게 설정 및 실행할 수 있습니다.
 
-```bash
-pip install chromadb
-chroma run --path ./chroma_data
-```
-서버는 기본적으로 `http://localhost:8000`에서 실행됩니다.
+1. **설정 (최초 1회)**
+   시스템에서 호환되는 Python(3.9 ~ 3.12) 버전을 자동으로 찾아 가상환경을 구성하고 ChromaDB를 설치합니다.
+   ```bash
+   pnpm run chroma:setup
+   ```
 
-### 실행 방법 2: Docker
+2. **서버 실행**
+   ```bash
+   pnpm run chroma:start
+   ```
+   서버는 `http://localhost:8000`에서 실행됩니다. 터미널을 열어두고 실행 상태를 유지하세요.
 
-Docker를 사용하는 경우 다음과 같이 실행하세요.
+### (참고) Docker 실행
 
+Docker를 사용하는 경우 다음과 같이 실행할 수도 있습니다.
 ```bash
 docker run -p 8000:8000 chromadb/chroma
 ```
-
-> [!NOTE]
-> 서버가 실행 중인 상태에서 `pnpm run start` 또는 `pnpm run ask`를 실행해야 합니다.
+*Note: 로컬 스크립트 실행이 동작하지 않는 경우에만 사용하세요.*
 
 ## 전처리 과정 프로세스 (Preprocessing Process)
 

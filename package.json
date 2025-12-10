@@ -11,7 +11,9 @@
     "dev": "tsx src/index.ts",
     "pipeline": "tsx src/pipeline/runPipeline.ts",
     "fetch:all": "tsx src/index.ts commits",
-    "ask": "tsx src/index.ts ask"
+    "ask": "tsx src/index.ts ask",
+    "chroma:setup": "./scripts/setup_chroma.sh",
+    "chroma:start": "./scripts/run_chroma.sh"
   },
   "keywords": [],
   "author": "bongseok.sa",
