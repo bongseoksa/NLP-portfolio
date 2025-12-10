@@ -33,7 +33,7 @@ pnpm run start
 
 ## 전처리 과정 프로세스 (Preprocessing Process)
 
-본 프로젝트는 GitHub API와 로컬 Git 명령어를 활용하여 다음과 같은 5단계의 데이터 전처리 파이프라인을 거칩니다:
+본 프로젝트는 GitHub API와 로컬 Git 명령어를 활용하여 다음과 같은 6단계의 데이터 전처리 파이프라인을 거칩니다:
 
 1. **초기화 및 환경 설정 (Initialization)**
    - `.env` 파일에서 `TARGET_REPO_OWNER`, `TARGET_REPO_NAME`, `LOCAL_REPO_PATH` 등 필수 환경 변수가 설정되어 있는지 확인합니다.
@@ -54,7 +54,34 @@ pnpm run start
 
 5. **데이터 집계 및 저장 (Aggregation & Output)**
    - 위 단계에서 수집한 모든 데이터(Commits, Changed Files, Local Diffs)를 하나로 병합합니다.
-   - 최종 결과물은 `output/pipeline_output.json` 파일로 저장되어 후속 분석에 활용될 수 있도록 합니다.
+   - 중간 결과물은 `output/pipeline_output.json` 파일로 저장됩니다.
+
+6. **데이터 정제 (Data Refinement)**
+   - NLP 모델 학습 및 임베딩 생성을 위해 수집된 Raw 데이터를 정제합니다.
+   - 커밋 메시지, 변경 파일, Diff 내용을 하나의 문맥(Context)으로 결합하고, LLM이 처리하기 적절한 텍스트 청크(Chunk) 형태로 변환합니다.
+   - 최종 정제된 데이터는 `output/refined_data.json`으로 저장됩니다.
+
+## 진행 현황 (Progress)
+
+*   [x] 분석 대상 레포지토리 확정: React + Vite 기반 portfolio
+*   [x] 분석용 레포지토리 생성 완료: NLP-portfolio
+*   [x] TypeScript 기반 프로젝트 환경 구성 완료
+*   [x] Github API + 로컬 프로젝트를 통한 전처리 파일 추출 (Pipeline Steps 1~5)
+*   [ ] NLP 입력용 데이터 정제 (Pipeline Step 6) - **Current Task**
+*   [ ] NLP 기반 질의응답 시스템 구축 (임베딩 및 검색)
+*   [ ] 시각화 및 모니터링 대시보드
+
+## 향후 확장 가능성 (Future Plans)
+
+현재는 프론트엔드 레포지토리에 한정하지만, 추후 다음 데이터까지 추가해 프로젝트 지식 베이스를 강화할 수 있습니다.
+
+*   백엔드 소스
+*   DB 스키마
+*   REST API/GraphQL 명세
+*   디자인/기획 문서
+*   Jira/Notion 이슈 기록
+*   회의록, 회고록, 업무 로그
+*   기능 배포 이력
 
 ## 비고 (Notes)
 - .env 파일은 gitignore에 추가하는 것이 기본이지만, PoC 프로젝트인 경우 편의를 위해 고려될 수 있습니다. (현재 프로젝트 설정 확인 필요)

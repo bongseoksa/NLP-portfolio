@@ -5,6 +5,7 @@ import { fetchFiles } from "../github/fetchFiles.js";
 import { parseLog, type LocalCommitLog } from "../git/parseLog.js";
 import { extractDiff, type CommitDiff } from "../git/extractDiff.js";
 import type { FileModel } from "../types/fileModel.js";
+import { refineData } from "./refineData.js";
 
 export async function runPipeline() {
     console.log("🚀 Pipeline started\n");
@@ -74,13 +75,28 @@ export async function runPipeline() {
         "utf-8"
     );
 
+    console.log("\n📌 Data Refinement (NLP Preparation)...");
+    const refinedData = refineData(result);
+    fs.writeFileSync(
+        path.join(outputDir, "refined_data.json"),
+        JSON.stringify(refinedData, null, 2),
+        "utf-8"
+    );
+    console.log(`   → ${refinedData.items.length} items refined.`);
+
     console.log("\n🎉 Pipeline finished!");
     console.log("📁 Saved → output/pipeline_output.json");
+    console.log("📁 Saved → output/refined_data.json");
 }
 
 // 스크립트 직접 실행 시 파이프라인 실행
-runPipeline().catch(err => {
-    console.error("❌ Pipeline failed:", err);
-    process.exit(1);
-});
+// ESM pattern to check if file is run directly
+import { fileURLToPath } from "url";
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    runPipeline().catch(err => {
+        console.error("❌ Pipeline failed:", err);
+        process.exit(1);
+    });
+}
 

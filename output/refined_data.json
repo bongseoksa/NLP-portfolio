@@ -1,0 +1,808 @@
+{
+  "items": [
+    {
+      "id": "b311fe634ea2654758c2da9b9ab733a3cb808a29",
+      "type": "commit",
+      "content": "Commit: b311fe634ea2654758c2da9b9ab733a3cb808a29\nAuthor: bongseoksa\nDate: 2025-08-08T07:03:03Z\nMessage: README 업데이트\n\nAffected Files:\n- README.md (modified) +2 -2\n- pnpm-lock.yaml (modified) +1179 -1185\n\nDiff Summary:\nFile: pnpm-lock.yaml\ndiff --git a/README.md b/README.md\nindex d19fe32..512a568 100644\n--- a/README.md\n+++ b/README.md\n@@ -9,8 +9,8 @@\n ※ github actions의 cd.yml이 완료되는 경우 vercel 배포 진행. vercel project에서 github 연동하지 않음.\n \n ```\n-  Package Manager: pnpm\n-  node version: v20\n+  Package Manager: pnpm@10.13.1\n+  node version: v22.18.0\n   bundler: vite\n   deployment: vercel, github actions\n ```\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex fce5217..ddbabad 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -10,97 +10,97 @@ importers:\n     dependencies:\n       '@hookform/resolvers':\n         specifier: ^3.9.1\n-        version: 3.10.0(react-hook-form@7.59.0(react@19.1.0))\n+        version: 3.10.0(react-hook-form@7.62.0(react@19.1.1))\n       '@radix-ui/react-accordion':\n         specifier: 1.2.2\n-        version: 1.2.2(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+        version: 1.2.2(@types/react-dom@19.1.7(@types/react@19.1.9))(@types/react@19.1.9)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)\n       '@radix-ui/react-alert-dialog':\n         specifier: 1.1.4\n-        version: 1.1.4(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+        version: 1.1.4(@types/react-dom@19.1.7(@types/react@19.1.9))(@types/react@19.1.9)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)\n       '@radix-ui/react-aspect-ratio':\n         specifier: 1.1.1\n-        version: 1.1.1(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+        version: 1.1.1(@types/react-dom@19.1.7(@types/react@19.1.9))(@types/react@19.1.9)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)\n       '@radix-ui/react-avatar':\n         specifier: 1.1.2\n-        version: 1.1.2(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+        version: 1.1.2(@types/react-dom@19.1.7(@types/react@19.1.9))(@ty\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "b311fe634ea2654758c2da9b9ab733a3cb808a29",
+        "author": "bongseoksa",
+        "date": "2025-08-08T07:03:03Z",
+        "message": "README 업데이트",
+        "fileCount": 2
+      }
+    },
+    {
+      "id": "4a957eb657fe1b75b5f3ae7047c3037d572808f7",
+      "type": "commit",
+      "content": "Commit: 4a957eb657fe1b75b5f3ae7047c3037d572808f7\nAuthor: SABONGSEOK\nDate: 2025-08-07T10:30:03Z\nMessage: C:/Program Files/Git/dashboard 리다이렉트 오류 수정\n\nAffected Files:\n- vercel.json (added) +3 -0\n\nDiff Summary:\nFile: vercel.json\ndiff --git a/vercel.json b/vercel.json\nnew file mode 100644\nindex 0000000..3a48e56\n--- /dev/null\n+++ b/vercel.json\n@@ -0,0 +1,3 @@\n+{\n+  \"rewrites\": [{ \"source\": \"/(.*)\", \"destination\": \"/\" }]\n+}\n---",
+      "metadata": {
+        "sha": "4a957eb657fe1b75b5f3ae7047c3037d572808f7",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T10:30:03Z",
+        "message": "C:/Program Files/Git/dashboard 리다이렉트 오류 수정",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "e34fb0d12c21a15f13c3d65d5b73b2055ca51a70",
+      "type": "commit",
+      "content": "Commit: e34fb0d12c21a15f13c3d65d5b73b2055ca51a70\nAuthor: SABONGSEOK\nDate: 2025-08-07T10:25:05Z\nMessage: GET 메소드 오류 수정\n\nAffected Files:\n- api/vitals.ts (modified) +2 -2\n\nDiff Summary:\nFile: api/vitals.ts\ndiff --git a/api/vitals.ts b/api/vitals.ts\nindex bce1041..e66e4ee 100644\n--- a/api/vitals.ts\n+++ b/api/vitals.ts\n@@ -8,8 +8,8 @@ const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SE\n const handleGet = async (req: VercelRequest, res: VercelResponse) => {\n   const { data, error } = await supabase\n     .from('web_vitals')\n-    .select('name, value, rating, inserted_at')\n-    .order('inserted_at', { ascending: false });\n+    .select('name, value, rating, created_at')\n+    .order('created_at', { ascending: false });\n \n   if (error) {\n     console.error('[Supabase select error]', error);\n---",
+      "metadata": {
+        "sha": "e34fb0d12c21a15f13c3d65d5b73b2055ca51a70",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T10:25:05Z",
+        "message": "GET 메소드 오류 수정",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "3cb7095188cc74243f348bb4abca9e800e1c91cc",
+      "type": "commit",
+      "content": "Commit: 3cb7095188cc74243f348bb4abca9e800e1c91cc\nAuthor: SABONGSEOK\nDate: 2025-08-07T10:21:41Z\nMessage: GET 메소드 오류 수정\n\nAffected Files:\n- src/api/vitals.ts (modified) +1 -1\n\nDiff Summary:\nFile: src/api/vitals.ts\ndiff --git a/src/api/vitals.ts b/src/api/vitals.ts\nindex 651ae69..c847627 100644\n--- a/src/api/vitals.ts\n+++ b/src/api/vitals.ts\n@@ -42,7 +42,7 @@ const getVitals = async () => {\n   } else {\n     // ✅ 서버리스 환경 → API 경유 조회\n     try {\n-      const response = await fetch('/api/vitals-data');\n+      const response = await fetch('/api/vitals');\n       if (!response.ok) throw new Error('API fetch failed');\n       return await response.json();\n     } catch (err) {\n---",
+      "metadata": {
+        "sha": "3cb7095188cc74243f348bb4abca9e800e1c91cc",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T10:21:41Z",
+        "message": "GET 메소드 오류 수정",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "435530760ee58f63018cbb6a1e144701494548e2",
+      "type": "commit",
+      "content": "Commit: 435530760ee58f63018cbb6a1e144701494548e2\nAuthor: SABONGSEOK\nDate: 2025-08-07T10:18:12Z\nMessage: GET 메소드 오류 수정\n\nAffected Files:\n- src/api/vitals.ts (modified) +1 -1\n- src/lib/superbaseClient.ts (modified) +2 -10\n\nDiff Summary:\nFile: src/lib/superbaseClient.ts\ndiff --git a/src/api/vitals.ts b/src/api/vitals.ts\nindex c847627..651ae69 100644\n--- a/src/api/vitals.ts\n+++ b/src/api/vitals.ts\n@@ -42,7 +42,7 @@ const getVitals = async () => {\n   } else {\n     // ✅ 서버리스 환경 → API 경유 조회\n     try {\n-      const response = await fetch('/api/vitals');\n+      const response = await fetch('/api/vitals-data');\n       if (!response.ok) throw new Error('API fetch failed');\n       return await response.json();\n     } catch (err) {\ndiff --git a/src/lib/superbaseClient.ts b/src/lib/superbaseClient.ts\nindex 4a6864b..9862bbd 100644\n--- a/src/lib/superbaseClient.ts\n+++ b/src/lib/superbaseClient.ts\n@@ -1,14 +1,6 @@\n import { createClient } from '@supabase/supabase-js';\n \n-const isLocal = import.meta.env.VITE_ENV === 'local';\n-\n-const supabaseUrl = isLocal ? import.meta.env.VITE_SUPABASE_URL! : process.env.SUPABASE_URL;\n-const supabaseAnonKey = isLocal\n-  ? import.meta.env.VITE_SUPABASE_ANON_KEY!\n-  : process.env.SUPABASE_ANON_KEY;\n-\n-// console.log('isLocal', isLocal);\n-// console.log('supabaseUrl', supabaseUrl);\n-// console.log('supabaseAnonKey', supabaseAnonKey);\n+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;\n+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;\n \n export const supabase = createClient(supabaseUrl, supabaseAnonKey);\n---",
+      "metadata": {
+        "sha": "435530760ee58f63018cbb6a1e144701494548e2",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T10:18:12Z",
+        "message": "GET 메소드 오류 수정",
+        "fileCount": 2
+      }
+    },
+    {
+      "id": "7a387e9b8b0b639a80f21967e9e593bf08f928a0",
+      "type": "commit",
+      "content": "Commit: 7a387e9b8b0b639a80f21967e9e593bf08f928a0\nAuthor: SABONGSEOK\nDate: 2025-08-07T10:14:28Z\nMessage: 서버리스 환경변수 수정\n\nAffected Files:\n- src/lib/superbaseClient.ts (modified) +8 -6\n\nDiff Summary:\nFile: src/lib/superbaseClient.ts\ndiff --git a/src/lib/superbaseClient.ts b/src/lib/superbaseClient.ts\nindex cd817ed..4a6864b 100644\n--- a/src/lib/superbaseClient.ts\n+++ b/src/lib/superbaseClient.ts\n@@ -2,11 +2,13 @@ import { createClient } from '@supabase/supabase-js';\n \n const isLocal = import.meta.env.VITE_ENV === 'local';\n \n-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;\n-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;\n-\n-console.log('isLocal', isLocal);\n-console.log('supabaseUrl', supabaseUrl);\n-console.log('supabaseAnonKey', supabaseAnonKey);\n+const supabaseUrl = isLocal ? import.meta.env.VITE_SUPABASE_URL! : process.env.SUPABASE_URL;\n+const supabaseAnonKey = isLocal\n+  ? import.meta.env.VITE_SUPABASE_ANON_KEY!\n+  : process.env.SUPABASE_ANON_KEY;\n+\n+// console.log('isLocal', isLocal);\n+// console.log('supabaseUrl', supabaseUrl);\n+// console.log('supabaseAnonKey', supabaseAnonKey);\n \n export const supabase = createClient(supabaseUrl, supabaseAnonKey);\n---",
+      "metadata": {
+        "sha": "7a387e9b8b0b639a80f21967e9e593bf08f928a0",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T10:14:28Z",
+        "message": "서버리스 환경변수 수정",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "9dd62694cb5151c91b783bafae70edb9939dc444",
+      "type": "commit",
+      "content": "Commit: 9dd62694cb5151c91b783bafae70edb9939dc444\nAuthor: SABONGSEOK\nDate: 2025-08-07T09:58:45Z\nMessage: endpoint 수정\n\nAffected Files:\n- src/api/vitals.ts (modified) +16 -17\n\nDiff Summary:\nFile: src/api/vitals.ts\ndiff --git a/src/api/vitals.ts b/src/api/vitals.ts\nindex 4649cfb..c847627 100644\n--- a/src/api/vitals.ts\n+++ b/src/api/vitals.ts\n@@ -15,14 +15,13 @@ const sendToServer = async (metric: Metric) => {\n       }\n     ]);\n     if (error) console.error('[Supabase insert error]', error);\n-    return;\n+  } else {\n+    fetch('/api/vitals', {\n+      method: 'POST',\n+      body: JSON.stringify(metric),\n+      headers: { 'Content-Type': 'application/json' }\n+    });\n   }\n-\n-  fetch('/api/vitals', {\n-    method: 'POST',\n-    body: JSON.stringify(metric),\n-    headers: { 'Content-Type': 'application/json' }\n-  });\n };\n \n /** 성능지표 데이터 조회 */\n@@ -40,16 +39,16 @@ const getVitals = async () => {\n     }\n \n     return data;\n-  }\n-\n-  // ✅ 서버리스 환경 → API 경유 조회\n-  try {\n-    const response = await fetch('/api/vitals-data');\n-    if (!response.ok) throw new Error('API fetch failed');\n-    return await response.json();\n-  } catch (err) {\n-    console.error('[API fetch error]', err);\n-    return [];\n+  } else {\n+    // ✅ 서버리스 환경 → API 경유 조회\n+    try {\n+      const response = await fetch('/api/vitals');\n+      if (!response.ok) throw new Error('API fetch failed');\n+      return await response.json();\n+    } catch (err) {\n+      console.error('[API fetch error]', err);\n+      return [];\n+    }\n   }\n };\n---",
+      "metadata": {
+        "sha": "9dd62694cb5151c91b783bafae70edb9939dc444",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T09:58:45Z",
+        "message": "endpoint 수정",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "e2a931b802f6324653d1990cea7096bb98013570",
+      "type": "commit",
+      "content": "Commit: e2a931b802f6324653d1990cea7096bb98013570\nAuthor: SABONGSEOK\nDate: 2025-08-07T09:45:33Z\nMessage: 서버리스 오류 수정 테스트\n\nAffected Files:\n- src/lib/superbaseClient.ts (modified) +6 -0\n\nDiff Summary:\nFile: src/lib/superbaseClient.ts\ndiff --git a/src/lib/superbaseClient.ts b/src/lib/superbaseClient.ts\nindex 9862bbd..cd817ed 100644\n--- a/src/lib/superbaseClient.ts\n+++ b/src/lib/superbaseClient.ts\n@@ -1,6 +1,12 @@\n import { createClient } from '@supabase/supabase-js';\n \n+const isLocal = import.meta.env.VITE_ENV === 'local';\n+\n const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;\n const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;\n \n+console.log('isLocal', isLocal);\n+console.log('supabaseUrl', supabaseUrl);\n+console.log('supabaseAnonKey', supabaseAnonKey);\n+\n export const supabase = createClient(supabaseUrl, supabaseAnonKey);\n---",
+      "metadata": {
+        "sha": "e2a931b802f6324653d1990cea7096bb98013570",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T09:45:33Z",
+        "message": "서버리스 오류 수정 테스트",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "4a3d80e30fb1a9425fdf0449aec45d8c22bf0c32",
+      "type": "commit",
+      "content": "Commit: 4a3d80e30fb1a9425fdf0449aec45d8c22bf0c32\nAuthor: SABONGSEOK\nDate: 2025-08-07T09:40:07Z\nMessage: 서버리스 오류 수정 테스트\n\nAffected Files:\n- src/lib/superbaseClient.ts (modified) +2 -7\n\nDiff Summary:\nFile: src/lib/superbaseClient.ts\ndiff --git a/src/lib/superbaseClient.ts b/src/lib/superbaseClient.ts\nindex 871d216..9862bbd 100644\n--- a/src/lib/superbaseClient.ts\n+++ b/src/lib/superbaseClient.ts\n@@ -1,11 +1,6 @@\n import { createClient } from '@supabase/supabase-js';\n-const isLocal = import.meta.env.VITE_ENV === 'local';\n \n-const supabaseUrl = isLocal ? import.meta.env.VITE_SUPABASE_URL! : import.meta.env.SUPABASE_URL!;\n-const supabaseAnonKey = isLocal\n-  ? import.meta.env.VITE_SUPABASE_ANON_KEY!\n-  : import.meta.env.SUPABASE_ANON_KEY!;\n-console.log('supabaseUrl', supabaseUrl);\n-console.log('supabaseAnonKey', supabaseAnonKey);\n+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;\n+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;\n \n export const supabase = createClient(supabaseUrl, supabaseAnonKey);\n---",
+      "metadata": {
+        "sha": "4a3d80e30fb1a9425fdf0449aec45d8c22bf0c32",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T09:40:07Z",
+        "message": "서버리스 오류 수정 테스트",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "9e178eab1465008993ef6056d9bde5a607c4caec",
+      "type": "commit",
+      "content": "Commit: 9e178eab1465008993ef6056d9bde5a607c4caec\nAuthor: SABONGSEOK\nDate: 2025-08-07T09:36:23Z\nMessage: 서버리스 오류 수정 테스트\n\nAffected Files:\n- src/lib/superbaseClient.ts (modified) +5 -2\n\nDiff Summary:\nFile: src/lib/superbaseClient.ts\ndiff --git a/src/lib/superbaseClient.ts b/src/lib/superbaseClient.ts\nindex 5bc2ee4..871d216 100644\n--- a/src/lib/superbaseClient.ts\n+++ b/src/lib/superbaseClient.ts\n@@ -1,7 +1,10 @@\n import { createClient } from '@supabase/supabase-js';\n+const isLocal = import.meta.env.VITE_ENV === 'local';\n \n-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;\n-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;\n+const supabaseUrl = isLocal ? import.meta.env.VITE_SUPABASE_URL! : import.meta.env.SUPABASE_URL!;\n+const supabaseAnonKey = isLocal\n+  ? import.meta.env.VITE_SUPABASE_ANON_KEY!\n+  : import.meta.env.SUPABASE_ANON_KEY!;\n console.log('supabaseUrl', supabaseUrl);\n console.log('supabaseAnonKey', supabaseAnonKey);\n---",
+      "metadata": {
+        "sha": "9e178eab1465008993ef6056d9bde5a607c4caec",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T09:36:23Z",
+        "message": "서버리스 오류 수정 테스트",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "65705df0b7d65fa494ad137a683b870c921007d7",
+      "type": "commit",
+      "content": "Commit: 65705df0b7d65fa494ad137a683b870c921007d7\nAuthor: SABONGSEOK\nDate: 2025-08-07T09:18:48Z\nMessage: 환경변수 확인 테스트\n\nAffected Files:\n- api/vitals.ts (modified) +25 -17\n- src/lib/superbaseClient.ts (modified) +2 -0\n\nDiff Summary:\nFile: src/lib/superbaseClient.ts\ndiff --git a/api/vitals.ts b/api/vitals.ts\nindex 29e407f..bce1041 100644\n--- a/api/vitals.ts\n+++ b/api/vitals.ts\n@@ -21,26 +21,34 @@ const handleGet = async (req: VercelRequest, res: VercelResponse) => {\n \n /** 데이터 추가 */\n const handlePost = async (req: VercelRequest, res: VercelResponse) => {\n-  // body가 파싱되어 있지 않으면 직접 파싱\n-  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;\n-  const { name, value, delta, rating, navigationType } = body;\n-\n-  const { error } = await supabase.from('web_vitals').insert([\n-    {\n-      name,\n-      value,\n-      delta,\n-      rating,\n-      navigation_type: navigationType\n+  try {\n+    // body가 파싱되어 있지 않으면 직접 파싱\n+    console.log('raw req.body:', req.body);\n+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;\n+    console.log('parsed body:', body);\n+\n+    const { name, value, delta, rating, navigationType } = body;\n+\n+    const { error } = await supabase.from('web_vitals').insert([\n+      {\n+        name,\n+        value,\n+        delta,\n+        rating,\n+        navigation_type: navigationType\n+      }\n+    ]);\n+\n+    if (error) {\n+      console.error('Supabase insert error:', error);\n+      return res.status(500).json({ success: false, error });\n     }\n-  ]);\n \n-  if (error) {\n-    console.error(error);\n-    return res.status(500).json({ success: false });\n+    return res.status(200).json({ success: true });\n+  } catch (err) {\n+    console.error('Unexpected error:', err);\n+    return res.status(500).json({ success: false, error: String(err) });\n   }\n-\n-  return res.status(200).json({ success: true });\n };\n \n export default async function handler(req: VercelRequest, res: VercelResponse) {\ndiff --git a/src/lib/superbaseClient.ts b/src/lib/superbaseClient.ts\nindex 9862bbd..5bc2ee4 100644\n--- a/src/lib/superbaseClient.ts\n+++ b/src/lib/superbaseClient.ts\n@@ -2,5 +2,7 @@ import { createClient } from '@supabase/supabase-js';\n \n const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;\n cons\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "65705df0b7d65fa494ad137a683b870c921007d7",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T09:18:48Z",
+        "message": "환경변수 확인 테스트",
+        "fileCount": 2
+      }
+    },
+    {
+      "id": "5db7b903f76a102d552fa5ac29b945f727e5c176",
+      "type": "commit",
+      "content": "Commit: 5db7b903f76a102d552fa5ac29b945f727e5c176\nAuthor: SABONGSEOK\nDate: 2025-08-07T09:00:22Z\nMessage: 서버리스 api 오류 수정\n\nAffected Files:\n- api/vitals.ts (modified) +5 -3\n\nDiff Summary:\nFile: api/vitals.ts\ndiff --git a/api/vitals.ts b/api/vitals.ts\nindex 224dfc0..29e407f 100644\n--- a/api/vitals.ts\n+++ b/api/vitals.ts\n@@ -21,7 +21,9 @@ const handleGet = async (req: VercelRequest, res: VercelResponse) => {\n \n /** 데이터 추가 */\n const handlePost = async (req: VercelRequest, res: VercelResponse) => {\n-  const { name, value, delta, rating, navigationType } = req.body;\n+  // body가 파싱되어 있지 않으면 직접 파싱\n+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;\n+  const { name, value, delta, rating, navigationType } = body;\n \n   const { error } = await supabase.from('web_vitals').insert([\n     {\n@@ -42,8 +44,8 @@ const handlePost = async (req: VercelRequest, res: VercelResponse) => {\n };\n \n export default async function handler(req: VercelRequest, res: VercelResponse) {\n-  if (req.method === 'POST') handlePost(req, res);\n-  else if (req.method === 'GET') handleGet(req, res);\n+  if (req.method === 'POST') return await handlePost(req, res);\n+  else if (req.method === 'GET') return await handleGet(req, res);\n   else {\n     return res.status(405).end();\n   }\n---",
+      "metadata": {
+        "sha": "5db7b903f76a102d552fa5ac29b945f727e5c176",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T09:00:22Z",
+        "message": "서버리스 api 오류 수정",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "0b88efac6cfb0bbe150e5e3a217f4f1d6d479b7f",
+      "type": "commit",
+      "content": "Commit: 0b88efac6cfb0bbe150e5e3a217f4f1d6d479b7f\nAuthor: SABONGSEOK\nDate: 2025-08-07T08:50:30Z\nMessage: lint오류 수정\n\nAffected Files:\n- src/components/chart/lineChart.tsx (modified) +1 -1\n\nDiff Summary:\nFile: src/components/chart/lineChart.tsx\ndiff --git a/src/components/chart/lineChart.tsx b/src/components/chart/lineChart.tsx\nindex 8923ce7..fbb667a 100644\n--- a/src/components/chart/lineChart.tsx\n+++ b/src/components/chart/lineChart.tsx\n@@ -92,7 +92,7 @@ export default function LineChart({ data, metric }: LineChartProps) {\n     g.append('g')\n       .attr('transform', `translate(0,${height})`)\n       .call(\n-        d3.axisBottom(xScale).tickFormat((domainValue: Date | d3.NumberValue, index: number) => {\n+        d3.axisBottom(xScale).tickFormat((domainValue: Date | d3.NumberValue) => {\n           // domainValue가 Date 타입이면 포맷 적용, 아니면 빈 문자열 반환\n           if (domainValue instanceof Date) {\n             return d3.timeFormat('%H:%M')(domainValue);\n---",
+      "metadata": {
+        "sha": "0b88efac6cfb0bbe150e5e3a217f4f1d6d479b7f",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T08:50:30Z",
+        "message": "lint오류 수정",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "90f5050771c4ff8843e9a9e9593090ad8e9ca78c",
+      "type": "commit",
+      "content": "Commit: 90f5050771c4ff8843e9a9e9593090ad8e9ca78c\nAuthor: SABONGSEOK\nDate: 2025-08-07T08:46:18Z\nMessage: 빌드오류 수정\n\nAffected Files:\n- src/components/chart/gaugeChart.tsx (modified) +6 -2\n- src/components/chart/lineChart.tsx (modified) +10 -1\n\nDiff Summary:\nFile: src/components/chart/lineChart.tsx\ndiff --git a/src/components/chart/gaugeChart.tsx b/src/components/chart/gaugeChart.tsx\nindex e38da8f..6fc041d 100644\n--- a/src/components/chart/gaugeChart.tsx\n+++ b/src/components/chart/gaugeChart.tsx\n@@ -36,7 +36,9 @@ export default function GaugeChart({ value, label, max }: GaugeChartProps) {\n       .startAngle(-Math.PI / 2)\n       .endAngle(Math.PI / 2);\n \n-    g.append('path').attr('d', backgroundArc).attr('fill', '#e5e7eb');\n+    g.append('path')\n+      .attr('d', backgroundArc({} as d3.DefaultArcObject))\n+      .attr('fill', '#e5e7eb');\n \n     // Value arc\n     const valueArc = d3\n@@ -49,7 +51,9 @@ export default function GaugeChart({ value, label, max }: GaugeChartProps) {\n     // Color based on performance score\n     const color = value >= 80 ? '#10b981' : value >= 50 ? '#f59e0b' : '#ef4444';\n \n-    g.append('path').attr('d', valueArc).attr('fill', color);\n+    g.append('path')\n+      .attr('d', valueArc({} as d3.DefaultArcObject))\n+      .attr('fill', color);\n \n     // Center text\n     g.append('text')\ndiff --git a/src/components/chart/lineChart.tsx b/src/components/chart/lineChart.tsx\nindex 29ea0c9..8923ce7 100644\n--- a/src/components/chart/lineChart.tsx\n+++ b/src/components/chart/lineChart.tsx\n@@ -91,7 +91,16 @@ export default function LineChart({ data, metric }: LineChartProps) {\n     // Add axes\n     g.append('g')\n       .attr('transform', `translate(0,${height})`)\n-      .call(d3.axisBottom(xScale).tickFormat(d3.timeFormat('%H:%M')));\n+      .call(\n+        d3.axisBottom(xScale).tickFormat((domainValue: Date | d3.NumberValue, index: number) => {\n+          // domainValue가 Date 타입이면 포맷 적용, 아니면 빈 문자열 반환\n+          if (domainValue instanceof Date) {\n+            return d3.timeFormat('%H:%M')(domainValue);\n+          }\n+          // d3.scaleTime이 아닌 경우에도 대비\n+          return '';\n+        })\n+      );\n \n     const yAxis =\n       metric === 'CLS'\n---",
+      "metadata": {
+        "sha": "90f5050771c4ff8843e9a9e9593090ad8e9ca78c",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T08:46:18Z",
+        "message": "빌드오류 수정",
+        "fileCount": 2
+      }
+    },
+    {
+      "id": "cbc34ffd37f3064d7f86e23cb8b7a6694a85c4b3",
+      "type": "commit",
+      "content": "Commit: cbc34ffd37f3064d7f86e23cb8b7a6694a85c4b3\nAuthor: SABONGSEOK\nDate: 2025-08-07T08:32:17Z\nMessage: lint 오류 수정\n\nAffected Files:\n- .github/workflows/ci.yml (modified) +1 -1\n- src/components/chart/barChart.tsx (modified) +2 -2\n- src/components/chart/donutChart.tsx (modified) +2 -2\n\nDiff Summary:\nFile: src/components/chart/donutChart.tsx\ndiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\nindex 60fa6d7..ad89575 100644\n--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -66,7 +66,7 @@ jobs:\n   # Build\n   build:\n     runs-on: ubuntu-latest\n-    needs: [lint]\n+    needs: [install-dependencies, lint]\n     steps:\n       - name: Checkout repository\n         uses: actions/checkout@v4\ndiff --git a/src/components/chart/barChart.tsx b/src/components/chart/barChart.tsx\nindex cdabf31..3147280 100644\n--- a/src/components/chart/barChart.tsx\n+++ b/src/components/chart/barChart.tsx\n@@ -111,10 +111,10 @@ export default function BarChart({ data, metric = 'LCP' }: BarChartProps) {\n         return getRatingColor(rating);\n       })\n       .attr('opacity', 0.7)\n-      .on('mouseover', function (event, d) {\n+      .on('mouseover', function () {\n         d3.select(this).attr('opacity', 1);\n       })\n-      .on('mouseout', function (event, d) {\n+      .on('mouseout', function () {\n         d3.select(this).attr('opacity', 0.7);\n       });\n \ndiff --git a/src/components/chart/donutChart.tsx b/src/components/chart/donutChart.tsx\nindex 1a433b1..423188e 100644\n--- a/src/components/chart/donutChart.tsx\n+++ b/src/components/chart/donutChart.tsx\n@@ -70,10 +70,10 @@ export default function DonutChart({ data }: DonutChartProps) {\n       .attr('d', arc)\n       .attr('fill', (d) => d.data.color)\n       .attr('opacity', 0.8)\n-      .on('mouseover', function (event, d) {\n+      .on('mouseover', function () {\n         d3.select(this).attr('opacity', 1);\n       })\n-      .on('mouseout', function (event, d) {\n+      .on('mouseout', function () {\n         d3.select(this).attr('opacity', 0.8);\n       });\n---",
+      "metadata": {
+        "sha": "cbc34ffd37f3064d7f86e23cb8b7a6694a85c4b3",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T08:32:17Z",
+        "message": "lint 오류 수정",
+        "fileCount": 3
+      }
+    },
+    {
+      "id": "cb3a3885132d6e72af60cfd4e96299c5ed32e5a9",
+      "type": "commit",
+      "content": "Commit: cb3a3885132d6e72af60cfd4e96299c5ed32e5a9\nAuthor: SABONGSEOK\nDate: 2025-08-07T08:24:53Z\nMessage: 성능 통계 페이지 적용\n\nAffected Files:\n- src/api/vitals.ts (modified) +1 -1\n- src/app/dashboard/page.tsx (modified) +392 -4\n- src/components/chart/barChart.tsx (added) +183 -0\n- src/components/chart/donutChart.tsx (added) +118 -0\n- src/components/chart/gaugeChart.tsx (added) +85 -0\n- src/components/chart/lineChart.tsx (added) +224 -0\n- src/types/dashboardTypes.ts (added) +26 -0\n\nDiff Summary:\nFile: src/types/dashboardTypes.ts\ndiff --git a/src/api/vitals.ts b/src/api/vitals.ts\nindex fc6ef99..4649cfb 100644\n--- a/src/api/vitals.ts\n+++ b/src/api/vitals.ts\n@@ -31,7 +31,7 @@ const getVitals = async () => {\n     // ✅ 로컬 환경 → Supabase 직접 조회\n     const { data, error } = await supabase\n       .from('web_vitals')\n-      .select('name, value, rating, created_at')\n+      .select('name, value, rating, created_at, delta, navigation_type')\n       .order('created_at', { ascending: false });\n \n     if (error) {\ndiff --git a/src/app/dashboard/page.tsx b/src/app/dashboard/page.tsx\nindex 70f6be7..4e84df3 100644\n--- a/src/app/dashboard/page.tsx\n+++ b/src/app/dashboard/page.tsx\n@@ -1,20 +1,408 @@\n import { getVitals } from '@/api/vitals';\n-import { useEffect } from 'react';\n+import { ChartDataPoint, DbMetricEntry, LatestMetrics } from '@/types/dashboardTypes';\n+import { useEffect, useState } from 'react';\n+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';\n+import {\n+  Activity,\n+  AlertTriangle,\n+  CheckCircle,\n+  Clock,\n+  Eye,\n+  MousePointer,\n+  TrendingUp,\n+  Zap\n+} from 'lucide-react';\n+import { Badge } from '@/components/ui/badge';\n+import GaugeChart from '@/components/chart/gaugeChart';\n+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';\n+import LineChart from '@/components/chart/lineChart';\n+import DonutChart from '@/components/chart/donutChart';\n+import BarChart from '@/components/chart/barChart';\n \n export default function DashboardPage() {\n+  const [dbMetrics, setDbMetrics] = useState<DbMetricEntry[]>([]);\n   const temp = async () => {\n     const res = await getVitals();\n     console.log('getVital', res);\n+    setDbMetrics(res);\n   };\n \n   useEffect(() => {\n     temp();\n   }, []);\n \n+  // 데이터가 없는 경우 처리\n+  if (dbMetrics.length === 0) {\n+    return (\n+      <div className=\"min-h-screen flex items-center justify-center p-4\">\n+        <Card className=\"w-full max-w-md text-center\">\n+          <CardHeader>\n+            <CardTit\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "cb3a3885132d6e72af60cfd4e96299c5ed32e5a9",
+        "author": "SABONGSEOK",
+        "date": "2025-08-07T08:24:53Z",
+        "message": "성능 통계 페이지 적용",
+        "fileCount": 7
+      }
+    },
+    {
+      "id": "3875e9dfa2620c870033a22ae3d324fb43671c2a",
+      "type": "commit",
+      "content": "Commit: 3875e9dfa2620c870033a22ae3d324fb43671c2a\nAuthor: SABONGSEOK\nDate: 2025-08-05T07:30:42Z\nMessage: getVitals 필드명 오류 수정\n\nAffected Files:\n- src/api/vitals.ts (modified) +2 -2\n- src/app/dashboard/componnets.ts (removed) +0 -0\n- src/app/dashboard/page.tsx (modified) +12 -0\n\nDiff Summary:\nFile: src/app/dashboard/page.tsx\ndiff --git a/src/api/vitals.ts b/src/api/vitals.ts\nindex cb48122..fc6ef99 100644\n--- a/src/api/vitals.ts\n+++ b/src/api/vitals.ts\n@@ -31,8 +31,8 @@ const getVitals = async () => {\n     // ✅ 로컬 환경 → Supabase 직접 조회\n     const { data, error } = await supabase\n       .from('web_vitals')\n-      .select('name, value, rating, inserted_at')\n-      .order('inserted_at', { ascending: false });\n+      .select('name, value, rating, created_at')\n+      .order('created_at', { ascending: false });\n \n     if (error) {\n       console.error('[Supabase select error]', error);\ndiff --git a/src/app/dashboard/componnets.ts b/src/app/dashboard/componnets.ts\ndeleted file mode 100644\nindex e69de29..0000000\ndiff --git a/src/app/dashboard/page.tsx b/src/app/dashboard/page.tsx\nindex abcb297..70f6be7 100644\n--- a/src/app/dashboard/page.tsx\n+++ b/src/app/dashboard/page.tsx\n@@ -1,4 +1,16 @@\n+import { getVitals } from '@/api/vitals';\n+import { useEffect } from 'react';\n+\n export default function DashboardPage() {\n+  const temp = async () => {\n+    const res = await getVitals();\n+    console.log('getVital', res);\n+  };\n+\n+  useEffect(() => {\n+    temp();\n+  }, []);\n+\n   return (\n     <div>\n       <h1>Web Vitals Dashboard</h1>\n---",
+      "metadata": {
+        "sha": "3875e9dfa2620c870033a22ae3d324fb43671c2a",
+        "author": "SABONGSEOK",
+        "date": "2025-08-05T07:30:42Z",
+        "message": "getVitals 필드명 오류 수정",
+        "fileCount": 3
+      }
+    },
+    {
+      "id": "ec74bfbb8389c9a998639b96d7a4854af979487c",
+      "type": "commit",
+      "content": "Commit: ec74bfbb8389c9a998639b96d7a4854af979487c\nAuthor: SABONGSEOK\nDate: 2025-08-05T06:36:07Z\nMessage: 대시보드 페이지 파일 추가. 작업 필요\n\nAffected Files:\n- package.json (modified) +3 -0\n- pnpm-lock.yaml (modified) +448 -0\n- src/App.tsx (modified) +20 -7\n- src/app/dashboard/componnets.ts (added) +0 -0\n- src/app/dashboard/page.tsx (added) +8 -0\n- src/components/Header.tsx (modified) +48 -5\n- src/locales/en.json (modified) +2 -1\n- src/locales/ko.json (modified) +2 -1\n- src/main.tsx (modified) +4 -1\n\nDiff Summary:\nFile: src/main.tsx\ndiff --git a/package.json b/package.json\nindex 735a08d..f264b0f 100644\n--- a/package.json\n+++ b/package.json\n@@ -39,10 +39,12 @@\n     \"@radix-ui/react-toggle-group\": \"1.1.1\",\n     \"@radix-ui/react-tooltip\": \"1.1.6\",\n     \"@supabase/supabase-js\": \"^2.53.0\",\n+    \"@types/d3\": \"^7.4.3\",\n     \"@vercel/node\": \"^5.3.11\",\n     \"class-variance-authority\": \"^0.7.1\",\n     \"clsx\": \"^2.1.1\",\n     \"cmdk\": \"1.0.4\",\n+    \"d3\": \"^7.9.0\",\n     \"date-fns\": \"4.1.0\",\n     \"embla-carousel-react\": \"8.5.1\",\n     \"i18next\": \"latest\",\n@@ -58,6 +60,7 @@\n     \"react-i18next\": \"latest\",\n     \"react-inlinesvg\": \"^4.2.0\",\n     \"react-resizable-panels\": \"^2.1.7\",\n+    \"react-router-dom\": \"^7.7.1\",\n     \"recharts\": \"2.15.0\",\n     \"simple-icons\": \"^15.8.0\",\n     \"sonner\": \"^1.7.1\",\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex 75b7653..fce5217 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -95,6 +95,9 @@ importers:\n       '@supabase/supabase-js':\n         specifier: ^2.53.0\n         version: 2.53.0\n+      '@types/d3':\n+        specifier: ^7.4.3\n+        version: 7.4.3\n       '@vercel/node':\n         specifier: ^5.3.11\n         version: 5.3.11(rollup@4.44.1)\n@@ -107,6 +110,9 @@ importers:\n       cmdk:\n         specifier: 1.0.4\n         version: 1.0.4(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+      d3:\n+        specifier: ^7.9.0\n+        version: 7.9.0\n       date-fns:\n         specifier: 4.1.0\n         version: 4.1.0\n@@ -152,6 +158,9 @@ importers:\n       react-resizable-panels:\n         specifier: ^2.1.7\n         version: 2.1.9(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+      react-router-dom:\n+        specifier: ^7.7.1\n+        version: 7.7.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n       recharts:\n         specifier: 2.15.0\n         version: 2.15.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n@@ -1553,33 +1562,102 @@ packages:\n   '@types/d3-array@3.2.1':\n     resolution: {integrity: sha512-Y2Jn2idRrLzUfAKV\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "ec74bfbb8389c9a998639b96d7a4854af979487c",
+        "author": "SABONGSEOK",
+        "date": "2025-08-05T06:36:07Z",
+        "message": "대시보드 페이지 파일 추가. 작업 필요",
+        "fileCount": 9
+      }
+    },
+    {
+      "id": "d2fc7a9dcf1c2e742d2e5bf284f659c625bda72d",
+      "type": "commit",
+      "content": "Commit: d2fc7a9dcf1c2e742d2e5bf284f659c625bda72d\nAuthor: SABONGSEOK\nDate: 2025-08-05T05:17:19Z\nMessage: 성능지표 조회 로직 추가\n\nAffected Files:\n- api/vitals.ts (modified) +24 -2\n- src/api/vitals.ts (modified) +30 -1\n\nDiff Summary:\nFile: src/api/vitals.ts\ndiff --git a/api/vitals.ts b/api/vitals.ts\nindex 7b97ebb..224dfc0 100644\n--- a/api/vitals.ts\n+++ b/api/vitals.ts\n@@ -4,9 +4,23 @@ import { createClient } from '@supabase/supabase-js';\n \n const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);\n \n-export default async function handler(req: VercelRequest, res: VercelResponse) {\n-  if (req.method !== 'POST') return res.status(405).end();\n+/** 데이터 조회 */\n+const handleGet = async (req: VercelRequest, res: VercelResponse) => {\n+  const { data, error } = await supabase\n+    .from('web_vitals')\n+    .select('name, value, rating, inserted_at')\n+    .order('inserted_at', { ascending: false });\n+\n+  if (error) {\n+    console.error('[Supabase select error]', error);\n+    return res.status(500).json({ error: 'Failed to fetch data' });\n+  }\n \n+  return res.status(200).json(data);\n+};\n+\n+/** 데이터 추가 */\n+const handlePost = async (req: VercelRequest, res: VercelResponse) => {\n   const { name, value, delta, rating, navigationType } = req.body;\n \n   const { error } = await supabase.from('web_vitals').insert([\n@@ -25,4 +39,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {\n   }\n \n   return res.status(200).json({ success: true });\n+};\n+\n+export default async function handler(req: VercelRequest, res: VercelResponse) {\n+  if (req.method === 'POST') handlePost(req, res);\n+  else if (req.method === 'GET') handleGet(req, res);\n+  else {\n+    return res.status(405).end();\n+  }\n }\ndiff --git a/src/api/vitals.ts b/src/api/vitals.ts\nindex 90c5c5d..cb48122 100644\n--- a/src/api/vitals.ts\n+++ b/src/api/vitals.ts\n@@ -25,6 +25,35 @@ const sendToServer = async (metric: Metric) => {\n   });\n };\n \n+/** 성능지표 데이터 조회 */\n+const getVitals = async () => {\n+  if (isLocal) {\n+    // ✅ 로컬 환경 → Supabase 직접 조회\n+    const { data, error } = await supabase\n+      .from('web_vitals')\n+      .select('name, value, rating, inserted_at')\n+      .order('inserted_at', { ascending: false });\n+\n+    if \n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "d2fc7a9dcf1c2e742d2e5bf284f659c625bda72d",
+        "author": "SABONGSEOK",
+        "date": "2025-08-05T05:17:19Z",
+        "message": "성능지표 조회 로직 추가",
+        "fileCount": 2
+      }
+    },
+    {
+      "id": "33e13aa7dad614e54673b3e088099124c22715a4",
+      "type": "commit",
+      "content": "Commit: 33e13aa7dad614e54673b3e088099124c22715a4\nAuthor: SABONGSEOK\nDate: 2025-08-05T04:30:48Z\nMessage: any type 제거\n\nAffected Files:\n- src/api/vitals.ts (modified) +2 -2\n\nDiff Summary:\nFile: src/api/vitals.ts\ndiff --git a/src/api/vitals.ts b/src/api/vitals.ts\nindex 4bfef66..90c5c5d 100644\n--- a/src/api/vitals.ts\n+++ b/src/api/vitals.ts\n@@ -1,9 +1,9 @@\n import { supabase } from '@/lib/superbaseClient';\n-import { onCLS, onFCP, onLCP, onTTFB, onINP } from 'web-vitals';\n+import { onCLS, onFCP, onLCP, onTTFB, onINP, Metric } from 'web-vitals';\n \n const isLocal = import.meta.env.VITE_ENV === 'local';\n \n-const sendToServer = async (metric: any) => {\n+const sendToServer = async (metric: Metric) => {\n   if (isLocal) {\n     const { error } = await supabase.from('web_vitals').insert([\n       {\n---",
+      "metadata": {
+        "sha": "33e13aa7dad614e54673b3e088099124c22715a4",
+        "author": "SABONGSEOK",
+        "date": "2025-08-05T04:30:48Z",
+        "message": "any type 제거",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "b848a59e102a76c15080f3ee3c693c390147fa90",
+      "type": "commit",
+      "content": "Commit: b848a59e102a76c15080f3ee3c693c390147fa90\nAuthor: SABONGSEOK\nDate: 2025-08-05T03:37:11Z\nMessage: console 제거\n\nAffected Files:\n- src/lib/superbaseClient.ts (modified) +0 -1\n\nDiff Summary:\nFile: src/lib/superbaseClient.ts\ndiff --git a/src/lib/superbaseClient.ts b/src/lib/superbaseClient.ts\nindex 887ef7f..9862bbd 100644\n--- a/src/lib/superbaseClient.ts\n+++ b/src/lib/superbaseClient.ts\n@@ -2,6 +2,5 @@ import { createClient } from '@supabase/supabase-js';\n \n const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;\n const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;\n-console.log(supabaseUrl, supabaseAnonKey);\n \n export const supabase = createClient(supabaseUrl, supabaseAnonKey);\n---",
+      "metadata": {
+        "sha": "b848a59e102a76c15080f3ee3c693c390147fa90",
+        "author": "SABONGSEOK",
+        "date": "2025-08-05T03:37:11Z",
+        "message": "console 제거",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "59935591de6bd42dd1a3734fe6f50daaf2024c2e",
+      "type": "commit",
+      "content": "Commit: 59935591de6bd42dd1a3734fe6f50daaf2024c2e\nAuthor: SABONGSEOK\nDate: 2025-08-05T03:35:10Z\nMessage: superbase 연동\n\nAffected Files:\n- api/vitals.ts (modified) +20 -6\n- package.json (modified) +1 -0\n- pnpm-lock.yaml (modified) +103 -0\n- src/api/vitals.ts (modified) +24 -7\n- src/lib/superbaseClient.ts (added) +7 -0\n\nDiff Summary:\nFile: src/lib/superbaseClient.ts\ndiff --git a/api/vitals.ts b/api/vitals.ts\nindex 8895ee3..7b97ebb 100644\n--- a/api/vitals.ts\n+++ b/api/vitals.ts\n@@ -1,14 +1,28 @@\n /** 서버리스 api 정의 */\n import type { VercelRequest, VercelResponse } from '@vercel/node';\n+import { createClient } from '@supabase/supabase-js';\n+\n+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);\n \n export default async function handler(req: VercelRequest, res: VercelResponse) {\n-  if (req.method === 'POST') {\n-    const metric = req.body;\n+  if (req.method !== 'POST') return res.status(405).end();\n+\n+  const { name, value, delta, rating, navigationType } = req.body;\n \n-    console.log('📊 Web Vital Received:', metric);\n+  const { error } = await supabase.from('web_vitals').insert([\n+    {\n+      name,\n+      value,\n+      delta,\n+      rating,\n+      navigation_type: navigationType\n+    }\n+  ]);\n \n-    res.status(200).json({ message: 'Received' });\n-  } else {\n-    res.status(405).json({ message: 'Method Not Allowed' });\n+  if (error) {\n+    console.error(error);\n+    return res.status(500).json({ success: false });\n   }\n+\n+  return res.status(200).json({ success: true });\n }\ndiff --git a/package.json b/package.json\nindex f0fb3a5..735a08d 100644\n--- a/package.json\n+++ b/package.json\n@@ -38,6 +38,7 @@\n     \"@radix-ui/react-toggle\": \"1.1.1\",\n     \"@radix-ui/react-toggle-group\": \"1.1.1\",\n     \"@radix-ui/react-tooltip\": \"1.1.6\",\n+    \"@supabase/supabase-js\": \"^2.53.0\",\n     \"@vercel/node\": \"^5.3.11\",\n     \"class-variance-authority\": \"^0.7.1\",\n     \"clsx\": \"^2.1.1\",\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex 33f215c..75b7653 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -92,6 +92,9 @@ importers:\n       '@radix-ui/react-tooltip':\n         specifier: 1.1.6\n         version: 1.1.6(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+      '@supabase/supabase-js':\n+        specifier: ^2.53.0\n+        version: 2.53.0\n       '\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "59935591de6bd42dd1a3734fe6f50daaf2024c2e",
+        "author": "SABONGSEOK",
+        "date": "2025-08-05T03:35:10Z",
+        "message": "superbase 연동",
+        "fileCount": 5
+      }
+    },
+    {
+      "id": "550b8c6d172faed7ebd10db6aff0ce99a06b525b",
+      "type": "commit",
+      "content": "Commit: 550b8c6d172faed7ebd10db6aff0ce99a06b525b\nAuthor: SABONGSEOK\nDate: 2025-08-05T01:21:50Z\nMessage: web-vitals를 통한 성능검토 api 추가.\n\nAffected Files:\n- api/vitals.ts (added) +14 -0\n- package.json (modified) +2 -1\n- pnpm-lock.yaml (modified) +802 -35\n- src/App.tsx (modified) +6 -2\n- src/api/vitals.ts (added) +19 -0\n- src/main.tsx (modified) +6 -6\n\nDiff Summary:\nFile: src/main.tsx\ndiff --git a/api/vitals.ts b/api/vitals.ts\nnew file mode 100644\nindex 0000000..8895ee3\n--- /dev/null\n+++ b/api/vitals.ts\n@@ -0,0 +1,14 @@\n+/** 서버리스 api 정의 */\n+import type { VercelRequest, VercelResponse } from '@vercel/node';\n+\n+export default async function handler(req: VercelRequest, res: VercelResponse) {\n+  if (req.method === 'POST') {\n+    const metric = req.body;\n+\n+    console.log('📊 Web Vital Received:', metric);\n+\n+    res.status(200).json({ message: 'Received' });\n+  } else {\n+    res.status(405).json({ message: 'Method Not Allowed' });\n+  }\n+}\ndiff --git a/package.json b/package.json\nindex de6a904..f0fb3a5 100644\n--- a/package.json\n+++ b/package.json\n@@ -38,7 +38,7 @@\n     \"@radix-ui/react-toggle\": \"1.1.1\",\n     \"@radix-ui/react-toggle-group\": \"1.1.1\",\n     \"@radix-ui/react-tooltip\": \"1.1.6\",\n-    \"@vercel/speed-insights\": \"^1.2.0\",\n+    \"@vercel/node\": \"^5.3.11\",\n     \"class-variance-authority\": \"^0.7.1\",\n     \"clsx\": \"^2.1.1\",\n     \"cmdk\": \"1.0.4\",\n@@ -63,6 +63,7 @@\n     \"tailwind-merge\": \"^2.5.5\",\n     \"tailwindcss-animate\": \"^1.0.7\",\n     \"vaul\": \"^0.9.6\",\n+    \"web-vitals\": \"^5.1.0\",\n     \"zod\": \"^3.24.1\"\n   },\n   \"devDependencies\": {\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex 15f75dc..33f215c 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -92,9 +92,9 @@ importers:\n       '@radix-ui/react-tooltip':\n         specifier: 1.1.6\n         version: 1.1.6(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n-      '@vercel/speed-insights':\n-        specifier: ^1.2.0\n-        version: 1.2.0(react@19.1.0)\n+      '@vercel/node':\n+        specifier: ^5.3.11\n+        version: 5.3.11(rollup@4.44.1)\n       class-variance-authority:\n         specifier: ^0.7.1\n         version: 0.7.1\n@@ -163,10 +163,13 @@ importers:\n         version: 2.6.0\n       tailwindcss-animate:\n         specifier: ^1.0.7\n-        version: 1.0.7(tailwindcss@3.4.17)\n+        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.1(\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "550b8c6d172faed7ebd10db6aff0ce99a06b525b",
+        "author": "SABONGSEOK",
+        "date": "2025-08-05T01:21:50Z",
+        "message": "web-vitals를 통한 성능검토 api 추가.",
+        "fileCount": 6
+      }
+    },
+    {
+      "id": "142f77fdca337582b5a7b6c0117bb99613c3787f",
+      "type": "commit",
+      "content": "Commit: 142f77fdca337582b5a7b6c0117bb99613c3787f\nAuthor: SABONGSEOK\nDate: 2025-08-04T23:31:52Z\nMessage: vercel speed insights 설치. 트래픽 확인을 위함\n\nAffected Files:\n- package.json (modified) +1 -0\n- pnpm-lock.yaml (modified) +30 -0\n- src/App.tsx (modified) +13 -11\n\nDiff Summary:\nFile: src/App.tsx\ndiff --git a/package.json b/package.json\nindex d441001..de6a904 100644\n--- a/package.json\n+++ b/package.json\n@@ -38,6 +38,7 @@\n     \"@radix-ui/react-toggle\": \"1.1.1\",\n     \"@radix-ui/react-toggle-group\": \"1.1.1\",\n     \"@radix-ui/react-tooltip\": \"1.1.6\",\n+    \"@vercel/speed-insights\": \"^1.2.0\",\n     \"class-variance-authority\": \"^0.7.1\",\n     \"clsx\": \"^2.1.1\",\n     \"cmdk\": \"1.0.4\",\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex 6791da2..15f75dc 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -92,6 +92,9 @@ importers:\n       '@radix-ui/react-tooltip':\n         specifier: 1.1.6\n         version: 1.1.6(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+      '@vercel/speed-insights':\n+        specifier: ^1.2.0\n+        version: 1.2.0(react@19.1.0)\n       class-variance-authority:\n         specifier: ^0.7.1\n         version: 0.7.1\n@@ -1565,6 +1568,29 @@ packages:\n     resolution: {integrity: sha512-VRwixir4zBWCSTP/ljEo091lbpypz57PoeAQ9imjG+vbeof9LplljsL1mos4ccG6H9IjfrVGM359RozUnuFhpw==}\n     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}\n \n+  '@vercel/speed-insights@1.2.0':\n+    resolution: {integrity: sha512-y9GVzrUJ2xmgtQlzFP2KhVRoCglwfRQgjyfY607aU0hh0Un6d0OUyrJkjuAlsV18qR4zfoFPs/BiIj9YDS6Wzw==}\n+    peerDependencies:\n+      '@sveltejs/kit': ^1 || ^2\n+      next: '>= 13'\n+      react: ^18 || ^19 || ^19.0.0-rc\n+      svelte: '>= 4'\n+      vue: ^3\n+      vue-router: ^4\n+    peerDependenciesMeta:\n+      '@sveltejs/kit':\n+        optional: true\n+      next:\n+        optional: true\n+      react:\n+        optional: true\n+      svelte:\n+        optional: true\n+      vue:\n+        optional: true\n+      vue-router:\n+        optional: true\n+\n   '@vitejs/plugin-react@4.6.0':\n     resolution: {integrity: sha512-5Kgff+m8e2PB+9j51eGHEpn5kUzRKH2Ry0qGoe8ItJg7pqnkPrYPkDQZGgGmTa0EGarHrkjLvOdU3b1fzI8otQ==}\n     engines: {node: ^14.18.0 || >=16.0.0}\n@@ -4615,6 +4641,10 @@ snapshots:\n       '@typescript-eslint/types': \n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "142f77fdca337582b5a7b6c0117bb99613c3787f",
+        "author": "SABONGSEOK",
+        "date": "2025-08-04T23:31:52Z",
+        "message": "vercel speed insights 설치. 트래픽 확인을 위함",
+        "fileCount": 3
+      }
+    },
+    {
+      "id": "85361fe6d823d7b35c0195415aeb32ab221c6194",
+      "type": "commit",
+      "content": "Commit: 85361fe6d823d7b35c0195415aeb32ab221c6194\nAuthor: SABONGSEOK\nDate: 2025-08-03T05:04:31Z\nMessage: 헤더, 푸터 링크 수정\n\nAffected Files:\n- README.md (modified) +1 -1\n- src/components/Footer.tsx (modified) +2 -2\n- src/components/Header.tsx (modified) +2 -2\n\nDiff Summary:\nFile: src/components/Header.tsx\ndiff --git a/README.md b/README.md\nindex d7a324d..d19fe32 100644\n--- a/README.md\n+++ b/README.md\n@@ -2,7 +2,7 @@\n \n ## 사이트 주소\n \n-(https://portfolio-wheat-eight-88.vercel.app/)[https://portfolio-wheat-eight-88.vercel.app/]\n+[https://portfolio-wheat-eight-88.vercel.app/](https://portfolio-wheat-eight-88.vercel.app/)\n \n ## 환경 세팅\n \ndiff --git a/src/components/Footer.tsx b/src/components/Footer.tsx\nindex 08768d5..036bab6 100644\n--- a/src/components/Footer.tsx\n+++ b/src/components/Footer.tsx\n@@ -17,13 +17,13 @@ const Footer: React.FC = () => {\n         </div>\n         <div className=\"flex items-center space-x-4\">\n           <a\n-            href=\"mailto:contact@example.com\"\n+            href=\"mailto:qhdtjr1004@naver.com\"\n             className=\"text-muted-foreground hover:text-foreground\"\n           >\n             <Mail className=\"h-5 w-5\" />\n           </a>\n           <a\n-            href=\"https://github.com\"\n+            href=\"https://github.com/bongseoksa\"\n             target=\"_blank\"\n             rel=\"noopener noreferrer\"\n             className=\"text-muted-foreground hover:text-foreground\"\ndiff --git a/src/components/Header.tsx b/src/components/Header.tsx\nindex 3fcf4e3..daeed44 100644\n--- a/src/components/Header.tsx\n+++ b/src/components/Header.tsx\n@@ -65,12 +65,12 @@ const Header: React.FC = () => {\n             {i18n.language === 'ko' ? 'EN' : '한국어'}\n           </Button>\n           <Button variant=\"ghost\" size=\"sm\" asChild>\n-            <a href=\"mailto:contact@example.com\">\n+            <a href=\"mailto:qhdtjr1004@naver.com\">\n               <Mail className=\"h-4 w-4\" />\n             </a>\n           </Button>\n           <Button variant=\"ghost\" size=\"sm\" asChild>\n-            <a href=\"https://github.com\" target=\"_blank\" rel=\"noopener noreferrer\">\n+            <a href=\"https://github.com/bongseoksa\" target=\"_blank\" rel=\"noopener noreferrer\">\n               <SimpleIcon svgData={siGithub.svg} />\n             </a>\n           </Button>\n---",
+      "metadata": {
+        "sha": "85361fe6d823d7b35c0195415aeb32ab221c6194",
+        "author": "SABONGSEOK",
+        "date": "2025-08-03T05:04:31Z",
+        "message": "헤더, 푸터 링크 수정",
+        "fileCount": 3
+      }
+    },
+    {
+      "id": "eacc7d2c9471b5837f62afb4f817511123b092a5",
+      "type": "commit",
+      "content": "Commit: eacc7d2c9471b5837f62afb4f817511123b092a5\nAuthor: SABONGSEOK\nDate: 2025-08-03T05:00:25Z\nMessage: README.md 배포 사이트 주소 추가\n\nAffected Files:\n- README.md (modified) +4 -0\n\nDiff Summary:\nFile: README.md\ndiff --git a/README.md b/README.md\nindex 2d9d726..d7a324d 100644\n--- a/README.md\n+++ b/README.md\n@@ -1,5 +1,9 @@\n # React + TypeScript + Vite\n \n+## 사이트 주소\n+\n+(https://portfolio-wheat-eight-88.vercel.app/)[https://portfolio-wheat-eight-88.vercel.app/]\n+\n ## 환경 세팅\n \n ※ github actions의 cd.yml이 완료되는 경우 vercel 배포 진행. vercel project에서 github 연동하지 않음.\n---",
+      "metadata": {
+        "sha": "eacc7d2c9471b5837f62afb4f817511123b092a5",
+        "author": "SABONGSEOK",
+        "date": "2025-08-03T05:00:25Z",
+        "message": "README.md 배포 사이트 주소 추가",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "ba684b638bd8cae5011a74c3a94958f2bff2abf7",
+      "type": "commit",
+      "content": "Commit: ba684b638bd8cae5011a74c3a94958f2bff2abf7\nAuthor: SABONGSEOK\nDate: 2025-08-03T04:42:11Z\nMessage: 포트폴리오 프로젝트 추가\n\nAffected Files:\n- README.md (modified) +1 -0\n- public/portfolio.gif (added) +0 -0\n- src/data/portfolio.ts (modified) +9 -0\n\nDiff Summary:\nFile: src/data/portfolio.ts\ndiff --git a/README.md b/README.md\nindex a5f0986..2d9d726 100644\n--- a/README.md\n+++ b/README.md\n@@ -7,6 +7,7 @@\n ```\n   Package Manager: pnpm\n   node version: v20\n+  bundler: vite\n   deployment: vercel, github actions\n ```\n \ndiff --git a/public/portfolio.gif b/public/portfolio.gif\nnew file mode 100644\nindex 0000000..41ba11d\nBinary files /dev/null and b/public/portfolio.gif differ\ndiff --git a/src/data/portfolio.ts b/src/data/portfolio.ts\nindex 1fca2d4..f39ecf1 100644\n--- a/src/data/portfolio.ts\n+++ b/src/data/portfolio.ts\n@@ -153,5 +153,14 @@ export const projects: Project[] = [\n     github: '',\n     detail:\n       'https://lush-sturgeon-c94.notion.site/1d2141f8c32780e98ae8f70b7ebb77a2?source=copy_link'\n+  },\n+  {\n+    title: '포트폴리오',\n+    description: 'Open AI를 활용한 포트폴리오',\n+    tech: ['v0.dev', 'claude-4-sonnet', 'react', 'typescript', 'tailwindcss'],\n+    image: '/portfolio.gif?height=200&width=300',\n+    github: 'https://github.com/bongseoksa/portfolio.git',\n+    detail:\n+      'https://lush-sturgeon-c94.notion.site/241141f8c32780699207d6c9fa10f03d?source=copy_link'\n   }\n ];\n---",
+      "metadata": {
+        "sha": "ba684b638bd8cae5011a74c3a94958f2bff2abf7",
+        "author": "SABONGSEOK",
+        "date": "2025-08-03T04:42:11Z",
+        "message": "포트폴리오 프로젝트 추가",
+        "fileCount": 3
+      }
+    },
+    {
+      "id": "16ca602bb8d3400ac95d3a189a59dc7b3fbf79b3",
+      "type": "commit",
+      "content": "Commit: 16ca602bb8d3400ac95d3a189a59dc7b3fbf79b3\nAuthor: SABONGSEOK\nDate: 2025-08-03T03:09:30Z\nMessage: CI 단계 성공시 CD 진행\n\nAffected Files:\n- .github/workflows/cd.yml (modified) +4 -2\n- .github/workflows/ci.yml (modified) +1 -1\n\nDiff Summary:\nFile: .github/workflows/ci.yml\ndiff --git a/.github/workflows/cd.yml b/.github/workflows/cd.yml\nindex 021979d..df1311f 100644\n--- a/.github/workflows/cd.yml\n+++ b/.github/workflows/cd.yml\n@@ -6,8 +6,10 @@ env:\n   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PRJ_ID }}\n \n on:\n-  push:\n-    branches: ['master']\n+  workflow_run:\n+    workflows: ['CI Workflow']\n+    types:\n+      - completed\n \n jobs:\n   Deploy-Production:\ndiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\nindex 48caeb0..60fa6d7 100644\n--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -1,4 +1,4 @@\n-name: CI actions\n+name: CI Workflow\n \n on:\n   push:\n---",
+      "metadata": {
+        "sha": "16ca602bb8d3400ac95d3a189a59dc7b3fbf79b3",
+        "author": "SABONGSEOK",
+        "date": "2025-08-03T03:09:30Z",
+        "message": "CI 단계 성공시 CD 진행",
+        "fileCount": 2
+      }
+    },
+    {
+      "id": "d6e7de73a6d6546490dc5a1045ff37fac040eb84",
+      "type": "commit",
+      "content": "Commit: d6e7de73a6d6546490dc5a1045ff37fac040eb84\nAuthor: SABONGSEOK\nDate: 2025-08-03T03:03:04Z\nMessage: vercel, github actions 이중 배포 방지\n\nAffected Files:\n- README.md (modified) +2 -0\n\nDiff Summary:\nFile: README.md\ndiff --git a/README.md b/README.md\nindex 2636d40..a5f0986 100644\n--- a/README.md\n+++ b/README.md\n@@ -2,6 +2,8 @@\n \n ## 환경 세팅\n \n+※ github actions의 cd.yml이 완료되는 경우 vercel 배포 진행. vercel project에서 github 연동하지 않음.\n+\n ```\n   Package Manager: pnpm\n   node version: v20\n---",
+      "metadata": {
+        "sha": "d6e7de73a6d6546490dc5a1045ff37fac040eb84",
+        "author": "SABONGSEOK",
+        "date": "2025-08-03T03:03:04Z",
+        "message": "vercel, github actions 이중 배포 방지",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "9daaa5fa85eca706e3ecfa3d7317282403e83689",
+      "type": "commit",
+      "content": "Commit: 9daaa5fa85eca706e3ecfa3d7317282403e83689\nAuthor: SABONGSEOK\nDate: 2025-08-03T02:49:57Z\nMessage: cd.yml 오류 보완\n\nAffected Files:\n- .github/workflows/cd.yml (modified) +18 -6\n\nDiff Summary:\nFile: .github/workflows/cd.yml\ndiff --git a/.github/workflows/cd.yml b/.github/workflows/cd.yml\nindex 5e644d9..021979d 100644\n--- a/.github/workflows/cd.yml\n+++ b/.github/workflows/cd.yml\n@@ -2,8 +2,8 @@ name: Vercel Production Deployment\n \n # 환경변수 세팅\n env:\n-  VERCEL_ORG_ID: ${{secrets.VERCEL_ORG_ID}}\n-  VERCEL_PROJECT_ID: ${{secrets.VERCEL_PRJ_ID}}\n+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}\n+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PRJ_ID }}\n \n on:\n   push:\n@@ -20,13 +20,25 @@ jobs:\n         run: npm install -g pnpm\n \n       - name: Install Vercel CLI\n-        run: pnpm setup && pnpm add -g vercel@canary\n+        run: |\n+          export PNPM_HOME=\"/home/runner/.local/share/pnpm\"\n+          export PATH=\"$PNPM_HOME:$PATH\"\n+          pnpm add -g vercel@canary\n \n       - name: Pull Vercel Environment Information\n-        run: vercel pull --yes --environment=production --token=${{secrets.VERCEL_TOKEN}}\n+        run: |\n+          export PNPM_HOME=\"/home/runner/.local/share/pnpm\"\n+          export PATH=\"$PNPM_HOME:$PATH\"\n+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}\n \n       - name: Build Project Artifacts\n-        run: vercel build --prod --token=${{secrets.VERCEL_TOKEN}}\n+        run: |\n+          export PNPM_HOME=\"/home/runner/.local/share/pnpm\"\n+          export PATH=\"$PNPM_HOME:$PATH\"\n+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}\n \n       - name: Deploy Project Artifacts to Vercel\n-        run: vercel deploy --prebuilt --prod --token=${{secrets.VERCEL_TOKEN}}\n+        run: |\n+          export PNPM_HOME=\"/home/runner/.local/share/pnpm\"\n+          export PATH=\"$PNPM_HOME:$PATH\"\n+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}\n---",
+      "metadata": {
+        "sha": "9daaa5fa85eca706e3ecfa3d7317282403e83689",
+        "author": "SABONGSEOK",
+        "date": "2025-08-03T02:49:57Z",
+        "message": "cd.yml 오류 보완",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "0d330eaffdf4badfd490d5872716745a08b312c1",
+      "type": "commit",
+      "content": "Commit: 0d330eaffdf4badfd490d5872716745a08b312c1\nAuthor: SABONGSEOK\nDate: 2025-08-03T02:38:50Z\nMessage: cd.yml 오류 보완\n\nAffected Files:\n- .github/workflows/cd.yml (modified) +1 -1\n\nDiff Summary:\nFile: .github/workflows/cd.yml\ndiff --git a/.github/workflows/cd.yml b/.github/workflows/cd.yml\nindex 1f8a474..5e644d9 100644\n--- a/.github/workflows/cd.yml\n+++ b/.github/workflows/cd.yml\n@@ -20,7 +20,7 @@ jobs:\n         run: npm install -g pnpm\n \n       - name: Install Vercel CLI\n-        run: pnpm add -g vercel@canary\n+        run: pnpm setup && pnpm add -g vercel@canary\n \n       - name: Pull Vercel Environment Information\n         run: vercel pull --yes --environment=production --token=${{secrets.VERCEL_TOKEN}}\n---",
+      "metadata": {
+        "sha": "0d330eaffdf4badfd490d5872716745a08b312c1",
+        "author": "SABONGSEOK",
+        "date": "2025-08-03T02:38:50Z",
+        "message": "cd.yml 오류 보완",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "dcfc81b44cf9e9cc5002b1069cbd2c1a69ddeab5",
+      "type": "commit",
+      "content": "Commit: dcfc81b44cf9e9cc5002b1069cbd2c1a69ddeab5\nAuthor: SABONGSEOK\nDate: 2025-08-03T02:34:07Z\nMessage: cd.yml 오류 보완\n\nAffected Files:\n- .github/workflows/cd.yml (modified) +4 -1\n\nDiff Summary:\nFile: .github/workflows/cd.yml\ndiff --git a/.github/workflows/cd.yml b/.github/workflows/cd.yml\nindex 1597d1a..1f8a474 100644\n--- a/.github/workflows/cd.yml\n+++ b/.github/workflows/cd.yml\n@@ -16,8 +16,11 @@ jobs:\n     steps:\n       - uses: actions/checkout@v4\n \n+      - name: Install pnpm\n+        run: npm install -g pnpm\n+\n       - name: Install Vercel CLI\n-        run: npm install -g vercel@canary\n+        run: pnpm add -g vercel@canary\n \n       - name: Pull Vercel Environment Information\n         run: vercel pull --yes --environment=production --token=${{secrets.VERCEL_TOKEN}}\n---",
+      "metadata": {
+        "sha": "dcfc81b44cf9e9cc5002b1069cbd2c1a69ddeab5",
+        "author": "SABONGSEOK",
+        "date": "2025-08-03T02:34:07Z",
+        "message": "cd.yml 오류 보완",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "43f44835560c5c28253a90d437d6e7b0ea4bcd02",
+      "type": "commit",
+      "content": "Commit: 43f44835560c5c28253a90d437d6e7b0ea4bcd02\nAuthor: SABONGSEOK\nDate: 2025-08-03T01:39:57Z\nMessage: README 업데이트\n\nAffected Files:\n- README.md (modified) +12 -4\n\nDiff Summary:\nFile: README.md\ndiff --git a/README.md b/README.md\nindex 09ed0d7..2636d40 100644\n--- a/README.md\n+++ b/README.md\n@@ -1,5 +1,13 @@\n # React + TypeScript + Vite\n \n+## 환경 세팅\n+\n+```\n+  Package Manager: pnpm\n+  node version: v20\n+  deployment: vercel, github actions\n+```\n+\n This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.\n \n Currently, two official plugins are available:\n@@ -36,15 +44,15 @@ export default tseslint.config([\n       // other options...\n     }\n   }\n-])\n+]);\n ```\n \n You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:\n \n ```js\n // eslint.config.js\n-import reactX from 'eslint-plugin-react-x'\n-import reactDom from 'eslint-plugin-react-dom'\n+import reactX from 'eslint-plugin-react-x';\n+import reactDom from 'eslint-plugin-react-dom';\n \n export default tseslint.config([\n   globalIgnores(['dist']),\n@@ -65,5 +73,5 @@ export default tseslint.config([\n       // other options...\n     }\n   }\n-])\n+]);\n ```\n---",
+      "metadata": {
+        "sha": "43f44835560c5c28253a90d437d6e7b0ea4bcd02",
+        "author": "SABONGSEOK",
+        "date": "2025-08-03T01:39:57Z",
+        "message": "README 업데이트",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "d51eaa8089edc6702e715a6d6096481891827a80",
+      "type": "commit",
+      "content": "Commit: d51eaa8089edc6702e715a6d6096481891827a80\nAuthor: SABONGSEOK\nDate: 2025-07-31T09:50:08Z\nMessage: cd.yml 및 vercel 배포 완료 확인. ci-cd 브랜치 트리거 제거\n\nAffected Files:\n- .github/workflows/cd.yml (modified) +23 -23\n\nDiff Summary:\nFile: .github/workflows/cd.yml\ndiff --git a/.github/workflows/cd.yml b/.github/workflows/cd.yml\nindex 097e820..1597d1a 100644\n--- a/.github/workflows/cd.yml\n+++ b/.github/workflows/cd.yml\n@@ -2,28 +2,28 @@ name: Vercel Production Deployment\n \n # 환경변수 세팅\n env:\n-    VERCEL_ORG_ID: ${{secrets.VERCEL_ORG_ID}}\n-    VERCEL_PROJECT_ID: ${{secrets.VERCEL_PRJ_ID}}\n+  VERCEL_ORG_ID: ${{secrets.VERCEL_ORG_ID}}\n+  VERCEL_PROJECT_ID: ${{secrets.VERCEL_PRJ_ID}}\n \n-on: \n+on:\n   push:\n-    branches: ['master', 'ci-cd']\n-\n-jobs: \n-    Deploy-Production:\n-        runs-on: ubuntu-latest\n-\n-        steps:\n---\nFile: uses: actions/checkout@v4\n-\n---\nFile: name: Install Vercel CLI\n-              run: npm install -g vercel@canary\n-\n---\nFile: name: Pull Vercel Environment Information\n-              run: vercel pull --yes --environment=production --token=${{secrets.VERCEL_TOKEN}}\n-\n---\nFile: name: Build Project Artifacts\n-              run: vercel build --prod --token=${{secrets.VERCEL_TOKEN}}\n-\n---\nFile: name: Deploy Project Artifacts to Vercel\n-              run: vercel deploy --prebuilt --prod --token=${{secrets.VERCEL_TOKEN}}\n+    branches: ['master']\n+\n+jobs:\n+  Deploy-Production:\n+    runs-on: ubuntu-latest\n+\n+    steps:\n+      - uses: actions/checkout@v4\n+\n+      - name: Install Vercel CLI\n+        run: npm install -g vercel@canary\n+\n+      - name: Pull Vercel Environment Information\n+        run: vercel pull --yes --environment=production --token=${{secrets.VERCEL_TOKEN}}\n+\n+      - name: Build Project Artifacts\n+        run: vercel build --prod --token=${{secrets.VERCEL_TOKEN}}\n+\n+      - name: Deploy Project Artifacts to Vercel\n+        run: vercel deploy --prebuilt --prod --token=${{secrets.VERCEL_TOKEN}}\n---",
+      "metadata": {
+        "sha": "d51eaa8089edc6702e715a6d6096481891827a80",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T09:50:08Z",
+        "message": "cd.yml 및 vercel 배포 완료 확인. ci-cd 브랜치 트리거 제거",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "587c7c43d71731ccc832ab8df7bd41354baa9973",
+      "type": "commit",
+      "content": "Commit: 587c7c43d71731ccc832ab8df7bd41354baa9973\nAuthor: bongseoksa\nDate: 2025-07-31T09:38:07Z\nMessage: Create cd.yml\n\nAffected Files:\n- .github/workflows/cd.yml (added) +29 -0\n\nDiff Summary:\nFile: .github/workflows/cd.yml\ndiff --git a/.github/workflows/cd.yml b/.github/workflows/cd.yml\nnew file mode 100644\nindex 0000000..097e820\n--- /dev/null\n+++ b/.github/workflows/cd.yml\n@@ -0,0 +1,29 @@\n+name: Vercel Production Deployment\n+\n+# 환경변수 세팅\n+env:\n+    VERCEL_ORG_ID: ${{secrets.VERCEL_ORG_ID}}\n+    VERCEL_PROJECT_ID: ${{secrets.VERCEL_PRJ_ID}}\n+\n+on: \n+  push:\n+    branches: ['master', 'ci-cd']\n+\n+jobs: \n+    Deploy-Production:\n+        runs-on: ubuntu-latest\n+\n+        steps:\n+            - uses: actions/checkout@v4\n+\n+            - name: Install Vercel CLI\n+              run: npm install -g vercel@canary\n+\n+            - name: Pull Vercel Environment Information\n+              run: vercel pull --yes --environment=production --token=${{secrets.VERCEL_TOKEN}}\n+            \n+            - name: Build Project Artifacts\n+              run: vercel build --prod --token=${{secrets.VERCEL_TOKEN}}\n+            \n+            - name: Deploy Project Artifacts to Vercel\n+              run: vercel deploy --prebuilt --prod --token=${{secrets.VERCEL_TOKEN}}\n---",
+      "metadata": {
+        "sha": "587c7c43d71731ccc832ab8df7bd41354baa9973",
+        "author": "bongseoksa",
+        "date": "2025-07-31T09:38:07Z",
+        "message": "Create cd.yml",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "4e59e1fbc1ac1002055fe851c80842f2747460db",
+      "type": "commit",
+      "content": "Commit: 4e59e1fbc1ac1002055fe851c80842f2747460db\nAuthor: SABONGSEOK\nDate: 2025-07-31T08:32:16Z\nMessage: ci.yml 동작 확인 완료. ci-cd 브랜치 트리거 제거\n\nAffected Files:\n- .github/workflows/ci.yml (modified) +2 -2\n\nDiff Summary:\nFile: .github/workflows/ci.yml\ndiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\nindex 760bbcb..48caeb0 100644\n--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -2,9 +2,9 @@ name: CI actions\n \n on:\n   push:\n-    branches: ['master', 'ci-cd']\n+    branches: ['master']\n   pull_request:\n-    branches: ['master', 'ci-cd']\n+    branches: ['master']\n \n jobs:\n   # 의존성 설치\n---",
+      "metadata": {
+        "sha": "4e59e1fbc1ac1002055fe851c80842f2747460db",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T08:32:16Z",
+        "message": "ci.yml 동작 확인 완료. ci-cd 브랜치 트리거 제거",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "ac84c76de6ce21def6504dc516063f5db051ad80",
+      "type": "commit",
+      "content": "Commit: ac84c76de6ce21def6504dc516063f5db051ad80\nAuthor: SABONGSEOK\nDate: 2025-07-31T08:30:24Z\nMessage: fix: pnpm not found\n\nAffected Files:\n- .github/workflows/ci.yml (modified) +6 -0\n\nDiff Summary:\nFile: .github/workflows/ci.yml\ndiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\nindex 9cc310a..760bbcb 100644\n--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -48,6 +48,9 @@ jobs:\n         with:\n           node-version: '20'\n \n+      - name: Install pnpm\n+        run: npm install -g pnpm\n+\n       - name: Restore node modules from cache\n         id: restore-node-modules\n         uses: actions/cache@v3\n@@ -73,6 +76,9 @@ jobs:\n         with:\n           node-version: '20'\n \n+      - name: Install pnpm\n+        run: npm install -g pnpm\n+\n       - name: Restore node modules from cache\n         id: restore-node-modules\n         uses: actions/cache@v3\n---",
+      "metadata": {
+        "sha": "ac84c76de6ce21def6504dc516063f5db051ad80",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T08:30:24Z",
+        "message": "fix: pnpm not found",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "96e2b86be2e89145542b741fa61ad849c85f0894",
+      "type": "commit",
+      "content": "Commit: 96e2b86be2e89145542b741fa61ad849c85f0894\nAuthor: SABONGSEOK\nDate: 2025-07-31T08:26:33Z\nMessage: ci 액션 테스트\n\nAffected Files:\n- .github/workflows/ci.yml (modified) +9 -7\n\nDiff Summary:\nFile: .github/workflows/ci.yml\ndiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\nindex 1ffd53e..9cc310a 100644\n--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -19,8 +19,11 @@ jobs:\n         with:\n           node-version: '20'\n \n+      - name: Install pnpm\n+        run: npm install -g pnpm\n+\n       - name: Restore node modules from cache\n-        id: resotre-node-modules\n+        id: restore-node-modules\n         uses: actions/cache@v3\n         with:\n           path: node_modules\n@@ -28,7 +31,7 @@ jobs:\n           restore-keys: ${{runner.os}}-node\n \n       - name: Install dependencies\n-        if: steps.resotre-node-modules.outputs.cache-hit != 'true'\n+        if: steps.restore-node-modules.outputs.cache-hit != 'true'\n         run: pnpm install\n         working-directory: ./\n \n@@ -46,7 +49,7 @@ jobs:\n           node-version: '20'\n \n       - name: Restore node modules from cache\n-        id: resotre-node-modules\n+        id: restore-node-modules\n         uses: actions/cache@v3\n         with:\n           path: node_modules\n@@ -54,8 +57,7 @@ jobs:\n           restore-keys: ${{runner.os}}-node\n \n       - name: Run Lint\n-        if: steps.resotre-node-modules.outputs.cache-hit != 'true'\n-        run: npm run lint\n+        run: pnpm run lint\n         working-directory: ./\n \n   # Build\n@@ -72,10 +74,10 @@ jobs:\n           node-version: '20'\n \n       - name: Restore node modules from cache\n-        id: resotre-node-modules\n+        id: restore-node-modules\n         uses: actions/cache@v3\n         with:\n-          path: week-3/node_modules\n+          path: node_modules\n           key: ${{runner.os}}-node-${{hashFiles('pnpm-lock.yaml')}}\n           restore-keys: ${{runner.os}}-node\n---",
+      "metadata": {
+        "sha": "96e2b86be2e89145542b741fa61ad849c85f0894",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T08:26:33Z",
+        "message": "ci 액션 테스트",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "5bae606e974bb04bf487096f236844f9fde05656",
+      "type": "commit",
+      "content": "Commit: 5bae606e974bb04bf487096f236844f9fde05656\nAuthor: SABONGSEOK\nDate: 2025-07-31T08:13:43Z\nMessage: ci-cd 브랜치에서 ci.yml 동작 테스트\n\nAffected Files:\n- .github/workflows/ci.yml (modified) +5 -5\n\nDiff Summary:\nFile: .github/workflows/ci.yml\ndiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\nindex 169a617..1ffd53e 100644\n--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -2,13 +2,13 @@ name: CI actions\n \n on:\n   push:\n-    branches: [ \"master\" ]\n+    branches: ['master', 'ci-cd']\n   pull_request:\n-    branches: [ \"master\" ]\n+    branches: ['master', 'ci-cd']\n \n jobs:\n   # 의존성 설치\n-  install-dependencies: \n+  install-dependencies:\n     runs-on: ubuntu-latest\n     steps:\n       - name: Checkout repository\n@@ -36,7 +36,7 @@ jobs:\n   lint:\n     runs-on: ubuntu-latest\n     needs: install-dependencies\n-    steps: \n+    steps:\n       - name: Checkout repository\n         uses: actions/checkout@v4\n \n@@ -62,7 +62,7 @@ jobs:\n   build:\n     runs-on: ubuntu-latest\n     needs: [lint]\n-    steps: \n+    steps:\n       - name: Checkout repository\n         uses: actions/checkout@v4\n---",
+      "metadata": {
+        "sha": "5bae606e974bb04bf487096f236844f9fde05656",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T08:13:43Z",
+        "message": "ci-cd 브랜치에서 ci.yml 동작 테스트",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "2d82bafa22354b1a64067b00e3de1fc6d36225c3",
+      "type": "commit",
+      "content": "Commit: 2d82bafa22354b1a64067b00e3de1fc6d36225c3\nAuthor: SABONGSEOK\nDate: 2025-07-31T08:12:33Z\nMessage: github actions 테스트용 파일 제거\n\nAffected Files:\n- .github/workflows/working-test.yml (removed) +0 -23\n\nDiff Summary:\nFile: .github/workflows/working-test.yml\ndiff --git a/.github/workflows/working-test.yml b/.github/workflows/working-test.yml\ndeleted file mode 100644\nindex 313931c..0000000\n--- a/.github/workflows/working-test.yml\n+++ /dev/null\n@@ -1,23 +0,0 @@\n-name: working test actions\n-\n-on:\n-  push:\n-    branches: [ \"ci-cd\" ]\n-  pull_request:\n-    branches: [ \"ci-cd\" ]\n-\n-jobs:\n-  # 동작 테스트\n-  work-test:\n-    runs-on: ubuntu-latest\n-    steps:\n---\nFile: name: Checkout repository\n-      uses: actions/checkout@v4\n-\n---\nFile: name: Run a one-line script\n-      run: echo Hello, world!\n-\n---\nFile: name: Run a multi-line script\n-      run: |\n-        echo Add other actions to build,\n-        echo test, and deploy your project.\n---",
+      "metadata": {
+        "sha": "2d82bafa22354b1a64067b00e3de1fc6d36225c3",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T08:12:33Z",
+        "message": "github actions 테스트용 파일 제거",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "53b20fe837be3a23243d89da9439dcd8c35638ef",
+      "type": "commit",
+      "content": "Commit: 53b20fe837be3a23243d89da9439dcd8c35638ef\nAuthor: SABONGSEOK\nDate: 2025-07-31T08:10:14Z\nMessage: pnpm lint, pnpm build 오류 보완\n\nAffected Files:\n- src/components/ui/alert-dialog.tsx (modified) +1 -1\n- src/components/ui/button-variants.ts (added) +27 -0\n- src/components/ui/button.tsx (modified) +12 -44\n- src/components/ui/calendar.tsx (modified) +1 -1\n- src/components/ui/pagination.tsx (modified) +41 -59\n- src/components/ui/toaster.tsx (modified) +1 -1\n- src/components/ui/toggle-group.tsx (modified) +1 -1\n- src/components/ui/toggle-variants.ts (added) +22 -0\n- src/components/ui/toggle.tsx (modified) +3 -23\n\nDiff Summary:\nFile: src/components/ui/toggle.tsx\ndiff --git a/src/components/ui/alert-dialog.tsx b/src/components/ui/alert-dialog.tsx\nindex d470691..b7df7a6 100644\n--- a/src/components/ui/alert-dialog.tsx\n+++ b/src/components/ui/alert-dialog.tsx\n@@ -4,7 +4,7 @@ import * as React from 'react';\n import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';\n \n import { cn } from '@/lib/utils';\n-import { buttonVariants } from '@/components/ui/button';\n+import { buttonVariants } from '@/components/ui/button-variants';\n \n const AlertDialog = AlertDialogPrimitive.Root;\n \ndiff --git a/src/components/ui/button-variants.ts b/src/components/ui/button-variants.ts\nnew file mode 100644\nindex 0000000..3d5aaeb\n--- /dev/null\n+++ b/src/components/ui/button-variants.ts\n@@ -0,0 +1,27 @@\n+import { cva } from 'class-variance-authority';\n+\n+export const buttonVariants = cva(\n+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',\n+  {\n+    variants: {\n+      variant: {\n+        default: 'bg-primary text-primary-foreground hover:bg-primary/90',\n+        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',\n+        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',\n+        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',\n+        ghost: 'hover:bg-accent hover:text-accent-foreground',\n+        link: 'text-primary underline-offset-4 hover:underline'\n+      },\n+      size: {\n+        default: 'h-10 px-4 py-2',\n+        sm: 'h-9 rounded-md px-3',\n+        lg: 'h-11 rounded-md px-8',\n+        icon: 'h-10 w-10'\n+      }\n+    },\n+    defaultVariants: {\n+      variant: 'default',\n+      size: 'default'\n+    }\n+  }\n+);\ndiff --git a/src/components/ui/butto\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "53b20fe837be3a23243d89da9439dcd8c35638ef",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T08:10:14Z",
+        "message": "pnpm lint, pnpm build 오류 보완",
+        "fileCount": 9
+      }
+    },
+    {
+      "id": "5bfc971a1d1e16f70d19ce8d8a6187685cbaf74e",
+      "type": "commit",
+      "content": "Commit: 5bfc971a1d1e16f70d19ce8d8a6187685cbaf74e\nAuthor: SABONGSEOK\nDate: 2025-07-31T07:50:25Z\nMessage: Merge branch 'ci-cd' of https://github.com/bongseoksa/portfolio into ci-cd\n\nAffected Files:\n- .github/workflows/working-test.yml (added) +23 -0\n\nDiff Summary:\nFile: .github/workflows/working-test.yml\n\n---",
+      "metadata": {
+        "sha": "5bfc971a1d1e16f70d19ce8d8a6187685cbaf74e",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T07:50:25Z",
+        "message": "Merge branch 'ci-cd' of https://github.com/bongseoksa/portfolio into ci-cd",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "2107e9ac65d912a64b96641fb3ccf37cb26f7ced",
+      "type": "commit",
+      "content": "Commit: 2107e9ac65d912a64b96641fb3ccf37cb26f7ced\nAuthor: SABONGSEOK\nDate: 2025-07-31T07:50:18Z\nMessage: pnpm build 수정\n\nAffected Files:\n- package.json (modified) +1 -0\n- pnpm-lock.yaml (modified) +14 -0\n- src/components/ui/button.tsx (modified) +1 -1\n- src/components/ui/sidebar.tsx (modified) +1 -1\n- src/components/ui/toaster.tsx (modified) +21 -11\n- src/components/ui/toggle-group.tsx (modified) +3 -2\n- src/components/ui/toggle.tsx (modified) +1 -1\n\nDiff Summary:\nFile: src/components/ui/toggle.tsx\ndiff --git a/package.json b/package.json\nindex 57b806f..d441001 100644\n--- a/package.json\n+++ b/package.json\n@@ -48,6 +48,7 @@\n     \"input-otp\": \"1.4.1\",\n     \"lucide-react\": \"^0.454.0\",\n     \"motion\": \"^12.23.6\",\n+    \"next-themes\": \"^0.4.6\",\n     \"react\": \"^19\",\n     \"react-day-picker\": \"8.10.1\",\n     \"react-dom\": \"^19\",\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex cad0821..6791da2 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -122,6 +122,9 @@ importers:\n       motion:\n         specifier: ^12.23.6\n         version: 12.23.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+      next-themes:\n+        specifier: ^0.4.6\n+        version: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n       react:\n         specifier: ^19\n         version: 19.1.0\n@@ -2604,6 +2607,12 @@ packages:\n   natural-compare@1.4.0:\n     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}\n \n+  next-themes@0.4.6:\n+    resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}\n+    peerDependencies:\n+      react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc\n+      react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc\n+\n   node-releases@2.0.19:\n     resolution: {integrity: sha512-xxOWJsBKtzAq7DY0J+DTzuz58K8e7sJbdgwkbMWQe8UYB6ekmsQ45q0M/tJDsGaZmbC+l7n57UV8Hl5tHxO9uw==}\n \n@@ -5762,6 +5771,11 @@ snapshots:\n \n   natural-compare@1.4.0: {}\n \n+  next-themes@0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0):\n+    dependencies:\n+      react: 19.1.0\n+      react-dom: 19.1.0(react@19.1.0)\n+\n   node-releases@2.0.19: {}\n \n   normalize-path@3.0.0: {}\ndiff --git a/src/components/ui/button.tsx b/src/components/ui/button.tsx\nindex a790175..36496a2 100644\n--- a/src/components/ui/button.tsx\n+++ b/src/components/ui/button.tsx\n@@ -53,4 +53,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(\n )\n Button.displayName = \"Button\"\n \n-export { Button }\n+export { Button, b\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "2107e9ac65d912a64b96641fb3ccf37cb26f7ced",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T07:50:18Z",
+        "message": "pnpm build 수정",
+        "fileCount": 7
+      }
+    },
+    {
+      "id": "1cd79fbbe42ab6ddfacaa85598435abe5a244698",
+      "type": "commit",
+      "content": "Commit: 1cd79fbbe42ab6ddfacaa85598435abe5a244698\nAuthor: bongseoksa\nDate: 2025-07-31T07:37:18Z\nMessage: Create working-test.yml\n\nAffected Files:\n- .github/workflows/working-test.yml (added) +23 -0\n\nDiff Summary:\nFile: .github/workflows/working-test.yml\ndiff --git a/.github/workflows/working-test.yml b/.github/workflows/working-test.yml\nnew file mode 100644\nindex 0000000..313931c\n--- /dev/null\n+++ b/.github/workflows/working-test.yml\n@@ -0,0 +1,23 @@\n+name: working test actions\n+\n+on:\n+  push:\n+    branches: [ \"ci-cd\" ]\n+  pull_request:\n+    branches: [ \"ci-cd\" ]\n+\n+jobs:\n+  # 동작 테스트\n+  work-test:\n+    runs-on: ubuntu-latest\n+    steps:\n+    - name: Checkout repository\n+      uses: actions/checkout@v4\n+        \n+    - name: Run a one-line script\n+      run: echo Hello, world!\n+\n+    - name: Run a multi-line script\n+      run: |\n+        echo Add other actions to build,\n+        echo test, and deploy your project.\n---",
+      "metadata": {
+        "sha": "1cd79fbbe42ab6ddfacaa85598435abe5a244698",
+        "author": "bongseoksa",
+        "date": "2025-07-31T07:37:18Z",
+        "message": "Create working-test.yml",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "5e4c2f9c2b4fcfc4128e58f88148e05aefe4ba07",
+      "type": "commit",
+      "content": "Commit: 5e4c2f9c2b4fcfc4128e58f88148e05aefe4ba07\nAuthor: SABONGSEOK\nDate: 2025-07-31T07:25:00Z\nMessage: merge commit\n\nAffected Files:\n(No file changes detected or fetched)\n\nDiff Summary:\n(No diff details available)",
+      "metadata": {
+        "sha": "5e4c2f9c2b4fcfc4128e58f88148e05aefe4ba07",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T07:25:00Z",
+        "message": "merge commit",
+        "fileCount": 0
+      }
+    },
+    {
+      "id": "e0efe9ee28aba2f8522d4f13205bce8e2fa9eaa8",
+      "type": "commit",
+      "content": "Commit: e0efe9ee28aba2f8522d4f13205bce8e2fa9eaa8\nAuthor: SABONGSEOK\nDate: 2025-07-31T07:22:08Z\nMessage: Merge branch 'ci-cd' of https://github.com/bongseoksa/portfolio into ci-cd\n\nAffected Files:\n- .github/workflows/ci.yml (added) +84 -0\n\nDiff Summary:\nFile: .github/workflows/ci.yml\n\n---",
+      "metadata": {
+        "sha": "e0efe9ee28aba2f8522d4f13205bce8e2fa9eaa8",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T07:22:08Z",
+        "message": "Merge branch 'ci-cd' of https://github.com/bongseoksa/portfolio into ci-cd",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "a7c363f99b481dd64324386181bc0e2cf37e717a",
+      "type": "commit",
+      "content": "Commit: a7c363f99b481dd64324386181bc0e2cf37e717a\nAuthor: SABONGSEOK\nDate: 2025-07-31T07:21:37Z\nMessage: pnpm lint 수정\n\nAffected Files:\n- src/components/HeroAbout.tsx (modified) +10 -7\n- src/components/ui/badge.tsx (modified) +1 -1\n- src/components/ui/button.tsx (modified) +1 -1\n- src/components/ui/calendar.tsx (modified) +38 -45\n- src/components/ui/chart.tsx (modified) +136 -172\n- src/components/ui/form.tsx (modified) +0 -1\n- src/components/ui/navigation-menu.tsx (modified) +0 -1\n- src/components/ui/sidebar.tsx (modified) +1 -2\n- src/components/ui/toggle.tsx (modified) +1 -1\n- src/components/ui/use-toast.ts (modified) +85 -92\n- tailwind.config.ts (modified) +5 -4\n\nDiff Summary:\nFile: tailwind.config.ts\ndiff --git a/src/components/HeroAbout.tsx b/src/components/HeroAbout.tsx\nindex 31419a7..fe0e6c3 100644\n--- a/src/components/HeroAbout.tsx\n+++ b/src/components/HeroAbout.tsx\n@@ -1,7 +1,7 @@\n 'use client';\n \n import { AnimatePresence, motion, wrap } from 'motion/react';\n-import { forwardRef, useEffect, useRef, useState } from 'react';\n+import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';\n import { useTranslation } from 'react-i18next';\n \n export default function UsePresenceData() {\n@@ -11,6 +11,14 @@ export default function UsePresenceData() {\n   const [selectedItem, setSelectedItem] = useState(items[0]);\n   const selectedItemRef = useRef(selectedItem);\n \n+  const setSlide = useCallback(\n+    (newDirection: 1 | -1) => {\n+      const nextItem = wrap(0, items.length, selectedItemRef.current + newDirection);\n+      setSelectedItem(nextItem);\n+    },\n+    [items.length]\n+  );\n+\n   // selectedItem이 변경될 때마다 ref 업데이트\n   useEffect(() => {\n     selectedItemRef.current = selectedItem;\n@@ -19,12 +27,7 @@ export default function UsePresenceData() {\n   useEffect(() => {\n     const slideInterval = setInterval(() => setSlide(1), 6000);\n     return () => clearInterval(slideInterval);\n-  }, []);\n-\n-  function setSlide(newDirection: 1 | -1) {\n-    const nextItem = wrap(0, items.length, selectedItemRef.current + newDirection);\n-    setSelectedItem(nextItem);\n-  }\n+  }, [setSlide]);\n \n   return (\n     <div>\ndiff --git a/src/components/ui/badge.tsx b/src/components/ui/badge.tsx\nindex aaa67f6..e23400f 100644\n--- a/src/components/ui/badge.tsx\n+++ b/src/components/ui/badge.tsx\n@@ -30,4 +30,4 @@ function Badge({ className, variant, ...props }: BadgeProps) {\n   return <div className={cn(badgeVariants({ variant }), className)} {...props} />;\n }\n \n-export { Badge, badgeVariants };\n+export { Badge };\ndiff --git a/src/components/ui/button.tsx b/src/components/ui/button.tsx\nindex 36496a2..a790175 100644\n--- a/src/components/ui/button.tsx\n+++ b/src/components/ui/button.tsx\n@\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "a7c363f99b481dd64324386181bc0e2cf37e717a",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T07:21:37Z",
+        "message": "pnpm lint 수정",
+        "fileCount": 11
+      }
+    },
+    {
+      "id": "0e36dd00124aafc4f196f3b0b6160f8cfbbdb013",
+      "type": "commit",
+      "content": "Commit: 0e36dd00124aafc4f196f3b0b6160f8cfbbdb013\nAuthor: bongseoksa\nDate: 2025-07-31T07:15:15Z\nMessage: Create ci.yml\n\nAffected Files:\n- .github/workflows/ci.yml (added) +84 -0\n\nDiff Summary:\nFile: .github/workflows/ci.yml\ndiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\nnew file mode 100644\nindex 0000000..169a617\n--- /dev/null\n+++ b/.github/workflows/ci.yml\n@@ -0,0 +1,84 @@\n+name: CI actions\n+\n+on:\n+  push:\n+    branches: [ \"master\" ]\n+  pull_request:\n+    branches: [ \"master\" ]\n+\n+jobs:\n+  # 의존성 설치\n+  install-dependencies: \n+    runs-on: ubuntu-latest\n+    steps:\n+      - name: Checkout repository\n+        uses: actions/checkout@v4\n+\n+      - name: Setup Node.js\n+        uses: actions/setup-node@v4\n+        with:\n+          node-version: '20'\n+\n+      - name: Restore node modules from cache\n+        id: resotre-node-modules\n+        uses: actions/cache@v3\n+        with:\n+          path: node_modules\n+          key: ${{runner.os}}-node-${{hashFiles('pnpm-lock.yaml')}}\n+          restore-keys: ${{runner.os}}-node\n+\n+      - name: Install dependencies\n+        if: steps.resotre-node-modules.outputs.cache-hit != 'true'\n+        run: pnpm install\n+        working-directory: ./\n+\n+  # lint 확인 및 수정\n+  lint:\n+    runs-on: ubuntu-latest\n+    needs: install-dependencies\n+    steps: \n+      - name: Checkout repository\n+        uses: actions/checkout@v4\n+\n+      - name: Setup Node.js\n+        uses: actions/setup-node@v4\n+        with:\n+          node-version: '20'\n+\n+      - name: Restore node modules from cache\n+        id: resotre-node-modules\n+        uses: actions/cache@v3\n+        with:\n+          path: node_modules\n+          key: ${{runner.os}}-node-${{hashFiles('pnpm-lock.yaml')}}\n+          restore-keys: ${{runner.os}}-node\n+\n+      - name: Run Lint\n+        if: steps.resotre-node-modules.outputs.cache-hit != 'true'\n+        run: npm run lint\n+        working-directory: ./\n+\n+  # Build\n+  build:\n+    runs-on: ubuntu-latest\n+    needs: [lint]\n+    steps: \n+      - name: Checkout repository\n+        uses: actions/checkout@v4\n+\n+      - name: Setup Node.js\n+        uses: actions/setup-node@v4\n+        with:\n+          node-version: '20'\n+\n+      - name: Restore node module\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "0e36dd00124aafc4f196f3b0b6160f8cfbbdb013",
+        "author": "bongseoksa",
+        "date": "2025-07-31T07:15:15Z",
+        "message": "Create ci.yml",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "9bbbc769e1bf4c76610d5a9bfbf8ab6634421394",
+      "type": "commit",
+      "content": "Commit: 9bbbc769e1bf4c76610d5a9bfbf8ab6634421394\nAuthor: SABONGSEOK\nDate: 2025-07-31T03:26:31Z\nMessage: simpleIcon 컴포넌트화, ElementRef -> ComponentRef\n\nAffected Files:\n- src/components/Footer.tsx (modified) +14 -17\n- src/components/Header.tsx (modified) +18 -21\n- src/components/ProjectsSection.tsx (modified) +2 -8\n- src/components/SimpleIcon.tsx (added) +16 -0\n- src/components/ui/accordion.tsx (modified) +16 -16\n- src/components/ui/alert-dialog.tsx (modified) +42 -66\n- src/components/ui/avatar.tsx (modified) +17 -20\n- src/components/ui/checkbox.tsx (modified) +11 -13\n- src/components/ui/command.tsx (modified) +43 -53\n- src/components/ui/context-menu.tsx (modified) +55 -66\n- src/components/ui/dialog.tsx (modified) +35 -53\n- src/components/ui/drawer.tsx (modified) +36 -54\n- src/components/ui/dropdown-menu.tsx (modified) +55 -68\n- src/components/ui/form.tsx (modified) +63 -72\n- src/components/ui/hover-card.tsx (modified) +12 -12\n- src/components/ui/input-otp.tsx (modified) +29 -29\n- src/components/ui/label.tsx (modified) +13 -18\n- src/components/ui/menubar.tsx (modified) +75 -90\n- src/components/ui/navigation-menu.tsx (modified) +37 -45\n- src/components/ui/popover.tsx (modified) +12 -12\n- src/components/ui/progress.tsx (modified) +9 -12\n- src/components/ui/radio-group.tsx (modified) +15 -21\n- src/components/ui/scroll-area.tsx (modified) +16 -18\n- src/components/ui/select.tsx (modified) +44 -51\n- src/components/ui/separator.tsx (modified) +20 -25\n- src/components/ui/sheet.tsx (modified) +46 -65\n- src/components/ui/sidebar.tsx (modified) +367 -394\n- src/components/ui/slider.tsx (modified) +9 -12\n- src/components/ui/switch.tsx (modified) +10 -10\n- src/components/ui/tabs.tsx (modified) +18 -18\n- src/components/ui/toast.tsx (modified) +43 -48\n- src/components/ui/toggle-group.tsx (modified) +22 -26\n- src/components/ui/toggle.tsx (modified) +21 -23\n- src/components/ui/tooltip.tsx (modified) +12 -12\n\nDiff Summary:\nFile: src/components/ui/tooltip.tsx\ndiff --git a/src/components/Footer.tsx b/src/components/Footer.tsx\nindex 8d15d6b..08768d5 100644\n--- a/src/components/Footer.tsx\n+++ b/src/components/Footer.tsx\n@@ -1,42 +1,39 @@\n-import type React from \"react\"\n-import { useTranslation } from \"react-i18next\"\n-import { Mail, Github, Linkedin } from \"lucide-react\"\n+import type React from 'react';\n+import { useTranslation } from 'react-i18next';\n+import { Mail } from 'lucide-react';\n+import SimpleIcon from './SimpleIcon';\n+import { siGithub } from 'simple-icons';\n \n const Footer: React.FC = () => {\n-  const { t } = useTranslation()\n+  const { t } = useTranslation();\n \n   return (\n     <footer className=\"border-t py-6 md:py-0\">\n       <div className=\"container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row\">\n         <div className=\"flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0\">\n           <p className=\"text-center text-sm leading-loose text-muted-foreground md:text-left\">\n-            {t(\"footer.copyright\")}\n+            {t('footer.copyright')}\n           </p>\n         </div>\n         <div className=\"flex items-center space-x-4\">\n-          <a href=\"mailto:contact@example.com\" className=\"text-muted-foreground hover:text-foreground\">\n-            <Mail className=\"h-5 w-5\" />\n-          </a>\n           <a\n-            href=\"https://github.com\"\n-            target=\"_blank\"\n-            rel=\"noopener noreferrer\"\n+            href=\"mailto:contact@example.com\"\n             className=\"text-muted-foreground hover:text-foreground\"\n           >\n-            <Github className=\"h-5 w-5\" />\n+            <Mail className=\"h-5 w-5\" />\n           </a>\n           <a\n-            href=\"https://linkedin.com\"\n+            href=\"https://github.com\"\n             target=\"_blank\"\n             rel=\"noopener noreferrer\"\n             className=\"text-muted-foreground hover:text-foreground\"\n           >\n-            <Linkedin className=\"h-5 w-5\" />\n+            <SimpleIcon svgData={siGithub.svg} />\n      \n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "9bbbc769e1bf4c76610d5a9bfbf8ab6634421394",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T03:26:31Z",
+        "message": "simpleIcon 컴포넌트화, ElementRef -> ComponentRef",
+        "fileCount": 34
+      }
+    },
+    {
+      "id": "806d1757140c3bc85939621adbdc0e445b6845b9",
+      "type": "commit",
+      "content": "Commit: 806d1757140c3bc85939621adbdc0e445b6845b9\nAuthor: SABONGSEOK\nDate: 2025-07-31T03:16:19Z\nMessage: 프로젝트 추가\n\nAffected Files:\n- package.json (modified) +2 -0\n- pnpm-lock.yaml (modified) +31 -0\n- public/appliance.png (added) +0 -0\n- public/maxwork.png (added) +0 -0\n- public/placeholder-logo.png (removed) +0 -0\n- public/placeholder-logo.svg (removed) +0 -1\n- public/widearth.png (added) +0 -0\n- src/components/ProjectsSection.tsx (modified) +36 -24\n- src/components/ui/card.tsx (modified) +55 -79\n- src/data/portfolio.ts (modified) +27 -23\n- src/locales/en.json (modified) +1 -1\n- src/locales/ko.json (modified) +1 -1\n- src/types/portfolio.ts (modified) +2 -2\n\nDiff Summary:\nFile: src/types/portfolio.ts\ndiff --git a/package.json b/package.json\nindex cc8f5e6..57b806f 100644\n--- a/package.json\n+++ b/package.json\n@@ -53,8 +53,10 @@\n     \"react-dom\": \"^19\",\n     \"react-hook-form\": \"^7.54.1\",\n     \"react-i18next\": \"latest\",\n+    \"react-inlinesvg\": \"^4.2.0\",\n     \"react-resizable-panels\": \"^2.1.7\",\n     \"recharts\": \"2.15.0\",\n+    \"simple-icons\": \"^15.8.0\",\n     \"sonner\": \"^1.7.1\",\n     \"tailwind-merge\": \"^2.5.5\",\n     \"tailwindcss-animate\": \"^1.0.7\",\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex 1757325..cad0821 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -137,12 +137,18 @@ importers:\n       react-i18next:\n         specifier: latest\n         version: 15.5.3(i18next@25.3.0(typescript@5.8.3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.8.3)\n+      react-inlinesvg:\n+        specifier: ^4.2.0\n+        version: 4.2.0(react@19.1.0)\n       react-resizable-panels:\n         specifier: ^2.1.7\n         version: 2.1.9(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n       recharts:\n         specifier: 2.15.0\n         version: 2.15.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+      simple-icons:\n+        specifier: ^15.8.0\n+        version: 15.8.0\n       sonner:\n         specifier: ^1.7.1\n         version: 1.7.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n@@ -2777,6 +2783,11 @@ packages:\n     peerDependencies:\n       react: ^19.1.0\n \n+  react-from-dom@0.7.5:\n+    resolution: {integrity: sha512-CO92PmMKo/23uYPm6OFvh5CtZbMgHs/Xn+o095Lz/TZj9t8DSDhGdSOMLxBxwWI4sr0MF17KUn9yJWc5Q00R/w==}\n+    peerDependencies:\n+      react: 16.8 - 19\n+\n   react-hook-form@7.59.0:\n     resolution: {integrity: sha512-kmkek2/8grqarTJExFNjy+RXDIP8yM+QTl3QL6m6Q8b2bih4ltmiXxH7T9n+yXNK477xPh5yZT/6vD8sYGzJTA==}\n     engines: {node: '>=18.0.0'}\n@@ -2799,6 +2810,11 @@ packages:\n       typescript:\n         optional: true\n \n+  react-inlinesvg@4.2.0:\n+    resolution: {integrity: sha512-V59P6sFU7NACIbvoay9ikYKVFWyIIZFGd7w6YT1m+H7Ues0fOI6B6IftE6NPSYXXv7RHVmrncIyJeYurs3OJcA==}\n+    peerDepen\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "806d1757140c3bc85939621adbdc0e445b6845b9",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T03:16:19Z",
+        "message": "프로젝트 추가",
+        "fileCount": 13
+      }
+    },
+    {
+      "id": "75e11637ea8779219c5ea7ff81af1aea96b77b55",
+      "type": "commit",
+      "content": "Commit: 75e11637ea8779219c5ea7ff81af1aea96b77b55\nAuthor: SABONGSEOK\nDate: 2025-07-31T00:12:24Z\nMessage: 경력 정보, UI 적용\n\nAffected Files:\n- src/components/CareerSection.tsx (modified) +79 -49\n- src/data/portfolio.ts (modified) +62 -14\n- src/types/portfolio.ts (modified) +22 -16\n\nDiff Summary:\nFile: src/types/portfolio.ts\ndiff --git a/src/components/CareerSection.tsx b/src/components/CareerSection.tsx\nindex e501d12..9bd4156 100644\n--- a/src/components/CareerSection.tsx\n+++ b/src/components/CareerSection.tsx\n@@ -1,60 +1,90 @@\n-import type React from \"react\"\n-import { useTranslation } from \"react-i18next\"\n-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from \"@/components/ui/card\"\n-import { Badge } from \"@/components/ui/badge\"\n-import { MapPin } from \"lucide-react\"\n-import { experiences } from \"../data/portfolio\"\n-import type { Experience } from \"../types/portfolio\"\n+import React from 'react';\n+import { useTranslation } from 'react-i18next';\n+import { experiences } from '../data/portfolio';\n+import type { Achievement } from '../types/portfolio';\n \n const CareerSection: React.FC = () => {\n-  const { t } = useTranslation()\n+  const { t } = useTranslation();\n+\n+  // 텍스트에서 링크를 적용하는 함수\n+  const renderTextWithLinks = (text: string, links: Record<string, string>) => {\n+    if (Object.keys(links).length === 0) {\n+      return text;\n+    }\n+\n+    // 모든 링크 키워드를 정규식으로 찾아서 한 번에 처리\n+    const linkKeywords = Object.keys(links);\n+    const regex = new RegExp(`(${linkKeywords.join('|')})`, 'g');\n+\n+    const parts: (string | React.JSX.Element)[] = [];\n+    let lastIndex = 0;\n+    let match;\n+\n+    while ((match = regex.exec(text)) !== null) {\n+      const keyword = match[0];\n+      const url = links[keyword];\n+\n+      // 매치 이전 텍스트 추가\n+      if (match.index > lastIndex) {\n+        parts.push(text.slice(lastIndex, match.index));\n+      }\n+\n+      // 링크 추가\n+      parts.push(\n+        <a\n+          key={`${keyword}-${match.index}`}\n+          href={url}\n+          target=\"_blank\"\n+          rel=\"noopener noreferrer\"\n+          className=\"text-blue-600 hover:text-blue-800 underline\"\n+        >\n+          {keyword}\n+        </a>\n+      );\n+\n+      lastIndex = match.index + keyword.length;\n+    }\n+\n+    // 마지막 매치 이후 텍스트 추가\n+    if (lastIndex < text.length) {\n+      parts.push(text.slice(\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "75e11637ea8779219c5ea7ff81af1aea96b77b55",
+        "author": "SABONGSEOK",
+        "date": "2025-07-31T00:12:24Z",
+        "message": "경력 정보, UI 적용",
+        "fileCount": 3
+      }
+    },
+    {
+      "id": "780a3443489f1bf306617e66a902e1a051d65c27",
+      "type": "commit",
+      "content": "Commit: 780a3443489f1bf306617e66a902e1a051d65c27\nAuthor: SABONGSEOK\nDate: 2025-07-30T10:48:57Z\nMessage: 커리어 내용 업데이트. UI 진행 필요\n\nAffected Files:\n- src/data/portfolio.ts (modified) +37 -21\n\nDiff Summary:\nFile: src/data/portfolio.ts\ndiff --git a/src/data/portfolio.ts b/src/data/portfolio.ts\nindex ecf0e14..89539f5 100644\n--- a/src/data/portfolio.ts\n+++ b/src/data/portfolio.ts\n@@ -16,39 +16,55 @@ export const skills: {\n \n export const experiences: Experience[] = [\n   {\n-    company: '테크 스타트업',\n-    position: '시니어 프론트엔드 개발자',\n-    period: '2022.03 - 현재',\n+    company: '비트맥스',\n+    position: '프론트엔드 개발자',\n+    period: '2021.06 - 2025.02',\n     location: '서울, 대한민국',\n-    description: 'React와 TypeScript를 활용한 웹 애플리케이션 개발 및 팀 리딩',\n+    description:\n+      '산업용 CMS 솔루션을 중심으로 스마트팩토리와 디지털트윈 환경에 최적화된 웹 어플리케이션을 개발하고, Next.js, Vue.js 등 최신 프레임워크 기반의 아키텍처 설계를 주도했습니다.',\n     achievements: [\n-      '사용자 경험 개선으로 전환율 25% 향상',\n-      '컴포넌트 라이브러리 구축으로 개발 효율성 40% 증대',\n-      '주니어 개발자 3명 멘토링'\n+      '프론트엔드 파트 내 개발 협업 및 코드 리뷰 리딩',\n+      'Vue.js 2에서 Next.js로의 프레임워크 마이그레이션 주도',\n+      'B2B 산업용 CMS 솔루션 프론트엔드 개발 및 유지보수',\n+      '스마트팩토리 연계 기능 개발 및 백오피스 시스템 운영 지원',\n+      '파견 및 외주 프로젝트에 참여하며 다양한 산업 도메인 대응'\n     ]\n   },\n   {\n-    company: '디지털 에이전시',\n-    position: '프론트엔드 개발자',\n-    period: '2020.06 - 2022.02',\n+    company: '제이하이소프트',\n+    position: '웹기반 게임 개발자',\n+    period: '2020.03 - 2021.05',\n     location: '서울, 대한민국',\n-    description: '다양한 클라이언트 프로젝트의 프론트엔드 개발 담당',\n+    description:\n+      '웹 기반 보드게임 및 슬롯형 게임 콘텐츠의 클라이언트 애플리케이션을 cocos2d-js와 JavaScript 기반으로 개발했습니다.\\n퍼블리싱 플랫폼 연동과 게임 내 로직 구현을 중심으로 멀티 플랫폼 대응 작업을 수행했습니다.',\n     achievements: [\n-      '10개 이상의 웹사이트 및 웹앱 개발 완료',\n-      '반응형 디자인 구현으로 모바일 사용성 개선',\n-      '성능 최적화로 로딩 속도 50% 단축'\n+      '멀티 플랫폼 웹게임 어플리케이션 개발 및 유지보수',\n+      '신규 홀덤 게임 클라이언트 파트 개발 및 운영 지원',\n+      '자체 게임 플랫폼(타짱) 웹 서비스 연동',\n+      '슬롯 당첨 확률 계산 로직 구현'\n     ]\n   },\n   {\n-    company: 'IT 솔루션 회사',\n-    position: '주니어 프론트엔드 개발자',\n-    period: '2019.03 - 2020.05',\n+    company: '잼토즈',\n+    position: '웹기반 게임 개발자',\n+    period: '2018.10 - 2019.09',\n+    location: '서울, 대한민국',\n+    description:\n+      '웹 기반 보드게임 및 슬롯형 게임 콘텐츠의 클라이언트 애플리케이션을 cocos2d-js와 JavaScript 기반으로 개발했습니다.',\n+    achievements: ['웹게임 어플리케이션 개\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "780a3443489f1bf306617e66a902e1a051d65c27",
+        "author": "SABONGSEOK",
+        "date": "2025-07-30T10:48:57Z",
+        "message": "커리어 내용 업데이트. UI 진행 필요",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "492b66020f0441aa41723b8e4af723c7af711107",
+      "type": "commit",
+      "content": "Commit: 492b66020f0441aa41723b8e4af723c7af711107\nAuthor: SABONGSEOK\nDate: 2025-07-30T08:13:18Z\nMessage: skillSection 항목 순서 수정\n\nAffected Files:\n- src/data/portfolio.ts (modified) +2 -2\n\nDiff Summary:\nFile: src/data/portfolio.ts\ndiff --git a/src/data/portfolio.ts b/src/data/portfolio.ts\nindex 566e69e..ecf0e14 100644\n--- a/src/data/portfolio.ts\n+++ b/src/data/portfolio.ts\n@@ -10,8 +10,8 @@ export const skills: {\n   frontend: ['React', 'Next.js', 'Vue.js (V2)', 'TypeScript', 'JavaScript'],\n   stateManagement: ['Recoil', 'Zustand', 'vuex'],\n   styling: ['tailwind CSS', 'styled-components'],\n-  api: ['TanStack Query', 'Axios', 'WebRTC', 'Firebase(FCM)'],\n-  tools: ['Figma', 'Zeplin', 'Bitbucket', 'git', 'FileZilla', 'Jira', 'Confluence', 'Slack']\n+  api: ['Axios', 'TanStack Query', 'WebRTC', 'Firebase(FCM)'],\n+  tools: ['Figma', 'Zeplin', 'git', 'Bitbucket', 'FileZilla', 'Jira', 'Slack', 'Confluence']\n };\n \n export const experiences: Experience[] = [\n---",
+      "metadata": {
+        "sha": "492b66020f0441aa41723b8e4af723c7af711107",
+        "author": "SABONGSEOK",
+        "date": "2025-07-30T08:13:18Z",
+        "message": "skillSection 항목 순서 수정",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "940b30b839b5e9105e2935fb0982ca573e25512b",
+      "type": "commit",
+      "content": "Commit: 940b30b839b5e9105e2935fb0982ca573e25512b\nAuthor: SABONGSEOK\nDate: 2025-07-29T08:53:53Z\nMessage: 기술스택 업데이트\n\nAffected Files:\n- src/components/SkillsSection.tsx (modified) +32 -18\n- src/components/ui/badge.tsx (modified) +14 -17\n- src/data/portfolio.ts (modified) +69 -75\n\nDiff Summary:\nFile: src/data/portfolio.ts\ndiff --git a/src/components/SkillsSection.tsx b/src/components/SkillsSection.tsx\nindex 154dbe4..83bf88a 100644\n--- a/src/components/SkillsSection.tsx\n+++ b/src/components/SkillsSection.tsx\n@@ -1,34 +1,48 @@\n-import type React from \"react\"\n-import { useTranslation } from \"react-i18next\"\n-import { Badge } from \"@/components/ui/badge\"\n-import { skills } from \"../data/portfolio\"\n+import type React from 'react';\n+import { useTranslation } from 'react-i18next';\n+import { Badge } from '@/components/ui/badge';\n+import { skills } from '../data/portfolio';\n \n const SkillsSection: React.FC = () => {\n-  const { t } = useTranslation()\n+  const { t } = useTranslation();\n+  const { frontend, stateManagement, styling, api, tools } = skills;\n \n   return (\n     <section id=\"skills\" className=\"py-24 bg-muted/50\">\n       <div className=\"container px-4 md:px-6\">\n         <div className=\"flex flex-col items-center justify-center space-y-4 text-center\">\n           <div className=\"space-y-2\">\n-            <h2 className=\"text-3xl font-bold tracking-tighter sm:text-5xl\">{t(\"skills.title\")}</h2>\n+            <h2 className=\"text-3xl font-bold tracking-tighter sm:text-5xl\">{t('skills.title')}</h2>\n             <p className=\"max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed\">\n-              {t(\"skills.description\")}\n+              {t('skills.description')}\n             </p>\n           </div>\n         </div>\n-        <div className=\"mx-auto grid max-w-5xl gap-6 py-12\">\n-          <div className=\"flex flex-wrap justify-center gap-2\">\n-            {skills.map((skill, index) => (\n-              <Badge key={index} variant=\"secondary\" className=\"text-sm py-2 px-4\">\n-                {skill}\n-              </Badge>\n-            ))}\n-          </div>\n+        <div className=\"mx-auto flex justify-between flex-wrap max-w-5xl gap-6 py-12\">\n+          {<Skills title=\"Frontend\" skills={frontend} />}\n+          {<Skills title=\"State\" skills={stateManagement} />}\n+  \n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "940b30b839b5e9105e2935fb0982ca573e25512b",
+        "author": "SABONGSEOK",
+        "date": "2025-07-29T08:53:53Z",
+        "message": "기술스택 업데이트",
+        "fileCount": 3
+      }
+    },
+    {
+      "id": "c5a6dfd5990c367cab4bb5cf472d736d87f54502",
+      "type": "commit",
+      "content": "Commit: c5a6dfd5990c367cab4bb5cf472d736d87f54502\nAuthor: SABONGSEOK\nDate: 2025-07-29T07:34:53Z\nMessage: heroSection 디자인, 내용 적용\n\nAffected Files:\n- .prettierrc (modified) +1 -1\n- src/components/HeroAbout.tsx (modified) +48 -110\n- src/components/HeroSection.tsx (modified) +14 -27\n- src/locales/en.json (modified) +15 -4\n- src/locales/ko.json (modified) +15 -5\n\nDiff Summary:\nFile: src/locales/ko.json\ndiff --git a/.prettierrc b/.prettierrc\nindex 01942bf..789f20e 100644\n--- a/.prettierrc\n+++ b/.prettierrc\n@@ -1,5 +1,5 @@\n {\n-  \"semi\": false,\n+  \"semi\": true,\n   \"singleQuote\": true,\n   \"printWidth\": 100,\n   \"tabWidth\": 2,\ndiff --git a/src/components/HeroAbout.tsx b/src/components/HeroAbout.tsx\nindex afbbf1d..31419a7 100644\n--- a/src/components/HeroAbout.tsx\n+++ b/src/components/HeroAbout.tsx\n@@ -1,61 +1,54 @@\n-'use client'\n+'use client';\n \n-import { AnimatePresence, motion, usePresenceData, wrap } from 'motion/react'\n-import { forwardRef, SVGProps, useState } from 'react'\n+import { AnimatePresence, motion, wrap } from 'motion/react';\n+import { forwardRef, useEffect, useRef, useState } from 'react';\n+import { useTranslation } from 'react-i18next';\n \n export default function UsePresenceData() {\n-  const items = [1, 2, 3, 4, 5, 6]\n-  const [selectedItem, setSelectedItem] = useState(items[0])\n-  const [direction, setDirection] = useState<1 | -1>(1)\n+  const { t } = useTranslation();\n+  const abouts = t('hero.about', { returnObjects: true }) as unknown[];\n+  const items = Array.isArray(abouts) ? abouts.map((_, i) => i) : [0];\n+  const [selectedItem, setSelectedItem] = useState(items[0]);\n+  const selectedItemRef = useRef(selectedItem);\n+\n+  // selectedItem이 변경될 때마다 ref 업데이트\n+  useEffect(() => {\n+    selectedItemRef.current = selectedItem;\n+  }, [selectedItem]);\n+\n+  useEffect(() => {\n+    const slideInterval = setInterval(() => setSlide(1), 6000);\n+    return () => clearInterval(slideInterval);\n+  }, []);\n \n   function setSlide(newDirection: 1 | -1) {\n-    const nextItem = wrap(1, items.length, selectedItem + newDirection)\n-    setSelectedItem(nextItem)\n-    setDirection(newDirection)\n+    const nextItem = wrap(0, items.length, selectedItemRef.current + newDirection);\n+    setSelectedItem(nextItem);\n   }\n \n-  const color = `var(--hue-${selectedItem})`\n-\n   return (\n-    <div style={container}>\n-      <motion.button\n-        initial={false}\n-        animate={{ background\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "c5a6dfd5990c367cab4bb5cf472d736d87f54502",
+        "author": "SABONGSEOK",
+        "date": "2025-07-29T07:34:53Z",
+        "message": "heroSection 디자인, 내용 적용",
+        "fileCount": 5
+      }
+    },
+    {
+      "id": "9b22d6ccd353552c5e86e1e8f8973f41a21f5860",
+      "type": "commit",
+      "content": "Commit: 9b22d6ccd353552c5e86e1e8f8973f41a21f5860\nAuthor: SABONGSEOK\nDate: 2025-07-29T01:29:02Z\nMessage: motion 라이브러리 샘플 테스트\n\nAffected Files:\n- package.json (modified) +1 -0\n- pnpm-lock.yaml (modified) +60 -0\n- src/components/HeroAbout.tsx (added) +138 -0\n- src/components/HeroSection.tsx (modified) +3 -0\n- src/globals.css (modified) +23 -0\n\nDiff Summary:\nFile: src/globals.css\ndiff --git a/package.json b/package.json\nindex 051c95c..cc8f5e6 100644\n--- a/package.json\n+++ b/package.json\n@@ -47,6 +47,7 @@\n     \"i18next-browser-languagedetector\": \"latest\",\n     \"input-otp\": \"1.4.1\",\n     \"lucide-react\": \"^0.454.0\",\n+    \"motion\": \"^12.23.6\",\n     \"react\": \"^19\",\n     \"react-day-picker\": \"8.10.1\",\n     \"react-dom\": \"^19\",\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex d98c7dc..1757325 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -119,6 +119,9 @@ importers:\n       lucide-react:\n         specifier: ^0.454.0\n         version: 0.454.0(react@19.1.0)\n+      motion:\n+        specifier: ^12.23.6\n+        version: 12.23.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n       react:\n         specifier: ^19\n         version: 19.1.0\n@@ -2099,6 +2102,20 @@ packages:\n   fraction.js@4.3.7:\n     resolution: {integrity: sha512-ZsDfxO51wGAXREY55a7la9LScWpwv9RxIrYABrlvOFBlH/ShPnrtsXeuUIfXKKOVicNxQ+o8JTbJvjS4M89yew==}\n \n+  framer-motion@12.23.6:\n+    resolution: {integrity: sha512-dsJ389QImVE3lQvM8Mnk99/j8tiZDM/7706PCqvkQ8sSCnpmWxsgX+g0lj7r5OBVL0U36pIecCTBoIWcM2RuKw==}\n+    peerDependencies:\n+      '@emotion/is-prop-valid': '*'\n+      react: ^18.0.0 || ^19.0.0\n+      react-dom: ^18.0.0 || ^19.0.0\n+    peerDependenciesMeta:\n+      '@emotion/is-prop-valid':\n+        optional: true\n+      react:\n+        optional: true\n+      react-dom:\n+        optional: true\n+\n   fsevents@2.3.3:\n     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}\n     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}\n@@ -2547,6 +2564,26 @@ packages:\n     engines: {node: '>=10'}\n     hasBin: true\n \n+  motion-dom@12.23.6:\n+    resolution: {integrity: sha512-G2w6Nw7ZOVSzcQmsdLc0doMe64O/Sbuc2bVAbgMz6oP/6/pRStKRiVRV4bQfHp5AHYAKEGhEdVHTM+R3FDgi5w==}\n+\n+  motion-utils@12.23.6:\n+    resolution: {integrity: sha512-eAWoPgr4eFEOFfg2WjIsMoqJTW6Z8MTUCgn/GZ3VRpClWBdnbjryiA3ZSNLyxCTmCQx4RmYX6jX1iWHbenUPNQ==}\n+\n+  motion@12.23.6:\n+  \n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "9b22d6ccd353552c5e86e1e8f8973f41a21f5860",
+        "author": "SABONGSEOK",
+        "date": "2025-07-29T01:29:02Z",
+        "message": "motion 라이브러리 샘플 테스트",
+        "fileCount": 5
+      }
+    },
+    {
+      "id": "5ba749a4e91ccc3dde8edbed4c517e0c172df27b",
+      "type": "commit",
+      "content": "Commit: 5ba749a4e91ccc3dde8edbed4c517e0c172df27b\nAuthor: SABONGSEOK\nDate: 2025-07-16T05:20:23Z\nMessage: 본인이름 수정\n\nAffected Files:\n- src/components/Header.tsx (modified) +1 -3\n- src/components/HeroSection.tsx (modified) +2 -1\n- src/locales/en.json (modified) +5 -2\n- src/locales/ko.json (modified) +8 -4\n\nDiff Summary:\nFile: src/locales/ko.json\ndiff --git a/src/components/Header.tsx b/src/components/Header.tsx\nindex 13e6732..72723bd 100644\n--- a/src/components/Header.tsx\n+++ b/src/components/Header.tsx\n@@ -28,9 +28,7 @@ const Header: React.FC = () => {\n             onClick={() => scrollToSection('about')}\n             className=\"mr-6 flex items-center space-x-2 bg-transparent border-none cursor-pointer\"\n           >\n-            <span className=\"font-bold text-xl\">\n-              {i18n.language === 'ko' ? '김개발' : 'Kim Dev'}\n-            </span>\n+            <span className=\"font-bold text-xl\">{t('about.about')}</span>\n           </button>\n         </div>\n         <nav className=\"flex items-center space-x-6 text-sm font-medium\">\ndiff --git a/src/components/HeroSection.tsx b/src/components/HeroSection.tsx\nindex 4a0c78b..1b964b4 100644\n--- a/src/components/HeroSection.tsx\n+++ b/src/components/HeroSection.tsx\n@@ -19,6 +19,7 @@ const HeroSection: React.FC = () => {\n     <section id=\"about\" className=\"py-24 md:py-32\">\n       <div className=\"container px-4 md:px-6\">\n         <div className=\"grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_500px]\">\n+          {/* TODO:: motionFramer로 오토 스위칭 처리 */}\n           <div className=\"flex flex-col justify-center space-y-4\">\n             <div className=\"space-y-2\">\n               <h1 className=\"text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none\">\n@@ -26,7 +27,7 @@ const HeroSection: React.FC = () => {\n                 <br />\n                 {t('hero.title')}\n                 <br />\n-                <span className=\"text-primary\">{t('hero.name')}</span>\n+                <span className=\"text-primary\">{t('about.name')}</span>\n                 {t('hero.subtitle')}\n               </h1>\n               <p className=\"max-w-[600px] text-muted-foreground md:text-xl\">\ndiff --git a/src/locales/en.json b/src/locales/en.json\nindex 577de0b..c935260 100644\n--- a/src/locales/en.json\n+++ b/src/locales/en.json\n@@ -1,4 +1,8 @@\n {\n+  \"about\": {\n+    \"about\": \"FE de\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "5ba749a4e91ccc3dde8edbed4c517e0c172df27b",
+        "author": "SABONGSEOK",
+        "date": "2025-07-16T05:20:23Z",
+        "message": "본인이름 수정",
+        "fileCount": 4
+      }
+    },
+    {
+      "id": "d2aab799f625ecb15cd5945a8866b73c8f493c87",
+      "type": "commit",
+      "content": "Commit: d2aab799f625ecb15cd5945a8866b73c8f493c87\nAuthor: SABONGSEOK\nDate: 2025-07-15T05:35:54Z\nMessage: 프로필 아바타 추가\n\nAffected Files:\n- public/bongseok_avata.png (added) +0 -0\n- src/components/HeroSection.tsx (modified) +19 -17\n\nDiff Summary:\nFile: src/components/HeroSection.tsx\ndiff --git a/public/bongseok_avata.png b/public/bongseok_avata.png\nnew file mode 100644\nindex 0000000..09f98b0\nBinary files /dev/null and b/public/bongseok_avata.png differ\ndiff --git a/src/components/HeroSection.tsx b/src/components/HeroSection.tsx\nindex 31253bf..4a0c78b 100644\n--- a/src/components/HeroSection.tsx\n+++ b/src/components/HeroSection.tsx\n@@ -1,9 +1,9 @@\n-\"use client\"\n+'use client'\n \n-import type React from \"react\"\n-import { useTranslation } from \"react-i18next\"\n-import { Button } from \"@/components/ui/button\"\n-import { Calendar, MapPin } from \"lucide-react\"\n+import type React from 'react'\n+import { useTranslation } from 'react-i18next'\n+import { Button } from '@/components/ui/button'\n+import { Calendar, MapPin } from 'lucide-react'\n \n const HeroSection: React.FC = () => {\n   const { t } = useTranslation()\n@@ -11,7 +11,7 @@ const HeroSection: React.FC = () => {\n   const scrollToSection = (sectionId: string) => {\n     const element = document.getElementById(sectionId)\n     if (element) {\n-      element.scrollIntoView({ behavior: \"smooth\" })\n+      element.scrollIntoView({ behavior: 'smooth' })\n     }\n   }\n \n@@ -22,38 +22,40 @@ const HeroSection: React.FC = () => {\n           <div className=\"flex flex-col justify-center space-y-4\">\n             <div className=\"space-y-2\">\n               <h1 className=\"text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none\">\n-                {t(\"hero.greeting\")}\n+                {t('hero.greeting')}\n                 <br />\n-                {t(\"hero.title\")}\n+                {t('hero.title')}\n                 <br />\n-                <span className=\"text-primary\">{t(\"hero.name\")}</span>\n-                {t(\"hero.subtitle\")}\n+                <span className=\"text-primary\">{t('hero.name')}</span>\n+                {t('hero.subtitle')}\n               </h1>\n-              <p className=\"max-w-[600px] text-muted-foreground md:text-xl\">{t(\"hero.description\")}</p>\n+              <p className=\"max-w-[600px] text-muted-foreg\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "d2aab799f625ecb15cd5945a8866b73c8f493c87",
+        "author": "SABONGSEOK",
+        "date": "2025-07-15T05:35:54Z",
+        "message": "프로필 아바타 추가",
+        "fileCount": 2
+      }
+    },
+    {
+      "id": "b9247720c95d9b063a0e1321469f7a567cf8393c",
+      "type": "commit",
+      "content": "Commit: b9247720c95d9b063a0e1321469f7a567cf8393c\nAuthor: SABONGSEOK\nDate: 2025-07-15T04:39:25Z\nMessage: tailwind css 설정 보완\n\nAffected Files:\n- components.json (modified) +1 -1\n- package.json (modified) +3 -3\n- pnpm-lock.yaml (modified) +422 -57\n- postcss.config.mjs (modified) +7 -3\n- tailwind.config.ts (renamed) +4 -7\n\nDiff Summary:\nFile: tailwind.config.js => tailwind.config.ts\ndiff --git a/components.json b/components.json\nindex d9ef0ae..13f24bf 100644\n--- a/components.json\n+++ b/components.json\n@@ -18,4 +18,4 @@\n     \"hooks\": \"@/hooks\"\n   },\n   \"iconLibrary\": \"lucide\"\n-}\n\\ No newline at end of file\n+}\ndiff --git a/package.json b/package.json\nindex 99f888b..051c95c 100644\n--- a/package.json\n+++ b/package.json\n@@ -38,7 +38,6 @@\n     \"@radix-ui/react-toggle\": \"1.1.1\",\n     \"@radix-ui/react-toggle-group\": \"1.1.1\",\n     \"@radix-ui/react-tooltip\": \"1.1.6\",\n-    \"autoprefixer\": \"^10.4.20\",\n     \"class-variance-authority\": \"^0.7.1\",\n     \"clsx\": \"^2.1.1\",\n     \"cmdk\": \"1.0.4\",\n@@ -63,13 +62,14 @@\n   },\n   \"devDependencies\": {\n     \"@eslint/js\": \"^9.29.0\",\n+    \"@tailwindcss/postcss\": \"^4.1.11\",\n     \"@types/node\": \"^24.0.8\",\n     \"@types/react\": \"^19.1.8\",\n     \"@types/react-dom\": \"^19.1.6\",\n     \"@typescript-eslint/eslint-plugin\": \"^8.35.1\",\n     \"@typescript-eslint/parser\": \"^8.35.1\",\n     \"@vitejs/plugin-react\": \"^4.5.2\",\n-    \"autoprefixer\": \"^10.4.21\",\n+    \"autoprefixer\": \"^10.4.20\",\n     \"eslint\": \"^9.30.0\",\n     \"eslint-config-prettier\": \"^10.1.5\",\n     \"eslint-plugin-import\": \"^2.32.0\",\n@@ -79,7 +79,7 @@\n     \"globals\": \"^16.2.0\",\n     \"postcss\": \"^8.5.6\",\n     \"prettier\": \"^3.6.2\",\n-    \"tailwindcss\": \"^3.4.17\",\n+    \"tailwindcss\": \"3\",\n     \"typescript\": \"~5.8.3\",\n     \"typescript-eslint\": \"^8.34.1\",\n     \"vite\": \"^7.0.0\"\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex df9a434..d98c7dc 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -92,9 +92,6 @@ importers:\n       '@radix-ui/react-tooltip':\n         specifier: 1.1.6\n         version: 1.1.6(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n-      autoprefixer:\n-        specifier: ^10.4.20\n-        version: 10.4.21(postcss@8.5.6)\n       class-variance-authority:\n         specifier: ^0.7.1\n         version: 0.7.1\n@@ -162,6 +159,9 @@ importers:\n       '@eslint/js':\n         specifier: ^9.29.0\n         version: 9.30.0\n+\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "b9247720c95d9b063a0e1321469f7a567cf8393c",
+        "author": "SABONGSEOK",
+        "date": "2025-07-15T04:39:25Z",
+        "message": "tailwind css 설정 보완",
+        "fileCount": 5
+      }
+    },
+    {
+      "id": "c7463f59e1a0d858c0259109f55761379a75f952",
+      "type": "commit",
+      "content": "Commit: c7463f59e1a0d858c0259109f55761379a75f952\nAuthor: SABONGSEOK\nDate: 2025-07-03T07:55:59Z\nMessage: set base template. supported by v0.dev\n\nAffected Files:\n- .gitignore (modified) +22 -0\n- components.json (added) +21 -0\n- index.html (modified) +1 -1\n- package.json (modified) +50 -2\n- pnpm-lock.yaml (modified) +3038 -2165\n- postcss.config.mjs (renamed) +1 -0\n- public/placeholder-logo.png (added) +0 -0\n- public/placeholder-logo.svg (added) +1 -0\n- public/placeholder-user.jpg (added) +0 -0\n- public/placeholder.jpg (added) +0 -0\n- public/placeholder.svg (added) +1 -0\n- public/vite.svg (removed) +0 -1\n- src/App.css (removed) +0 -42\n- src/App.tsx (modified) +19 -26\n- src/components/CareerSection.tsx (added) +60 -0\n- src/components/Footer.tsx (added) +42 -0\n- src/components/Header.tsx (added) +88 -0\n- src/components/HeroSection.tsx (added) +70 -0\n- src/components/ProjectsSection.tsx (added) +73 -0\n- src/components/SkillsSection.tsx (added) +34 -0\n- src/components/theme-provider.tsx (added) +11 -0\n- src/components/ui/accordion.tsx (added) +54 -0\n- src/components/ui/alert-dialog.tsx (added) +141 -0\n- src/components/ui/alert.tsx (added) +59 -0\n- src/components/ui/aspect-ratio.tsx (added) +7 -0\n- src/components/ui/avatar.tsx (added) +50 -0\n- src/components/ui/badge.tsx (added) +36 -0\n- src/components/ui/breadcrumb.tsx (added) +115 -0\n- src/components/ui/button.tsx (added) +56 -0\n- src/components/ui/calendar.tsx (added) +66 -0\n- src/components/ui/card.tsx (added) +79 -0\n- src/components/ui/carousel.tsx (added) +262 -0\n- src/components/ui/chart.tsx (added) +365 -0\n- src/components/ui/checkbox.tsx (added) +30 -0\n- src/components/ui/collapsible.tsx (added) +11 -0\n- src/components/ui/command.tsx (added) +153 -0\n- src/components/ui/context-menu.tsx (added) +200 -0\n- src/components/ui/dialog.tsx (added) +122 -0\n- src/components/ui/drawer.tsx (added) +118 -0\n- src/components/ui/dropdown-menu.tsx (added) +200 -0\n- src/components/ui/form.tsx (added) +178 -0\n- src/components/ui/hover-card.tsx (added) +29 -0\n- src/components/ui/input-otp.tsx (added) +71 -0\n- src/components/ui/input.tsx (added) +22 -0\n- src/components/ui/label.tsx (added) +26 -0\n- src/components/ui/menubar.tsx (added) +236 -0\n- src/components/ui/navigation-menu.tsx (added) +128 -0\n- src/components/ui/pagination.tsx (added) +117 -0\n- src/components/ui/popover.tsx (added) +31 -0\n- src/components/ui/progress.tsx (added) +28 -0\n- src/components/ui/radio-group.tsx (added) +44 -0\n- src/components/ui/resizable.tsx (added) +45 -0\n- src/components/ui/scroll-area.tsx (added) +48 -0\n- src/components/ui/select.tsx (added) +160 -0\n- src/components/ui/separator.tsx (added) +31 -0\n- src/components/ui/sheet.tsx (added) +140 -0\n- src/components/ui/sidebar.tsx (added) +763 -0\n- src/components/ui/skeleton.tsx (added) +15 -0\n- src/components/ui/slider.tsx (added) +28 -0\n- src/components/ui/sonner.tsx (added) +31 -0\n- src/components/ui/switch.tsx (added) +29 -0\n- src/components/ui/table.tsx (added) +117 -0\n- src/components/ui/tabs.tsx (added) +55 -0\n- src/components/ui/textarea.tsx (added) +22 -0\n- src/components/ui/toast.tsx (added) +129 -0\n- src/components/ui/toaster.tsx (added) +35 -0\n- src/components/ui/toggle-group.tsx (added) +61 -0\n- src/components/ui/toggle.tsx (added) +45 -0\n- src/components/ui/tooltip.tsx (added) +30 -0\n- src/components/ui/use-mobile.tsx (added) +19 -0\n- src/components/ui/use-toast.ts (added) +194 -0\n- src/data/portfolio.ts (added) +95 -0\n- src/globals.css (added) +94 -0\n- src/index.css (modified) +9 -65\n- src/lib/i18n.ts (added) +33 -0\n- src/lib/utils.ts (added) +6 -0\n- src/locales/en.json (added) +37 -0\n- src/locales/ko.json (added) +37 -0\n- src/main.tsx (modified) +2 -1\n- src/types/portfolio.ts (added) +24 -0\n- tailwind.config.js (modified) +84 -2\n- tsconfig.json (modified) +23 -3\n- tsconfig.node.json (modified) +2 -2\n- vite.config.ts (modified) +7 -1\n\nDiff Summary:\nFile: vite.config.ts\ndiff --git a/.gitignore b/.gitignore\nindex a547bf3..5404b69 100644\n--- a/.gitignore\n+++ b/.gitignore\n@@ -1,6 +1,18 @@\n # Logs\n logs\n *.log\n+\n+# dependencies\n+/node_modules\n+\n+# next.js\n+/.next/\n+/out/\n+\n+# production\n+/build\n+\n+# debug\n npm-debug.log*\n yarn-debug.log*\n yarn-error.log*\n@@ -22,3 +34,13 @@ dist-ssr\n *.njsproj\n *.sln\n *.sw?\n+\n+# env files\n+.env*\n+\n+# vercel\n+.vercel\n+\n+# typescript\n+*.tsbuildinfo\n+next-env.d.ts\n\\ No newline at end of file\ndiff --git a/components.json b/components.json\nnew file mode 100644\nindex 0000000..d9ef0ae\n--- /dev/null\n+++ b/components.json\n@@ -0,0 +1,21 @@\n+{\n+  \"$schema\": \"https://ui.shadcn.com/schema.json\",\n+  \"style\": \"default\",\n+  \"rsc\": true,\n+  \"tsx\": true,\n+  \"tailwind\": {\n+    \"config\": \"tailwind.config.ts\",\n+    \"css\": \"app/globals.css\",\n+    \"baseColor\": \"neutral\",\n+    \"cssVariables\": true,\n+    \"prefix\": \"\"\n+  },\n+  \"aliases\": {\n+    \"components\": \"@/components\",\n+    \"utils\": \"@/lib/utils\",\n+    \"ui\": \"@/components/ui\",\n+    \"lib\": \"@/lib\",\n+    \"hooks\": \"@/hooks\"\n+  },\n+  \"iconLibrary\": \"lucide\"\n+}\n\\ No newline at end of file\ndiff --git a/index.html b/index.html\nindex e4b78ea..a979ff8 100644\n--- a/index.html\n+++ b/index.html\n@@ -4,7 +4,7 @@\n     <meta charset=\"UTF-8\" />\n     <link rel=\"icon\" type=\"image/svg+xml\" href=\"/vite.svg\" />\n     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n-    <title>Vite + React + TS</title>\n+    <title>프론트엔드 개발자 사봉석</title>\n   </head>\n   <body>\n     <div id=\"root\"></div>\ndiff --git a/package.json b/package.json\nindex 28bef54..99f888b 100644\n--- a/package.json\n+++ b/package.json\n@@ -10,8 +10,56 @@\n     \"preview\": \"vite preview\"\n   },\n   \"dependencies\": {\n-    \"react\": \"^19.1.0\",\n-    \"react-dom\": \"^19.1.0\"\n+    \"@hookform/resolvers\": \"^3.9.1\",\n+    \"@radix-ui/react-accordion\": \"1.2.2\",\n+    \"@radix-ui/react-alert-dialog\": \"1.1.4\",\n+    \"@radix-ui/react-aspect-ratio\": \"1.1.1\",\n+    \"@radix-ui/react-avatar\": \"1.1.2\",\n+    \"@radix-ui/react-checkbox\": \"1.1.3\",\n+    \n...(Truncated)...\n---\nFile: supports-color\n-\n-  '@eslint/js@9.30.0': {}\n-\n-  '@eslint/object-schema@2.1.6': {}\n+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.1.8)(react@19.1.0)\n+      react: 19.1.0\n+    optionalDependencies:\n+      '@types/react': 19.1.8\n \n-  '@eslint/plugin-kit@0.3.3':\n+  '@radix-ui/react-slot@1.2.3(@types/react@19.1.8)(react@19.1.0)':\n     dependencies:\n-      '@eslint/core': 0.15.1\n-      levn: 0.4.1\n-\n-  '@humanfs/core@0.19.1': {}\n+      '@radix-ui/react-compose-refs': 1.1.2(@types/react@19.1.8)(react@19.1.0)\n+      react: 19.1.0\n+    optionalDependencies:\n+      '@types/react': 19.1.8\n \n-  '@humanfs/node@0.16.6':\n+  '@radix-ui/react-switch@1.1.2(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':\n     dependencies:\n-      '@humanfs/core': 0.19.1\n-      '@humanwhocodes/retry': 0.3.1\n+      '@radix-ui/primitive': 1.1.1\n+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.1.8)(react@19.1.0)\n+      '@radix-ui/react-context': 1.1.1(@types/react@19.1.8)(react@19.1.0)\n+      '@radix-ui/react-primitive': 2.0.1(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)\n+      '@radix-ui/react-use-controllable-state': 1.1.0(@types/react@19.1.8)(react@19.1.0)\n+      '@radix-ui/react-use-previous': 1.1.0(@types/react@19.1.8)(react@19.1.0)\n+      '@radix-ui/react-use-size': 1.1.0(@types/react@19.1.8)(react@19.1.0)\n+      react: 19.1.0\n+      react-dom: 19.1.0(react@19.1.0)\n+    optionalDependencies:\n+      '@types/react': 19.1.8\n+      '@types/react-dom': 19.1.6(@types/react@19.1.8)\n+\n+  '@radix-ui/react-tabs@1.1.2(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':\n+    dependencies:\n+      '@radix-ui/primitive': 1.1.1\n+      '@radix-ui/react-context': 1.1.1(@types/react@19.1.8)(react@19.1.0)\n+      '@radix-ui/react-direction': 1.1.0(@types/react@19.1.8)(react@19.1.0)\n+      '@radix-ui/react-id': 1.1\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "c7463f59e1a0d858c0259109f55761379a75f952",
+        "author": "SABONGSEOK",
+        "date": "2025-07-03T07:55:59Z",
+        "message": "set base template. supported by v0.dev",
+        "fileCount": 84
+      }
+    },
+    {
+      "id": "4e656d84d97875f190b2f4b88a59807ca30621de",
+      "type": "commit",
+      "content": "Commit: 4e656d84d97875f190b2f4b88a59807ca30621de\nAuthor: SABONGSEOK\nDate: 2025-07-01T06:33:03Z\nMessage: eslint, prettier 설정 및 적용.\n기본 pnpm dev 실행 확인완료\n\nAffected Files:\n- .prettierrc (added) +7 -0\n- README.md (modified) +10 -10\n- eslint.config.js (modified) +5 -5\n- package.json (modified) +1 -0\n- pnpm-lock.yaml (modified) +2009 -733\n- postcss.config.js (modified) +4 -6\n- src/App.tsx (modified) +3 -7\n- src/main.tsx (modified) +1 -1\n- tailwind.config.js (modified) +8 -10\n- tsconfig.json (modified) +4 -4\n- tsconfig.node.json (modified) +2 -3\n- vite.config.ts (modified) +1 -1\n\nDiff Summary:\nFile: vite.config.ts\ndiff --git a/.prettierrc b/.prettierrc\nnew file mode 100644\nindex 0000000..01942bf\n--- /dev/null\n+++ b/.prettierrc\n@@ -0,0 +1,7 @@\n+{\n+  \"semi\": false,\n+  \"singleQuote\": true,\n+  \"printWidth\": 100,\n+  \"tabWidth\": 2,\n+  \"trailingComma\": \"none\"\n+}\ndiff --git a/README.md b/README.md\nindex 7959ce4..09ed0d7 100644\n--- a/README.md\n+++ b/README.md\n@@ -24,18 +24,18 @@ export default tseslint.config([\n       // Alternatively, use this for stricter rules\n       ...tseslint.configs.strictTypeChecked,\n       // Optionally, add this for stylistic rules\n-      ...tseslint.configs.stylisticTypeChecked,\n+      ...tseslint.configs.stylisticTypeChecked\n \n       // Other configs...\n     ],\n     languageOptions: {\n       parserOptions: {\n         project: ['./tsconfig.node.json', './tsconfig.app.json'],\n-        tsconfigRootDir: import.meta.dirname,\n-      },\n+        tsconfigRootDir: import.meta.dirname\n+      }\n       // other options...\n-    },\n-  },\n+    }\n+  }\n ])\n ```\n \n@@ -55,15 +55,15 @@ export default tseslint.config([\n       // Enable lint rules for React\n       reactX.configs['recommended-typescript'],\n       // Enable lint rules for React DOM\n-      reactDom.configs.recommended,\n+      reactDom.configs.recommended\n     ],\n     languageOptions: {\n       parserOptions: {\n         project: ['./tsconfig.node.json', './tsconfig.app.json'],\n-        tsconfigRootDir: import.meta.dirname,\n-      },\n+        tsconfigRootDir: import.meta.dirname\n+      }\n       // other options...\n-    },\n-  },\n+    }\n+  }\n ])\n ```\ndiff --git a/eslint.config.js b/eslint.config.js\nindex d94e7de..c2f9d0b 100644\n--- a/eslint.config.js\n+++ b/eslint.config.js\n@@ -8,16 +8,16 @@ import { globalIgnores } from 'eslint/config'\n export default tseslint.config([\n   globalIgnores(['dist']),\n   {\n-    files: ['**/*.{ts,tsx}'],\n+    files: ['**/*.{ts,tsx,js,jsx}'],\n     extends: [\n       js.configs.recommended,\n       tseslint.configs.recommended,\n       reactHooks.configs['recommended-latest'],\n-      reactRefresh\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "4e656d84d97875f190b2f4b88a59807ca30621de",
+        "author": "SABONGSEOK",
+        "date": "2025-07-01T06:33:03Z",
+        "message": "eslint, prettier 설정 및 적용.\n기본 pnpm dev 실행 확인완료",
+        "fileCount": 12
+      }
+    },
+    {
+      "id": "3f55ac72edd25d5ec5aa83deed86b0e403506507",
+      "type": "commit",
+      "content": "Commit: 3f55ac72edd25d5ec5aa83deed86b0e403506507\nAuthor: SABONGSEOK\nDate: 2025-07-01T05:27:35Z\nMessage: tailwincss.config.js content 보완\n\nAffected Files:\n- tailwind.config.js (modified) +5 -1\n\nDiff Summary:\nFile: tailwind.config.js\ndiff --git a/tailwind.config.js b/tailwind.config.js\nindex 45d301d..bfe6cee 100644\n--- a/tailwind.config.js\n+++ b/tailwind.config.js\n@@ -1,7 +1,11 @@\n /** @type {import('tailwindcss').Config} */\n export default {\n   mode: \"jit\",\n-  content: [],\n+  content: [\n+    \"./index.html\",\n+    \"./src/**/*.{js,ts,jsx,tsx}\",\n+    \"./public/**/*.html\"\n+  ],\n   theme: {\n     extend: {},\n   },\n---",
+      "metadata": {
+        "sha": "3f55ac72edd25d5ec5aa83deed86b0e403506507",
+        "author": "SABONGSEOK",
+        "date": "2025-07-01T05:27:35Z",
+        "message": "tailwincss.config.js content 보완",
+        "fileCount": 1
+      }
+    },
+    {
+      "id": "0cb599fd443a8c84effa1f35581015a22ba92038",
+      "type": "commit",
+      "content": "Commit: 0cb599fd443a8c84effa1f35581015a22ba92038\nAuthor: SABONGSEOK\nDate: 2025-07-01T05:25:12Z\nMessage: init tailwindcss as v3\n\nAffected Files:\n- package.json (modified) +1 -1\n- pnpm-lock.yaml (modified) +523 -56\n- postcss.config.js (added) +6 -0\n- src/App.tsx (modified) +1 -0\n- src/index.css (modified) +4 -0\n- tailwind.config.js (added) +10 -0\n- tsconfig.app.json (modified) +0 -1\n\nDiff Summary:\nFile: tsconfig.app.json\ndiff --git a/package.json b/package.json\nindex 6a8c673..8347db0 100644\n--- a/package.json\n+++ b/package.json\n@@ -30,7 +30,7 @@\n     \"globals\": \"^16.2.0\",\n     \"postcss\": \"^8.5.6\",\n     \"prettier\": \"^3.6.2\",\n-    \"tailwindcss\": \"^4.1.11\",\n+    \"tailwindcss\": \"^3.4.17\",\n     \"typescript\": \"~5.8.3\",\n     \"typescript-eslint\": \"^8.34.1\",\n     \"vite\": \"^7.0.0\"\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nindex 9830780..c31fa47 100644\n--- a/pnpm-lock.yaml\n+++ b/pnpm-lock.yaml\n@@ -26,34 +26,34 @@ importers:\n         version: 19.1.6(@types/react@19.1.8)\n       '@typescript-eslint/eslint-plugin':\n         specifier: ^8.35.1\n-        version: 8.35.1(@typescript-eslint/parser@8.35.1(eslint@9.30.0)(typescript@5.8.3))(eslint@9.30.0)(typescript@5.8.3)\n+        version: 8.35.1(@typescript-eslint/parser@8.35.1(eslint@9.30.0(jiti@1.21.7))(typescript@5.8.3))(eslint@9.30.0(jiti@1.21.7))(typescript@5.8.3)\n       '@typescript-eslint/parser':\n         specifier: ^8.35.1\n-        version: 8.35.1(eslint@9.30.0)(typescript@5.8.3)\n+        version: 8.35.1(eslint@9.30.0(jiti@1.21.7))(typescript@5.8.3)\n       '@vitejs/plugin-react':\n         specifier: ^4.5.2\n-        version: 4.6.0(vite@7.0.0)\n+        version: 4.6.0(vite@7.0.0(jiti@1.21.7)(yaml@2.8.0))\n       autoprefixer:\n         specifier: ^10.4.21\n         version: 10.4.21(postcss@8.5.6)\n       eslint:\n         specifier: ^9.30.0\n-        version: 9.30.0\n+        version: 9.30.0(jiti@1.21.7)\n       eslint-config-prettier:\n         specifier: ^10.1.5\n-        version: 10.1.5(eslint@9.30.0)\n+        version: 10.1.5(eslint@9.30.0(jiti@1.21.7))\n       eslint-plugin-import:\n         specifier: ^2.32.0\n-        version: 2.32.0(@typescript-eslint/parser@8.35.1(eslint@9.30.0)(typescript@5.8.3))(eslint@9.30.0)\n+        version: 2.32.0(@typescript-eslint/parser@8.35.1(eslint@9.30.0(jiti@1.21.7))(typescript@5.8.3))(eslint@9.30.0(jiti@1.21.7))\n       eslint-plugin-react:\n         specifier: ^7.37.5\n-        version: 7.37.5(eslint@9.30.0)\n+        ver\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "0cb599fd443a8c84effa1f35581015a22ba92038",
+        "author": "SABONGSEOK",
+        "date": "2025-07-01T05:25:12Z",
+        "message": "init tailwindcss as v3",
+        "fileCount": 7
+      }
+    },
+    {
+      "id": "ad1c9172733ba74e0cb2847cd03cb80e74d01cc2",
+      "type": "commit",
+      "content": "Commit: ad1c9172733ba74e0cb2847cd03cb80e74d01cc2\nAuthor: SABONGSEOK\nDate: 2025-07-01T04:56:46Z\nMessage: install base packages\n\nAffected Files:\n- package.json (modified) +10 -1\n- pnpm-lock.yaml (added) +3487 -0\n\nDiff Summary:\nFile: pnpm-lock.yaml\ndiff --git a/package.json b/package.json\nindex 03acd96..6a8c673 100644\n--- a/package.json\n+++ b/package.json\n@@ -17,11 +17,20 @@\n     \"@eslint/js\": \"^9.29.0\",\n     \"@types/react\": \"^19.1.8\",\n     \"@types/react-dom\": \"^19.1.6\",\n+    \"@typescript-eslint/eslint-plugin\": \"^8.35.1\",\n+    \"@typescript-eslint/parser\": \"^8.35.1\",\n     \"@vitejs/plugin-react\": \"^4.5.2\",\n-    \"eslint\": \"^9.29.0\",\n+    \"autoprefixer\": \"^10.4.21\",\n+    \"eslint\": \"^9.30.0\",\n+    \"eslint-config-prettier\": \"^10.1.5\",\n+    \"eslint-plugin-import\": \"^2.32.0\",\n+    \"eslint-plugin-react\": \"^7.37.5\",\n     \"eslint-plugin-react-hooks\": \"^5.2.0\",\n     \"eslint-plugin-react-refresh\": \"^0.4.20\",\n     \"globals\": \"^16.2.0\",\n+    \"postcss\": \"^8.5.6\",\n+    \"prettier\": \"^3.6.2\",\n+    \"tailwindcss\": \"^4.1.11\",\n     \"typescript\": \"~5.8.3\",\n     \"typescript-eslint\": \"^8.34.1\",\n     \"vite\": \"^7.0.0\"\ndiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml\nnew file mode 100644\nindex 0000000..9830780\n--- /dev/null\n+++ b/pnpm-lock.yaml\n@@ -0,0 +1,3487 @@\n+lockfileVersion: '9.0'\n+\n+settings:\n+  autoInstallPeers: true\n+  excludeLinksFromLockfile: false\n+\n+importers:\n+\n+  .:\n+    dependencies:\n+      react:\n+        specifier: ^19.1.0\n+        version: 19.1.0\n+      react-dom:\n+        specifier: ^19.1.0\n+        version: 19.1.0(react@19.1.0)\n+    devDependencies:\n+      '@eslint/js':\n+        specifier: ^9.29.0\n+        version: 9.30.0\n+      '@types/react':\n+        specifier: ^19.1.8\n+        version: 19.1.8\n+      '@types/react-dom':\n+        specifier: ^19.1.6\n+        version: 19.1.6(@types/react@19.1.8)\n+      '@typescript-eslint/eslint-plugin':\n+        specifier: ^8.35.1\n+        version: 8.35.1(@typescript-eslint/parser@8.35.1(eslint@9.30.0)(typescript@5.8.3))(eslint@9.30.0)(typescript@5.8.3)\n+      '@typescript-eslint/parser':\n+        specifier: ^8.35.1\n+        version: 8.35.1(eslint@9.30.0)(typescript@5.8.3)\n+      '@vitejs/plugin-react':\n+        specifier: ^4.5.2\n+        version: 4.6.0(vite@7.0.0)\n+      autoprefixer:\n+\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "ad1c9172733ba74e0cb2847cd03cb80e74d01cc2",
+        "author": "SABONGSEOK",
+        "date": "2025-07-01T04:56:46Z",
+        "message": "install base packages",
+        "fileCount": 2
+      }
+    },
+    {
+      "id": "a90bef901f8fb8295f586c88daf04c6b26a8ca6f",
+      "type": "commit",
+      "content": "Commit: a90bef901f8fb8295f586c88daf04c6b26a8ca6f\nAuthor: SABONGSEOK\nDate: 2025-07-01T04:52:16Z\nMessage: init: create portfolio as react\n\nAffected Files:\n- .gitignore (added) +24 -0\n- README.md (added) +69 -0\n- eslint.config.js (added) +23 -0\n- index.html (added) +13 -0\n- package.json (added) +29 -0\n- public/vite.svg (added) +1 -0\n- src/App.css (added) +42 -0\n- src/App.tsx (added) +35 -0\n- src/assets/react.svg (added) +1 -0\n- src/index.css (added) +68 -0\n- src/main.tsx (added) +10 -0\n- src/vite-env.d.ts (added) +1 -0\n- tsconfig.app.json (added) +27 -0\n- tsconfig.json (added) +7 -0\n- tsconfig.node.json (added) +25 -0\n- vite.config.ts (added) +7 -0\n\nDiff Summary:\nFile: vite.config.ts\ndiff --git a/.gitignore b/.gitignore\nnew file mode 100644\nindex 0000000..a547bf3\n--- /dev/null\n+++ b/.gitignore\n@@ -0,0 +1,24 @@\n+# Logs\n+logs\n+*.log\n+npm-debug.log*\n+yarn-debug.log*\n+yarn-error.log*\n+pnpm-debug.log*\n+lerna-debug.log*\n+\n+node_modules\n+dist\n+dist-ssr\n+*.local\n+\n+# Editor directories and files\n+.vscode/*\n+!.vscode/extensions.json\n+.idea\n+.DS_Store\n+*.suo\n+*.ntvs*\n+*.njsproj\n+*.sln\n+*.sw?\ndiff --git a/README.md b/README.md\nnew file mode 100644\nindex 0000000..7959ce4\n--- /dev/null\n+++ b/README.md\n@@ -0,0 +1,69 @@\n+# React + TypeScript + Vite\n+\n+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.\n+\n+Currently, two official plugins are available:\n+\n+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh\n+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh\n+\n+## Expanding the ESLint configuration\n+\n+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:\n+\n+```js\n+export default tseslint.config([\n+  globalIgnores(['dist']),\n+  {\n+    files: ['**/*.{ts,tsx}'],\n+    extends: [\n+      // Other configs...\n+\n+      // Remove tseslint.configs.recommended and replace with this\n+      ...tseslint.configs.recommendedTypeChecked,\n+      // Alternatively, use this for stricter rules\n+      ...tseslint.configs.strictTypeChecked,\n+      // Optionally, add this for stylistic rules\n+      ...tseslint.configs.stylisticTypeChecked,\n+\n+      // Other configs...\n+    ],\n+    languageOptions: {\n+      parserOptions: {\n+        project: ['./tsconfig.node.json', './tsconfig.app.json'],\n+        tsconfigRootDir: import.meta.dirname,\n+      },\n+      // other options...\n+    },\n+  },\n+])\n+```\n+\n+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "a90bef901f8fb8295f586c88daf04c6b26a8ca6f",
+        "author": "SABONGSEOK",
+        "date": "2025-07-01T04:52:16Z",
+        "message": "init: create portfolio as react",
+        "fileCount": 16
+      }
+    },
+    {
+      "id": "e880f3780fc6b05b98fb0c33776473821ee9141f",
+      "type": "commit",
+      "content": "Commit: e880f3780fc6b05b98fb0c33776473821ee9141f\nAuthor: SABONGSEOK\nDate: 2025-07-01T04:51:02Z\nMessage: reset repository. wrong framework\n\nAffected Files:\n- .gitignore (removed) +0 -24\n- .vscode/extensions.json (removed) +0 -3\n- README.md (removed) +0 -5\n- index.html (removed) +0 -13\n- package.json (removed) +0 -21\n- public/vite.svg (removed) +0 -1\n- src/App.vue (removed) +0 -30\n- src/assets/vue.svg (removed) +0 -1\n- src/components/HelloWorld.vue (removed) +0 -41\n- src/main.ts (removed) +0 -5\n- src/style.css (removed) +0 -79\n- src/vite-env.d.ts (removed) +0 -1\n- tsconfig.app.json (removed) +0 -15\n- tsconfig.json (removed) +0 -7\n- tsconfig.node.json (removed) +0 -25\n- vite.config.ts (removed) +0 -7\n\nDiff Summary:\nFile: vite.config.ts\ndiff --git a/.gitignore b/.gitignore\ndeleted file mode 100644\nindex a547bf3..0000000\n--- a/.gitignore\n+++ /dev/null\n@@ -1,24 +0,0 @@\n-# Logs\n-logs\n-*.log\n-npm-debug.log*\n-yarn-debug.log*\n-yarn-error.log*\n-pnpm-debug.log*\n-lerna-debug.log*\n-\n-node_modules\n-dist\n-dist-ssr\n-*.local\n-\n-# Editor directories and files\n-.vscode/*\n-!.vscode/extensions.json\n-.idea\n-.DS_Store\n-*.suo\n-*.ntvs*\n-*.njsproj\n-*.sln\n-*.sw?\ndiff --git a/.vscode/extensions.json b/.vscode/extensions.json\ndeleted file mode 100644\nindex a7cea0b..0000000\n--- a/.vscode/extensions.json\n+++ /dev/null\n@@ -1,3 +0,0 @@\n-{\n-  \"recommendations\": [\"Vue.volar\"]\n-}\ndiff --git a/README.md b/README.md\ndeleted file mode 100644\nindex 33895ab..0000000\n--- a/README.md\n+++ /dev/null\n@@ -1,5 +0,0 @@\n-# Vue 3 + TypeScript + Vite\n-\n-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.\n-\n-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).\ndiff --git a/index.html b/index.html\ndeleted file mode 100644\nindex dde16aa..0000000\n--- a/index.html\n+++ /dev/null\n@@ -1,13 +0,0 @@\n-<!doctype html>\n-<html lang=\"en\">\n-  <head>\n-    <meta charset=\"UTF-8\" />\n-    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/vite.svg\" />\n-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n-    <title>Vite + Vue + TS</title>\n-  </head>\n-  <body>\n-    <div id=\"app\"></div>\n-    <script type=\"module\" src=\"/src/main.ts\"></script>\n-  </body>\n-</html>\ndiff --git a/package.json b/package.json\ndeleted file mode 100644\nindex 50c1aff..0000000\n--- a/package.json\n+++ /dev/null\n@@ -1,21 +0,0 @@\n-{\n-  \"name\": \"portfolio\",\n-  \"private\": true,\n-  \"version\": \"0.0.0\",\n-  \"type\": \"module\",\n-  \"scripts\": {\n-    \"dev\": \"vite\",\n-    \"build\": \"vue-tsc -b &\n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "e880f3780fc6b05b98fb0c33776473821ee9141f",
+        "author": "SABONGSEOK",
+        "date": "2025-07-01T04:51:02Z",
+        "message": "reset repository. wrong framework",
+        "fileCount": 16
+      }
+    },
+    {
+      "id": "455f659bf2776aebacc5a1d7ce7149444b110f75",
+      "type": "commit",
+      "content": "Commit: 455f659bf2776aebacc5a1d7ce7149444b110f75\nAuthor: SABONGSEOK\nDate: 2025-07-01T03:59:09Z\nMessage: init: create vite + react + ts project\n\nAffected Files:\n- .gitignore (added) +24 -0\n- .vscode/extensions.json (added) +3 -0\n- README.md (added) +5 -0\n- index.html (added) +13 -0\n- package.json (added) +21 -0\n- public/vite.svg (added) +1 -0\n- src/App.vue (added) +30 -0\n- src/assets/vue.svg (added) +1 -0\n- src/components/HelloWorld.vue (added) +41 -0\n- src/main.ts (added) +5 -0\n- src/style.css (added) +79 -0\n- src/vite-env.d.ts (added) +1 -0\n- tsconfig.app.json (added) +15 -0\n- tsconfig.json (added) +7 -0\n- tsconfig.node.json (added) +25 -0\n- vite.config.ts (added) +7 -0\n\nDiff Summary:\nFile: vite.config.ts\ndiff --git a/.gitignore b/.gitignore\nnew file mode 100644\nindex 0000000..a547bf3\n--- /dev/null\n+++ b/.gitignore\n@@ -0,0 +1,24 @@\n+# Logs\n+logs\n+*.log\n+npm-debug.log*\n+yarn-debug.log*\n+yarn-error.log*\n+pnpm-debug.log*\n+lerna-debug.log*\n+\n+node_modules\n+dist\n+dist-ssr\n+*.local\n+\n+# Editor directories and files\n+.vscode/*\n+!.vscode/extensions.json\n+.idea\n+.DS_Store\n+*.suo\n+*.ntvs*\n+*.njsproj\n+*.sln\n+*.sw?\ndiff --git a/.vscode/extensions.json b/.vscode/extensions.json\nnew file mode 100644\nindex 0000000..a7cea0b\n--- /dev/null\n+++ b/.vscode/extensions.json\n@@ -0,0 +1,3 @@\n+{\n+  \"recommendations\": [\"Vue.volar\"]\n+}\ndiff --git a/README.md b/README.md\nnew file mode 100644\nindex 0000000..33895ab\n--- /dev/null\n+++ b/README.md\n@@ -0,0 +1,5 @@\n+# Vue 3 + TypeScript + Vite\n+\n+This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.\n+\n+Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).\ndiff --git a/index.html b/index.html\nnew file mode 100644\nindex 0000000..dde16aa\n--- /dev/null\n+++ b/index.html\n@@ -0,0 +1,13 @@\n+<!doctype html>\n+<html lang=\"en\">\n+  <head>\n+    <meta charset=\"UTF-8\" />\n+    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/vite.svg\" />\n+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n+    <title>Vite + Vue + TS</title>\n+  </head>\n+  <body>\n+    <div id=\"app\"></div>\n+    <script type=\"module\" src=\"/src/main.ts\"></script>\n+  </body>\n+</html>\ndiff --git a/package.json b/package.json\nnew file mode 100644\nindex 0000000..50c1aff\n--- /dev/null\n+++ b/package.json\n@@ -0,0 +1,21 @@\n+{\n+  \"name\": \"portfolio\",\n+  \"private\": true,\n+  \"version\": \"0.0.0\",\n+  \"type\": \"module\",\n+  \"scripts\": {\n+    \"dev\": \"vite\",\n+    \"build\": \"vue-tsc -b && vite build\",\n+    \n...(Truncated)...\n---",
+      "metadata": {
+        "sha": "455f659bf2776aebacc5a1d7ce7149444b110f75",
+        "author": "SABONGSEOK",
+        "date": "2025-07-01T03:59:09Z",
+        "message": "init: create vite + react + ts project",
+        "fileCount": 16
+      }
+    }
+  ]
+}
