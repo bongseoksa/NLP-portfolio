@@ -25,7 +25,9 @@
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
+    "chromadb": "^3.1.6",
     "dotenv": "^17.2.3",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "openai": "^6.10.0"
   }
 }

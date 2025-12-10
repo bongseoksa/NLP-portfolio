@@ -35,6 +35,22 @@ pnpm run start
   - **`vectors/`**: 임베딩 벡터 데이터 (예정)
 - **`output/`**: (Legacy) 이전 출력 경로, `data/`로 통합 예정
 
+## OpenAI API 설정 (OpenAI API Setup)
+
+NLP 임베딩 기능을 사용하기 위해서는 OpenAI API 키가 필요합니다.
+
+1. [OpenAI Platform](https://platform.openai.com/)에 접속하여 가입 또는 로그인합니다.
+2. [API Keys 페이지](https://platform.openai.com/api-keys)로 이동합니다.
+3. **"Create new secret key"** 버튼을 클릭하여 새로운 키를 발급받습니다.
+4. 발급된 키를 복사하여 `.env` 파일에 `OPENAI_API_KEY` 변수로 추가합니다.
+
+```env
+OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+> [!WARNING]
+> API 키는 외부에 노출되지 않도록 주의하세요. GitHub 등 공개 저장소에 `.env` 파일이 업로드되지 않도록 확인해야 합니다.
+
 ## 전처리 과정 프로세스 (Preprocessing Process)
 
 본 프로젝트는 GitHub API와 로컬 Git 명령어를 활용하여 다음과 같은 6단계의 데이터 전처리 파이프라인을 거칩니다:

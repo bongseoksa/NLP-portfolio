@@ -9,6 +9,8 @@ import type { FileModel } from "../models/File.js";
 import type { CommitDiff } from "../models/Diff.js";
 import type { PipelineOutput } from "../models/PipelineOutput.js";
 import { refineData } from "./steps/preprocessText.js";
+import { generateEmbeddings } from "../nlp/embedding/openaiEmbedding.js";
+import { saveVectors } from "../vector_store/saveVectors.js";
 
 /**
  * 전체 데이터 수집 및 전처리 파이프라인을 실행합니다.
@@ -16,7 +18,8 @@ import { refineData } from "./steps/preprocessText.js";
  * 2. 변경 파일 정보 수집
  * 3. 로컬 Git 로그 및 Diff 추출
  * 4. 데이터 정제 (NLP 입력 형태)
- * 5. 결과 저장 (JSON)
+ * 5. 임베딩 생성 (OpenAI)
+ * 6. 벡터 저장 (Chroma)
  */
 export async function runPipeline() {
     console.log("🚀 Pipeline started\n");
@@ -65,14 +68,14 @@ export async function runPipeline() {
     result.commitDiffs = diffs;
     console.log("   → commitDiffs completed.");
 
-    // 4️⃣ 로컬 git 로그 저장 (이미 위에서 가져옴)
+    // 4️⃣ 로컬 git 로그 저장
     console.log("\n📌 Saving local git logs...");
     result.localLogs = localCommits;
     console.log(`   → ${localCommits.length} logs saved.`);
 
 
-    // 5️⃣ JSON 파일로 저장
-    const outputDir = path.join(process.cwd(), "output");
+    // 5️⃣ JSON 파일로 저장 (Raw)
+    const outputDir = path.join(process.cwd(), "output"); // note: data/raw was suggested but keeping output for now compatibility
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
 
     fs.writeFileSync(
@@ -81,6 +84,7 @@ export async function runPipeline() {
         "utf-8"
     );
 
+    // 6️⃣ 데이터 정제
     console.log("\n📌 Data Refinement (NLP Preparation)...");
     const refinedData = refineData(result);
     fs.writeFileSync(
@@ -89,6 +93,38 @@ export async function runPipeline() {
         "utf-8"
     );
     console.log(`   → ${refinedData.items.length} items refined.`);
+
+    // 7️⃣ 임베딩 생성 및 저장 (Optional: if OPENAI_KEY exists)
+    if (process.env.OPENAI_API_KEY) {
+        console.log("\n📌 Generating Embeddings...");
+        try {
+            const batchSize = 10;
+            const items = refinedData.items;
+            const embeddings: number[][] = [];
+
+            // Batch processing to avoid huge payload
+            for (let i = 0; i < items.length; i += batchSize) {
+                const batch = items.slice(i, i + batchSize);
+                const texts = batch.map((item: any) => item.content);
+                console.log(`   Processing batch ${i / batchSize + 1}/${Math.ceil(items.length / batchSize)}...`);
+
+                const batchEmbeddings = await generateEmbeddings(texts);
+                embeddings.push(...batchEmbeddings);
+            }
+
+            console.log(`   → Generated ${embeddings.length} vectors.`);
+
+            console.log("\n📌 Saving to ChromaDB...");
+            // Collection name convention: repo-year-month or just repo-commits
+            await saveVectors(`${repo}-commits`, items, embeddings);
+
+        } catch (err: any) {
+            console.error("❌ Embedding/Vector Store Failed:", err.message);
+            console.error("   (Is ChromaDB running? 'chroma run --path ./chroma_db')");
+        }
+    } else {
+        console.log("\n⚠️ OPENAI_API_KEY not found. Skipping embedding & vector storage.");
+    }
 
     console.log("\n🎉 Pipeline finished!");
     console.log("📁 Saved → output/pipeline_output.json");
