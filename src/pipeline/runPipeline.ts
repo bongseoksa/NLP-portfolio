@@ -1,12 +1,23 @@
 import fs from "fs";
 import path from "path";
-import { fetchAllCommits, type CommitItem } from "../github/fetchCommit.js";
-import { fetchFiles } from "../github/fetchFiles.js";
-import { parseLog, type LocalCommitLog } from "../git/parseLog.js";
-import { extractDiff, type CommitDiff } from "../git/extractDiff.js";
-import type { FileModel } from "../types/fileModel.js";
-import { refineData } from "./refineData.js";
+import { fetchAllCommits } from "../data_sources/github/fetchCommit.js";
+import { fetchFiles } from "../data_sources/github/fetchFiles.js";
+import { parseLog } from "../data_sources/git/parseLog.js";
+import { extractDiff } from "../data_sources/git/extractDiff.js";
+import type { CommitItem, LocalCommitLog } from "../models/Commit.js";
+import type { FileModel } from "../models/File.js";
+import type { CommitDiff } from "../models/Diff.js";
+import type { PipelineOutput } from "../models/PipelineOutput.js";
+import { refineData } from "./steps/preprocessText.js";
 
+/**
+ * 전체 데이터 수집 및 전처리 파이프라인을 실행합니다.
+ * 1. GitHub API 커밋 수집
+ * 2. 변경 파일 정보 수집
+ * 3. 로컬 Git 로그 및 Diff 추출
+ * 4. 데이터 정제 (NLP 입력 형태)
+ * 5. 결과 저장 (JSON)
+ */
 export async function runPipeline() {
     console.log("🚀 Pipeline started\n");
 
@@ -24,12 +35,7 @@ export async function runPipeline() {
         return;
     }
 
-    const result: {
-        commits: CommitItem[];
-        commitFiles: Record<string, FileModel[]>;
-        commitDiffs: CommitDiff[];
-        localLogs: LocalCommitLog[];
-    } = {
+    const result: PipelineOutput = {
         commits: [],
         commitFiles: {},
         commitDiffs: [],

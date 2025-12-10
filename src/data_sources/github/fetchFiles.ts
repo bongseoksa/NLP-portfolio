@@ -1,7 +1,7 @@
 // src/github/fetchFiles.ts
 
 import { Octokit } from "@octokit/rest";
-import type { FileModel } from "../types/fileModel.js";
+import type { FileModel } from "../../models/File.js";
 
 const token = process.env.GITHUB_TOKEN;
 if (!token) {
@@ -17,8 +17,11 @@ interface FetchFilesParams {
 }
 
 /**
- * GitHub Commit API에서 특정 커밋의 파일 변경 목록을 가져온다.
- * 반환값은 FileModel[] 형태이며, 후속 파이프라인에서 diff 병합에 사용된다.
+ * GitHub Commit API에서 특정 커밋의 파일 변경 목록을 가져옵니다.
+ * 반환값은 FileModel[] 형태이며, 후속 파이프라인에서 diff 병합에 사용됩니다.
+ * 
+ * @param {FetchFilesParams} params - owner, repo, sha 정보
+ * @returns {Promise<FileModel[]>} 변경된 파일 목록
  */
 export async function fetchFiles({
     owner,

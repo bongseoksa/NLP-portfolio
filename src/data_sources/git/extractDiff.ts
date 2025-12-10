@@ -1,21 +1,17 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import type { LocalCommitLog } from "./parseLog.js";
+import type { LocalCommitLog } from "../../models/Commit.js";
+import type { CommitDiff, FileDiff } from "../../models/Diff.js";
 
 const execAsync = promisify(exec);
 
-export interface FileDiff {
-    filePath: string;
-    additions: number;
-    deletions: number;
-    patch: string; // 전체 diff 텍스트
-}
-
-export interface CommitDiff {
-    sha: string;
-    files: FileDiff[];
-}
-
+/**
+ * 로컬 Git 저장소에서 `git show` 명령어를 사용하여 각 커밋의 상세 변경 내역(Diff)을 추출합니다.
+ * 대용량 Diff 처리를 위해 maxBuffer 옵션이 증가되어 있습니다.
+ * 
+ * @param {LocalCommitLog[]} commits - Diff를 추출할 대상 커밋 목록
+ * @returns {Promise<CommitDiff[]>} 각 커밋별 Diff 결과 리스트
+ */
 export async function extractDiff(commits: LocalCommitLog[]): Promise<CommitDiff[]> {
     const results: CommitDiff[] = [];
 

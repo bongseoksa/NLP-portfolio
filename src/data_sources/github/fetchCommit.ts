@@ -1,13 +1,6 @@
 import "dotenv/config";
 import fetch from "node-fetch";
-
-export interface CommitItem {
-    sha: string;
-    author: string | null;
-    date: string;
-    message: string;
-    url: string;
-}
+import type { CommitItem } from "../../models/Commit.js";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN!;
 const OWNER = process.env.TARGET_REPO_OWNER!;
@@ -33,7 +26,9 @@ async function githubRequest(url: string) {
 }
 
 /**
- * 전체 커밋 가져오기 (pagination 처리)
+ * GitHub Repository의 전체 커밋 목록을 페이지네이션(Pagination)하여 모두 가져옵니다.
+ * 
+ * @returns {Promise<CommitItem[]>} 전체 커밋 리스트
  */
 export async function fetchAllCommits(): Promise<CommitItem[]> {
     let page = 1;

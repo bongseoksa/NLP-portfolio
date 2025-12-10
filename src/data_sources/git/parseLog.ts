@@ -1,18 +1,14 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import type { LocalCommitLog } from "../../models/Commit.js";
 
 const execAsync = promisify(exec);
 
-export interface LocalCommitLog {
-    sha: string;
-    author: string;
-    date: string;
-    message: string;
-}
-
 /**
- * 로컬 Git 저장소에서 최근 N개 커밋 로그를 가져온다.
- * @param limit 가져올 커밋 개수 (기본값: 20)
+ * 로컬 Git 저장소에서 최근 N개의 커밋 로그를 `git log` 명령어로 가져와 파싱합니다.
+ * 
+ * @param {number} limit - 가져올 커밋 개수 (기본값: 20)
+ * @returns {Promise<LocalCommitLog[]>} 파싱된 로컬 커밋 로그 리스트
  */
 export async function parseLog(limit: number = 20): Promise<LocalCommitLog[]> {
     try {

@@ -1,16 +1,16 @@
-import type { CommitItem } from "../github/fetchCommit.js";
-import type { FileModel } from "../types/fileModel.js";
-import type { CommitDiff } from "../git/extractDiff.js";
-import type { LocalCommitLog } from "../git/parseLog.js";
-import type { RefinedData, RefinedItem } from "../types/refinedData.js";
+import type { CommitItem, LocalCommitLog } from "../../models/Commit.js";
+import type { FileModel } from "../../models/File.js";
+import type { CommitDiff } from "../../models/Diff.js";
+import type { RefinedData, RefinedItem } from "../../models/refinedData.js";
+import type { PipelineOutput } from "../../models/PipelineOutput.js";
 
-type PipelineOutput = {
-    commits: CommitItem[];
-    commitFiles: Record<string, FileModel[]>;
-    commitDiffs: CommitDiff[];
-    localLogs: LocalCommitLog[];
-};
-
+/**
+ * 수집된 Raw Data(PipelineOutput)를 NLP 모델이 이해하기 쉬운 텍스트 포맷으로 변환(정제)합니다.
+ * 커밋 메시지, 파일 변경 내역, Diff 내용을 합쳐 하나의 문맥(Text Chunk)으로 만듭니다.
+ * 
+ * @param {PipelineOutput} data - 파이프라인에서 수집된 원본 데이터
+ * @returns {RefinedData} 정제된 데이터 객체
+ */
 export function refineData(data: PipelineOutput): RefinedData {
     const items: RefinedItem[] = [];
 

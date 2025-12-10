@@ -19,17 +19,21 @@ pnpm run start
 현재 프로젝트의 주요 디렉토리 및 파일 구성은 다음과 같습니다:
 
 - **`src/`**: 소스 코드 디렉토리
-  - **`index.ts`**: 어플리케이션의 진입점(Entry Point)입니다. 환경 변수를 로드하고 파이프라인을 시작합니다.
-  - **`pipeline/`**
-    - `runPipeline.ts`: 데이터 수집 및 처리의 전체 흐름을 제어하는 핵심 로직이 포함되어 있습니다.
-  - **`github/`**: GitHub API와 통신하는 모듈입니다.
-    - `fetchCommit.ts`: 타겟 레포지토리의 전체 커밋 목록을 페이지네이션 처리하여 가져옵니다.
-    - `fetchFiles.ts`: 특정 커밋에서 변경된 파일들의 상세 정보(상태, 추가/삭제 라인 수 등)를 조회합니다.
-  - **`git/`**: 로컬 Git 명령어를 실행하는 모듈입니다.
-    - `parseLog.ts`: `git log` 명령어를 사용하여 로컬 저장소의 커밋 로그를 파싱합니다.
-    - `extractDiff.ts`: `git show` 명령어를 사용하여 각 파일별 상세 변경 내용(Diff)을 추출합니다.
-  - **`types/`**: `CommitItem`, `FileModel`, `CommitDiff` 등 데이터 구조를 정의하는 TypeScript 타입 파일들입니다.
-- **`output/`**: 전처리된 데이터 결과물이 저장되는 디렉토리입니다. (`pipeline_output.json`)
+  - **`index.ts`**: 어플리케이션의 진입점(Entry Point)입니다.
+  - **`config/`**: 환경 변수 로드 등 설정 관리
+  - **`data_sources/`**: 데이터 수집 계층
+    - **`github/`**: GitHub API 연동 (`fetchCommit.ts`, `fetchFiles.ts`)
+    - **`git/`**: 로컬 Git 및 Diff 분석 (`parseLog.ts`, `extractDiff.ts`)
+  - **`models/`**: TypeScript 타입 정의 및 데이터 모델 (`Commit.ts`, `File.ts` 등)
+  - **`pipeline/`**: 전체 데이터 처리 파이프라인 워크플로우
+    - `runPipeline.ts`: 파이프라인 실행 로직
+    - **`steps/`**: 파이프라인의 개별 처리 단계 (예: `preprocessText.ts`)
+  - **`utils/`**: 공통 유틸리티
+- **`data/`**: 데이터 저장소
+  - **`raw/`**: 수집된 원본 데이터
+  - **`processed/`**: 정제된 데이터
+  - **`vectors/`**: 임베딩 벡터 데이터 (예정)
+- **`output/`**: (Legacy) 이전 출력 경로, `data/`로 통합 예정
 
 ## 전처리 과정 프로세스 (Preprocessing Process)
 
@@ -67,7 +71,7 @@ pnpm run start
 *   [x] 분석용 레포지토리 생성 완료: NLP-portfolio
 *   [x] TypeScript 기반 프로젝트 환경 구성 완료
 *   [x] Github API + 로컬 프로젝트를 통한 전처리 파일 추출 (Pipeline Steps 1~5)
-*   [ ] NLP 입력용 데이터 정제 (Pipeline Step 6) - **Current Task**
+*   [x] NLP 입력용 데이터 정제 (Pipeline Step 6)
 *   [ ] NLP 기반 질의응답 시스템 구축 (임베딩 및 검색)
 *   [ ] 시각화 및 모니터링 대시보드
 
