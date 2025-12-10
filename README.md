@@ -1,9 +1,6 @@
 # GitHub Analyzer
 
-GitHub Analyzer is a tool that analyzes GitHub repositories to extract information about the code and the commit history. It can be used to generate a report of the code and the commit history, or to generate a report of the code and the commit history for a specific repository.
-
-## 비고
-- .env 파일은 gitignore에 추가하는 것이 기본이지만, PoC 프로젝트이므로 github에 파일을 업데이트 합니다.
+GitHub repositories를 분석하여 코드와 커밋 히스토리 정보를 추출하는 도구입니다. 특정 레포지토리의 커밋 기록, 변경된 파일 정보, 그리고 diff 내용을 수집하여 분석 리포트를 생성하기 위한 데이터를 전처리합니다.
 
 ## Installation
 
@@ -17,41 +14,49 @@ pnpm install
 pnpm run start
 ```
 
-## License
+## 프로젝트 구조 (Project Structure)
 
-MIT
+현재 프로젝트의 주요 디렉토리 및 파일 구성은 다음과 같습니다:
 
-## 세팅 과정
+- **`src/`**: 소스 코드 디렉토리
+  - **`index.ts`**: 어플리케이션의 진입점(Entry Point)입니다. 환경 변수를 로드하고 파이프라인을 시작합니다.
+  - **`pipeline/`**
+    - `runPipeline.ts`: 데이터 수집 및 처리의 전체 흐름을 제어하는 핵심 로직이 포함되어 있습니다.
+  - **`github/`**: GitHub API와 통신하는 모듈입니다.
+    - `fetchCommit.ts`: 타겟 레포지토리의 전체 커밋 목록을 페이지네이션 처리하여 가져옵니다.
+    - `fetchFiles.ts`: 특정 커밋에서 변경된 파일들의 상세 정보(상태, 추가/삭제 라인 수 등)를 조회합니다.
+  - **`git/`**: 로컬 Git 명령어를 실행하는 모듈입니다.
+    - `parseLog.ts`: `git log` 명령어를 사용하여 로컬 저장소의 커밋 로그를 파싱합니다.
+    - `extractDiff.ts`: `git show` 명령어를 사용하여 각 파일별 상세 변경 내용(Diff)을 추출합니다.
+  - **`types/`**: `CommitItem`, `FileModel`, `CommitDiff` 등 데이터 구조를 정의하는 TypeScript 타입 파일들입니다.
+- **`output/`**: 전처리된 데이터 결과물이 저장되는 디렉토리입니다. (`pipeline_output.json`)
 
-```bash
-pnpm init # package.json 생성
-pnpm add -D typescript ts-node @types/node
+## 전처리 과정 프로세스 (Preprocessing Process)
 
-npx tsc --init # tsconfig.json 생성
-```
+본 프로젝트는 GitHub API와 로컬 Git 명령어를 활용하여 다음과 같은 5단계의 데이터 전처리 파이프라인을 거칩니다:
 
-- (GitHub API SDK)[https://docs.github.com/ko/rest/guides/scripting-with-the-rest-api-and-javascript?apiVersion=2022-11-28]
+1. **초기화 및 환경 설정 (Initialization)**
+   - `.env` 파일에서 `TARGET_REPO_OWNER`, `TARGET_REPO_NAME`, `LOCAL_REPO_PATH` 등 필수 환경 변수가 설정되어 있는지 확인합니다.
 
-```bash
-pnpm add @octokit/rest
-pnpm add -D @types/node-fetch
-pnpm add node-fetch dotenv
-```
+2. **GitHub 커밋 목록 수집 (Fetch Commits)**
+   - `src/github/fetchCommit.ts`를 통해 GitHub API로 타겟 레포지토리의 모든 커밋 정보를 가져옵니다.
+   - 페이지네이션(Pagination)을 지원하여 누락 없이 전체 히스토리를 수집합니다.
+   - 각 커밋의 SHA, 작성자, 날짜, 메시지 등을 추출합니다.
 
-## GitHub API로 커밋 목록 가져오기 코드 작성
+3. **변경 파일 정보 조회 (Fetch Changed Files)**
+   - 수집된 각 커밋에 대해 `src/github/fetchFiles.ts`를 실행하여 변경된 파일 목록을 조회합니다.
+   - 파일명, 변경 상태(added, modified, removed 등), 추가/삭제된 라인 수(additions, deletions) 정보를 수집합니다.
 
-- 커밋 SHA
-- 작성자
-- 날짜
-- 메시지
-- 변경된 파일 정보
+4. **로컬 Diff 추출 (Extract Local Diffs)**
+   - `src/git/parseLog.ts`와 `src/git/extractDiff.ts`를 사용하여 로컬에 클론된 저장소에서 직접 Git 명령어를 실행합니다.
+   - `git show {sha} --numstat --patch` 명령어를 통해 상세한 코드 변경 내역(Full Diff)을 추출합니다.
+   - 이는 GitHub API의 제한을 보완하고 더 상세한 로컬 분석 데이터를 확보하기 위함입니다.
 
-## 로컬 git log 파서 생성
+5. **데이터 집계 및 저장 (Aggregation & Output)**
+   - 위 단계에서 수집한 모든 데이터(Commits, Changed Files, Local Diffs)를 하나로 병합합니다.
+   - 최종 결과물은 `output/pipeline_output.json` 파일로 저장되어 후속 분석에 활용될 수 있도록 합니다.
 
-```bash
-    git log --name-status
-    git show <sha>
-    git diff <sha>^ <sha>
-```
-등을 활용한 파일별 diff 스니펫 생성
+## 비고 (Notes)
+- .env 파일은 gitignore에 추가하는 것이 기본이지만, PoC 프로젝트인 경우 편의를 위해 고려될 수 있습니다. (현재 프로젝트 설정 확인 필요)
+- GitHub API 호출 시 Rate Limit에 유의해야 합니다.
 
