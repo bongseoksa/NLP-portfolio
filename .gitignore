@@ -14,3 +14,7 @@ chroma_data/
 
 # Dependencies
 .chroma_venv/
+
+# env files
+.env
+frontend/.env

@@ -2,6 +2,8 @@ import { Routes, Route, NavLink } from 'react-router-dom';
 import { css } from '../styled-system/css';
 import QAPage from './pages/QAPage';
 import DashboardPage from './pages/DashboardPage';
+import SettingsPage from './pages/SettingsPage';
+import ServerStatus from './components/common/ServerStatus';
 
 export default function App() {
   return (
@@ -20,7 +22,7 @@ export default function App() {
           <h1 className={css({ fontWeight: 'bold', fontSize: 'lg' })}>
             🔍 GitHub Analyzer
           </h1>
-          <div className={css({ display: 'flex', gap: '4' })}>
+          <div className={css({ display: 'flex', gap: '2' })}>
             <NavLink
               to="/"
               className={({ isActive }) =>
@@ -28,6 +30,7 @@ export default function App() {
                   px: '3',
                   py: '1',
                   borderRadius: 'md',
+                  fontSize: 'sm',
                   transition: 'all 0.2s',
                   bg: isActive ? 'blue.600' : 'transparent',
                   _hover: { bg: isActive ? 'blue.600' : 'gray.700' },
@@ -43,6 +46,7 @@ export default function App() {
                   px: '3',
                   py: '1',
                   borderRadius: 'md',
+                  fontSize: 'sm',
                   transition: 'all 0.2s',
                   bg: isActive ? 'blue.600' : 'transparent',
                   _hover: { bg: isActive ? 'blue.600' : 'gray.700' },
@@ -51,10 +55,29 @@ export default function App() {
             >
               📊 Dashboard
             </NavLink>
+            <NavLink
+              to="/settings"
+              className={({ isActive }) =>
+                css({
+                  px: '3',
+                  py: '1',
+                  borderRadius: 'md',
+                  fontSize: 'sm',
+                  transition: 'all 0.2s',
+                  bg: isActive ? 'blue.600' : 'transparent',
+                  _hover: { bg: isActive ? 'blue.600' : 'gray.700' },
+                })
+              }
+            >
+              ⚙️ Settings
+            </NavLink>
           </div>
         </div>
-        <div className={css({ fontSize: 'sm', color: 'gray.400' })}>
-          NLP Portfolio Project
+        <div className={css({ display: 'flex', alignItems: 'center', gap: '4' })}>
+          <ServerStatus />
+          <span className={css({ fontSize: 'sm', color: 'gray.400' })}>
+            NLP Portfolio
+          </span>
         </div>
       </nav>
 
@@ -63,6 +86,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<QAPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
     </div>

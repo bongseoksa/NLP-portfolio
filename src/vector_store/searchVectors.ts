@@ -40,7 +40,7 @@ export async function searchVectors(
 
         // 2. 벡터 검색 수행
         const results = await collection.query({
-            queryEmbeddings: [queryEmbedding], // or use queryTexts if using built-in embedding function
+            queryEmbeddings: [queryEmbedding as number[]], // or use queryTexts if using built-in embedding function
             nResults: nResults,
         });
 
@@ -61,10 +61,10 @@ export async function searchVectors(
                     const distance = firstBatchDistances ? firstBatchDistances[i] : null;
 
                     mappedResults.push({
-                        id: id,
+                        id: id ?? "",
                         content: content || "",
                         metadata: metadata,
-                        score: distance !== null ? distance : 0
+                        score: distance ?? 0
                     });
                 }
             }
