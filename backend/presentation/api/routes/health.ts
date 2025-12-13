@@ -2,7 +2,7 @@
  * 헬스체크 라우터
  */
 import { Router, type Request, type Response, type IRouter } from 'express';
-import { checkSupabaseConnection } from '../services/supabase.js';
+import { checkSupabaseConnection } from '../../../infrastructure/database/supabase/supabase.js';
 
 const router: IRouter = Router();
 

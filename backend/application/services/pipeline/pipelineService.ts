@@ -1,16 +1,16 @@
 import fs from "fs";
 import path from "path";
-import { fetchAllCommits } from "../data_sources/github/fetchCommit.js";
-import { fetchFiles } from "../data_sources/github/fetchFiles.js";
-import { parseLog } from "../data_sources/git/parseLog.js";
-import { extractDiff } from "../data_sources/git/extractDiff.js";
-import type { CommitItem, LocalCommitLog } from "../models/Commit.js";
-import type { FileModel } from "../models/File.js";
-import type { CommitDiff } from "../models/Diff.js";
-import type { PipelineOutput } from "../models/PipelineOutput.js";
+import { fetchAllCommits } from "../../../infrastructure/data/github/fetchCommit.js";
+import { fetchFiles } from "../../../infrastructure/data/github/fetchFiles.js";
+import { parseLog } from "../../../infrastructure/data/git/parseLog.js";
+import { extractDiff } from "../../../infrastructure/data/git/extractDiff.js";
+import type { CommitItem, LocalCommitLog } from "../../../domain/entities/Commit.js";
+import type { FileModel } from "../../../domain/entities/File.js";
+import type { CommitDiff } from "../../../domain/entities/Diff.js";
+import type { PipelineOutput } from "../../../domain/entities/PipelineOutput.js";
 import { refineData } from "./steps/preprocessText.js";
-import { generateEmbeddings } from "../nlp/embedding/openaiEmbedding.js";
-import { saveVectors } from "../vector_store/saveVectors.js";
+import { generateEmbeddings } from "../../../infrastructure/llm/openai/openaiEmbedding.js";
+import { saveVectors } from "../../../infrastructure/vector/chroma/saveVectors.js";
 
 export interface PipelineOptions {
     /** 기존 벡터 컬렉션을 삭제하고 새로 생성 (임베딩 차원 변경 시 필요) */

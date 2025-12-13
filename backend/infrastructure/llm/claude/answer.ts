@@ -4,7 +4,7 @@
  */
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import type { SearchResult } from "../vector_store/searchVectors.js";
+import type { SearchResult } from "../../vector/chroma/searchVectors.js";
 
 // OpenAI 클라이언트 (API 키가 없으면 null)
 const openaiApiKey = process.env.OPENAI_API_KEY;

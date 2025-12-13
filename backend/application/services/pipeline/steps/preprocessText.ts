@@ -1,8 +1,8 @@
-import type { CommitItem, LocalCommitLog } from "../../models/Commit.js";
-import type { FileModel } from "../../models/File.js";
-import type { CommitDiff } from "../../models/Diff.js";
-import type { RefinedData, RefinedItem } from "../../models/refinedData.js";
-import type { PipelineOutput } from "../../models/PipelineOutput.js";
+import type { CommitItem, LocalCommitLog } from "../../../../domain/entities/Commit.js";
+import type { FileModel } from "../../../../domain/entities/File.js";
+import type { CommitDiff } from "../../../../domain/entities/Diff.js";
+import type { RefinedData, RefinedItem } from "../../../../domain/entities/refinedData.js";
+import type { PipelineOutput } from "../../../../domain/entities/PipelineOutput.js";
 
 /**
  * 수집된 Raw Data(PipelineOutput)를 NLP 모델이 이해하기 쉬운 텍스트 포맷으로 변환(정제)합니다.

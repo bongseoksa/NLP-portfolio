@@ -2,9 +2,9 @@
  * 질의응답 라우터
  */
 import { Router, type Request, type Response, type IRouter } from 'express';
-import { searchVectors } from '../../vector_store/searchVectors.js';
-import { generateAnswer } from '../../qa/answer.js';
-import { saveQAHistory } from '../services/supabase.js';
+import { searchVectors } from '../../../infrastructure/vector/chroma/searchVectors.js';
+import { generateAnswer } from '../../../infrastructure/llm/claude/answer.js';
+import { saveQAHistory } from '../../../infrastructure/database/supabase/supabase.js';
 
 const router: IRouter = Router();
 

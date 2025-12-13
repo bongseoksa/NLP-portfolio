@@ -3,7 +3,7 @@
  * Supabase 테이블 초기화
  */
 import { Router, type Request, type Response, type IRouter } from 'express';
-import { checkTableExists, getSchemaSQL } from '../services/supabaseMigration.js';
+import { checkTableExists, getSchemaSQL } from '../../../infrastructure/database/supabase/supabaseMigration.js';
 
 const router: IRouter = Router();
 

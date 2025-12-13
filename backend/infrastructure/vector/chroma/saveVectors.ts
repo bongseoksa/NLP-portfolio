@@ -2,7 +2,7 @@
  * ChromaDB와 상호작용하여 벡터 데이터를 저장하고 검색하는 모듈입니다.
  */
 import { ChromaClient, type Collection } from "chromadb";
-import type { RefinedItem } from "../models/refinedData.js";
+import type { RefinedItem } from "../../../domain/entities/refinedData.js";
 
 // ChromaDB 클라이언트 초기화 (기본 localhost:8000)
 const client = new ChromaClient();

@@ -1,7 +1,7 @@
 // src/github/fetchFiles.ts
 
 import { Octokit } from "@octokit/rest";
-import type { FileModel } from "../../models/File.js";
+import type { FileModel } from "../../../domain/entities/File.js";
 
 const token = process.env.GITHUB_TOKEN;
 if (!token) {

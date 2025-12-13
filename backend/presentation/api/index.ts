@@ -37,7 +37,7 @@ app.use('/api/migration', migrationRouter);
 // 대시보드 통계 라우터 (history 라우터에서 분리)
 app.get('/api/dashboard/summary', async (_req, res) => {
     try {
-        const { getDashboardStats } = await import('./services/supabase.js');
+        const { getDashboardStats } = await import('../../infrastructure/database/supabase/supabase.js');
         const stats = await getDashboardStats();
         
         res.json({

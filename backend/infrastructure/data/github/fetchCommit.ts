@@ -1,6 +1,6 @@
 import "dotenv/config";
 import fetch from "node-fetch";
-import type { CommitItem } from "../../models/Commit.js";
+import type { CommitItem } from "../../../domain/entities/Commit.js";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN!;
 const OWNER = process.env.TARGET_REPO_OWNER!;

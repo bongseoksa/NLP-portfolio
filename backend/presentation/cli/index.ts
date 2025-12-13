@@ -1,9 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { runPipeline } from "./pipeline/runPipeline.js";
-import { searchVectors } from "./vector_store/searchVectors.js";
-import { generateAnswer } from "./qa/answer.js";
+import { runPipeline } from "../../application/services/pipeline/pipelineService.js";
+import { searchVectors } from "../../infrastructure/vector/chroma/searchVectors.js";
+import { generateAnswer } from "../../infrastructure/llm/claude/answer.js";
 
 const args = process.argv.slice(2);
 const command = args[0];

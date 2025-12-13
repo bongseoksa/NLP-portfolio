@@ -2,7 +2,7 @@
  * ChromaDB에서 유사한 벡터를 검색하는 모듈입니다.
  */
 import { ChromaClient } from "chromadb";
-import { generateEmbeddings } from "../nlp/embedding/openaiEmbedding.js";
+import { generateEmbeddings } from "../../llm/openai/openaiEmbedding.js";
 
 const client = new ChromaClient();
 

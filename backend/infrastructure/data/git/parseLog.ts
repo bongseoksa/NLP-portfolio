@@ -1,6 +1,6 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import type { LocalCommitLog } from "../../models/Commit.js";
+import type { LocalCommitLog } from "../../../domain/entities/Commit.js";
 
 const execAsync = promisify(exec);
 

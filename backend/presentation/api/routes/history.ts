@@ -2,7 +2,7 @@
  * 이력 조회 라우터
  */
 import { Router, type Request, type Response, type IRouter } from 'express';
-import { getQAHistory, getQAHistoryById, getDashboardStats } from '../services/supabase.js';
+import { getQAHistory, getQAHistoryById, getDashboardStats } from '../../../infrastructure/database/supabase/supabase.js';
 
 const router: IRouter = Router();
 

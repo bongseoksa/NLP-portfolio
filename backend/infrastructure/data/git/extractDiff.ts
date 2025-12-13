@@ -1,7 +1,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import type { LocalCommitLog } from "../../models/Commit.js";
-import type { CommitDiff, FileDiff } from "../../models/Diff.js";
+import type { LocalCommitLog } from "../../../domain/entities/Commit.js";
+import type { CommitDiff, FileDiff } from "../../../domain/entities/Diff.js";
 
 const execAsync = promisify(exec);
 
