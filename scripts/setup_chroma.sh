@@ -48,7 +48,8 @@ $PYTHON_CMD -m venv $VENV_DIR
 echo "📦 Installing ChromaDB..."
 source $VENV_DIR/bin/activate
 pip install --upgrade pip
-pip install "chromadb>=0.4.0,<0.6.0"
+# chromadb 1.x 서버 + posthog 3.x (호환성 필수)
+pip install "chromadb>=1.0.0" "posthog>=3.0.0,<4.0.0"
 
 echo "🎉 ChromaDB setup complete!"
 echo "Run 'pnpm run chroma:start' to start the server."

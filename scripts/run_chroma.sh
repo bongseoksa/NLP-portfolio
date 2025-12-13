@@ -17,4 +17,8 @@ fi
 
 echo "🚀 Starting ChromaDB server on http://localhost:8000..."
 source $VENV_DIR/bin/activate
+
+# Disable telemetry to avoid PostHog version compatibility issues
+export ANONYMIZED_TELEMETRY=false
+
 chroma run --path $DATA_DIR

@@ -27,6 +27,8 @@ export async function searchVectors(
     nResults: number = 5
 ): Promise<SearchResult[]> {
     try {
+        console.log("🔍 Searching in collection: ", collectionName);
+        console.log("🔍 Query: ", query);
         const collection = await client.getCollection({ name: collectionName });
 
         // 1. 쿼리 텍스트를 임베딩으로 변환

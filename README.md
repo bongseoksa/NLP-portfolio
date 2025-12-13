@@ -135,6 +135,111 @@ docker run -p 8000:8000 chromadb/chroma
 *   회의록, 회고록, 업무 로그
 *   기능 배포 이력
 
+## 이슈 관리 (Issue Management)
+
+프로젝트 진행 중 발생한 이슈와 해결 방법을 기록합니다.
+
+### 1. `chroma` 명령어를 찾지 못하는 문제
+
+**증상**
+```bash
+$ chroma run --path ./chroma_data
+zsh: command not found: chroma
+```
+
+**원인**
+- ChromaDB가 Python 가상환경(`.chroma_venv`)에 설치되어 있으나, 가상환경을 활성화하지 않고 직접 명령어를 실행함
+- 시스템 PATH에 가상환경의 `bin` 디렉토리가 포함되지 않음
+
+**해결 방법**
+```bash
+# 방법 1: 제공된 스크립트 사용 (권장)
+pnpm run chroma:start
+
+# 방법 2: 가상환경 직접 활성화
+source .chroma_venv/bin/activate
+chroma run --path ./chroma_data
+
+# 방법 3: 전체 경로로 실행
+.chroma_venv/bin/chroma run --path ./chroma_data
+```
+
+---
+
+### 2. ChromaDB Telemetry 에러 (PostHog 버전 호환성)
+
+**증상**
+```
+ERROR: Failed to send telemetry event ServerStartEvent: capture() takes 1 positional argument but 3 were given
+```
+
+**원인**
+- ChromaDB가 사용하는 PostHog 라이브러리의 버전 호환성 문제
+- PostHog 7.x 버전에서 `capture()` 함수의 API가 변경되어 ChromaDB와 호환되지 않음
+
+**해결 방법**
+PostHog를 호환되는 3.x 버전으로 다운그레이드:
+```bash
+source .chroma_venv/bin/activate
+pip install "posthog>=3.0.0,<4.0.0"
+```
+
+**확인**
+```bash
+# 버전 확인
+pip show posthog
+# Version: 3.25.0 (또는 3.x.x)
+
+# 서버 재시작 후 에러 메시지가 사라지는지 확인
+pnpm run chroma:start
+```
+
+---
+
+### 3. ChromaDB 클라이언트-서버 버전 불일치 (`KeyError('_type')`)
+
+**증상**
+```
+❌ searchVectors failed: ChromaServerError: KeyError('_type')
+    at chromaFetch (...)
+    at async ChromaClient.getCollection (...)
+```
+
+**원인**
+- Node.js chromadb 클라이언트(3.x)와 Python ChromaDB 서버(0.5.x) 간의 **API 버전 불일치**
+- chromadb 클라이언트 3.x는 서버 1.x 이상과 호환되도록 설계됨
+- 서버 0.5.x의 API 응답 형식이 클라이언트가 기대하는 형식과 다름
+
+| 구분 | 문제 버전 | 호환 버전 |
+|------|-----------|-----------|
+| Node.js chromadb 클라이언트 | 3.1.6 | 3.1.6 (변경 불필요) |
+| Python ChromaDB 서버 | 0.5.23 ❌ | **1.0.0 이상** ✅ |
+
+**해결 방법**
+Python ChromaDB 서버를 1.x 버전으로 업그레이드:
+```bash
+source .chroma_venv/bin/activate
+pip install "chromadb>=1.0.0" "posthog>=3.0.0,<4.0.0"
+```
+
+**확인**
+```bash
+# 버전 확인
+pip show chromadb
+# Version: 1.3.7 (또는 1.x.x)
+
+# 서버 재시작
+pnpm run chroma:start
+
+# 질의응답 테스트
+pnpm ask "테스트 질문"
+# KeyError 없이 정상 동작하면 해결됨
+```
+
+**참고**: `setup_chroma.sh` 스크립트가 이미 호환되는 버전을 설치하도록 업데이트되었습니다. 새로 설정하는 경우 `pnpm run chroma:setup`을 실행하면 됩니다.
+
+---
+
 ## 비고 (Notes)
 - .env 파일은 gitignore에 추가하는 것이 기본이지만, PoC 프로젝트인 경우 편의를 위해 고려될 수 있습니다. (현재 프로젝트 설정 확인 필요)
 - GitHub API 호출 시 Rate Limit에 유의해야 합니다.
