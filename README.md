@@ -274,6 +274,11 @@ ChatGPT 스타일의 질의응답 인터페이스:
 | `pnpm run control` | Control 서버 실행 (:3000) |
 | `pnpm run start:local` | Control + API 서버 동시 실행 |
 
+**⚠️ zsh 사용 시 주의사항:**
+- 물음표(`?`), 별표(`*`) 등 특수문자가 포함된 질문은 반드시 따옴표로 감싸주세요.
+- 예: `pnpm run ask "차트는 뭐로 만들어졌어?"` ✅
+- 예: `pnpm run ask 차트는 뭐로 만들어졌어?` ❌ (zsh glob 오류 발생)
+
 ### 프론트엔드 (`frontend/`)
 
 | 명령어 | 설명 |
@@ -357,6 +362,29 @@ ChromaServerError: KeyError('_type')
 source .chroma_venv/bin/activate
 pip install "chromadb>=1.0.0" "posthog>=3.0.0,<4.0.0"
 ```
+
+---
+
+### 문제: zsh에서 `pnpm run ask` 명령어 오류
+
+```
+zsh: no matches found: 만들어졌어?
+```
+
+**원인**: zsh에서 물음표(`?`)가 glob 패턴으로 해석됨
+
+**해결**: 질문을 따옴표로 감싸기
+```bash
+# ❌ 오류 발생
+pnpm run ask 차트는 뭐로 만들어졌어?
+
+# ✅ 올바른 사용법
+pnpm run ask "차트는 뭐로 만들어졌어?"
+# 또는
+pnpm run ask '차트는 뭐로 만들어졌어?'
+```
+
+**참고**: 물음표(`?`), 별표(`*`), 대괄호(`[]`) 등 특수문자가 포함된 질문은 반드시 따옴표로 감싸주세요.
 
 ### 문제: Control 서버 연결 안됨
 

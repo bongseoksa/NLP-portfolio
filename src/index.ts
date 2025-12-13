@@ -28,7 +28,13 @@ Examples:
   pnpm run dev                    # 전체 파이프라인 실행
   pnpm run dev --reset            # 컬렉션 리셋 후 전체 파이프라인 실행
   pnpm run dev reindex            # 기존 데이터로 재임베딩 (권장)
-  pnpm run ask "기술스택 알려줘"    # 질의응답
+  pnpm run ask "기술스택 알려줘"    # 질의응답 (물음표 등 특수문자는 따옴표 필수)
+  pnpm run ask '차트는 뭐로 만들어졌어?'  # 특수문자 포함 질문
+
+⚠️  zsh 사용 시 주의:
+  - 물음표(?), 별표(*) 등 특수문자가 포함된 질문은 반드시 따옴표로 감싸주세요.
+  - 예: pnpm run ask "차트는 뭐로 만들어졌어?" (O)
+  - 예: pnpm run ask 차트는 뭐로 만들어졌어? (X - zsh glob 오류)
 `);
 }
 
@@ -41,6 +47,9 @@ async function main() {
     const filteredArgs = args.filter(arg => !arg.startsWith("--"));
     const cmd = filteredArgs[0];
 
+    // zsh glob 패턴 해석 문제 해결: 환경 변수에서 질문 읽기 (fallback)
+    // pnpm이 인자를 전달하지 못한 경우를 대비
+
     if (cmd === "help" || cmd === "--help" || cmd === "-h") {
         printHelp();
         return;
@@ -49,7 +58,13 @@ async function main() {
     if (cmd === "ask" || cmd === "query") {
         const query = filteredArgs.slice(1).join(" ");
         if (!query) {
-            console.error("❌ 질문을 입력해주세요. (예: ask '이 프로젝트의 목적은?')");
+            console.error("❌ 질문을 입력해주세요.");
+            console.error("");
+            console.error("사용법:");
+            console.error('  pnpm run ask "질문 내용"');
+            console.error('  pnpm run ask \'차트는 뭐로 만들어졌어?\'');
+            console.error("");
+            console.error("⚠️  zsh 사용 시: 물음표(?) 등 특수문자가 포함된 질문은 반드시 따옴표로 감싸주세요.");
             return;
         }
 

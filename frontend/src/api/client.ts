@@ -17,14 +17,15 @@ const CONTROL_BASE_URL = import.meta.env.VITE_CONTROL_URL || 'http://localhost:3
 
 /**
  * API 요청 헬퍼
- * 네트워크 오류는 조용히 처리하고 null 반환
+ * @param silent true: 네트워크 오류를 조용히 처리하고 null 반환 (상태 확인용)
+ *               false: 모든 오류를 throw (실제 작업용)
  */
 async function apiRequest<T>(
   endpoint: string, 
   options?: RequestInit,
   baseUrl: string = API_BASE_URL,
-  silent: boolean = true
-): Promise<T | null> {
+  silent: boolean = false
+): Promise<T> {
   try {
     const response = await fetch(`${baseUrl}${endpoint}`, {
       headers: {
@@ -34,22 +35,31 @@ async function apiRequest<T>(
     });
 
     if (!response.ok) {
-      // HTTP 오류는 조용히 처리
-      if (!silent) {
-        console.debug(`API 요청 실패: ${response.status} ${response.statusText}`);
+      const error = new Error(`API Error: ${response.status} ${response.statusText}`);
+      if (silent) {
+        // 조용한 모드: null 반환
+        return null as T;
       }
-      return null;
+      // 일반 모드: 에러 throw
+      throw error;
     }
 
     return response.json();
   } catch (error: unknown) {
-    // 네트워크 오류 (연결 거부 등) 조용히 처리
+    // 네트워크 오류 (연결 거부 등)
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      // API 서버가 없을 때는 조용히 null 반환
-      return null;
+      if (silent) {
+        // 조용한 모드: null 반환
+        return null as T;
+      }
+      // 일반 모드: 에러 throw
+      throw new Error(`API 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요. (${baseUrl})`);
     }
-    // 기타 오류도 조용히 처리
-    return null;
+    // 기타 오류
+    if (silent) {
+      return null as T;
+    }
+    throw error;
   }
 }
 
@@ -60,11 +70,11 @@ async function apiRequest<T>(
 /**
  * 질문 전송 및 답변 받기
  */
-export async function askQuestion(request: AskRequest): Promise<AskResponse | null> {
+export async function askQuestion(request: AskRequest): Promise<AskResponse> {
   return apiRequest<AskResponse>('/api/ask', {
     method: 'POST',
     body: JSON.stringify(request),
-  });
+  }, API_BASE_URL, false); // 실제 작업이므로 에러 throw
 }
 
 /**
@@ -83,22 +93,35 @@ export async function getQAHistory(params?: {
   if (params?.offset) searchParams.set('offset', params.offset.toString());
 
   const query = searchParams.toString();
-  const result = await apiRequest<QARecord[]>(`/api/history${query ? `?${query}` : ''}`);
-  return result || [];
+  try {
+    const result = await apiRequest<QARecord[]>(`/api/history${query ? `?${query}` : ''}`, undefined, API_BASE_URL, true);
+    return result || [];
+  } catch {
+    // API 서버가 없을 때는 빈 배열 반환
+    return [];
+  }
 }
 
 /**
  * 특정 질문 기록 조회
  */
 export async function getQARecord(id: string): Promise<QARecord | null> {
-  return apiRequest<QARecord>(`/api/history/${id}`);
+  try {
+    return await apiRequest<QARecord>(`/api/history/${id}`, undefined, API_BASE_URL, true);
+  } catch {
+    return null;
+  }
 }
 
 /**
  * 대시보드 요약 통계 조회
  */
 export async function getDashboardSummary(): Promise<DashboardSummary | null> {
-  return apiRequest<DashboardSummary>('/api/dashboard/summary');
+  try {
+    return await apiRequest<DashboardSummary>('/api/dashboard/summary', undefined, API_BASE_URL, true);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -113,24 +136,36 @@ export async function getDailyStats(params?: {
   if (params?.endDate) searchParams.set('endDate', params.endDate);
 
   const query = searchParams.toString();
-  const result = await apiRequest<DailyStats[]>(`/api/dashboard/daily${query ? `?${query}` : ''}`);
-  return result || [];
+  try {
+    const result = await apiRequest<DailyStats[]>(`/api/dashboard/daily${query ? `?${query}` : ''}`, undefined, API_BASE_URL, true);
+    return result || [];
+  } catch {
+    return [];
+  }
 }
 
 /**
  * 질문 유형 분포 조회
  */
 export async function getCategoryDistribution(): Promise<CategoryDistribution[]> {
-  const result = await apiRequest<CategoryDistribution[]>('/api/dashboard/categories');
-  return result || [];
+  try {
+    const result = await apiRequest<CategoryDistribution[]>('/api/dashboard/categories', undefined, API_BASE_URL, true);
+    return result || [];
+  } catch {
+    return [];
+  }
 }
 
 /**
  * 데이터 소스 기여도 조회
  */
 export async function getSourceContribution(): Promise<SourceContribution[]> {
-  const result = await apiRequest<SourceContribution[]>('/api/dashboard/sources');
-  return result || [];
+  try {
+    const result = await apiRequest<SourceContribution[]>('/api/dashboard/sources', undefined, API_BASE_URL, true);
+    return result || [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -170,42 +205,50 @@ export interface ControlResponse {
  * 모든 서버 상태 조회
  */
 export async function getServerStatus(): Promise<ServerStatus | null> {
-  return apiRequest<ServerStatus>('/control/status', undefined, CONTROL_BASE_URL);
+  try {
+    return await apiRequest<ServerStatus>('/control/status', undefined, CONTROL_BASE_URL, true);
+  } catch {
+    return null;
+  }
 }
 
 /**
  * ChromaDB 서버 시작
  */
-export async function startChromaDB(): Promise<ControlResponse | null> {
-  return apiRequest<ControlResponse>('/control/chromadb/start', { method: 'POST' }, CONTROL_BASE_URL);
+export async function startChromaDB(): Promise<ControlResponse> {
+  return apiRequest<ControlResponse>('/control/chromadb/start', { method: 'POST' }, CONTROL_BASE_URL, false);
 }
 
 /**
  * ChromaDB 서버 종료
  */
-export async function stopChromaDB(): Promise<ControlResponse | null> {
-  return apiRequest<ControlResponse>('/control/chromadb/stop', { method: 'POST' }, CONTROL_BASE_URL);
+export async function stopChromaDB(): Promise<ControlResponse> {
+  return apiRequest<ControlResponse>('/control/chromadb/stop', { method: 'POST' }, CONTROL_BASE_URL, false);
 }
 
 /**
  * API 서버 시작
  */
-export async function startAPIServer(): Promise<ControlResponse | null> {
-  return apiRequest<ControlResponse>('/control/api/start', { method: 'POST' }, CONTROL_BASE_URL);
+export async function startAPIServer(): Promise<ControlResponse> {
+  return apiRequest<ControlResponse>('/control/api/start', { method: 'POST' }, CONTROL_BASE_URL, false);
 }
 
 /**
  * API 서버 종료
  */
-export async function stopAPIServer(): Promise<ControlResponse | null> {
-  return apiRequest<ControlResponse>('/control/api/stop', { method: 'POST' }, CONTROL_BASE_URL);
+export async function stopAPIServer(): Promise<ControlResponse> {
+  return apiRequest<ControlResponse>('/control/api/stop', { method: 'POST' }, CONTROL_BASE_URL, false);
 }
 
 /**
  * 서버 로그 조회
  */
 export async function getServerLogs(server: 'chromadb' | 'api'): Promise<{ logs: string[] } | null> {
-  return apiRequest<{ logs: string[] }>(`/control/logs/${server}`, undefined, CONTROL_BASE_URL);
+  try {
+    return await apiRequest<{ logs: string[] }>(`/control/logs/${server}`, undefined, CONTROL_BASE_URL, true);
+  } catch {
+    return null;
+  }
 }
 
 /**

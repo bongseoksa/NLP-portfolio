@@ -2,10 +2,13 @@
  * 프로세스 관리자
  * ChromaDB 서버와 API 서버의 시작/종료를 관리
  */
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, exec } from 'child_process';
+import { promisify } from 'util';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
+
+const execAsync = promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,6 +40,47 @@ class ProcessManager {
     }
 
     /**
+     * 포트 사용 중인지 확인
+     */
+    private async isPortInUse(port: number): Promise<boolean> {
+        try {
+            const { stdout } = await execAsync(`lsof -i :${port} 2>/dev/null || true`);
+            return stdout.trim().length > 0;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * 포트 8000에서 실행 중인 ChromaDB 프로세스 종료
+     */
+    private async killChromaDBOnPort8000(): Promise<void> {
+        try {
+            // 포트 8000을 사용하는 Python 프로세스 찾기
+            const { stdout } = await execAsync('lsof -ti :8000 2>/dev/null || true');
+            const pids = stdout.trim().split('\n').filter(pid => pid.length > 0);
+            
+            for (const pid of pids) {
+                try {
+                    // 프로세스가 chroma 관련인지 확인
+                    const { stdout: cmdline } = await execAsync(`ps -p ${pid} -o command= 2>/dev/null || true`);
+                    if (cmdline.includes('chroma') || cmdline.includes('uvicorn')) {
+                        console.log(`🛑 기존 ChromaDB 프로세스 종료 중 (PID: ${pid})...`);
+                        await execAsync(`kill -TERM ${pid} 2>/dev/null || true`);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        // 강제 종료
+                        await execAsync(`kill -KILL ${pid} 2>/dev/null || true`);
+                    }
+                } catch {
+                    // 프로세스가 이미 종료되었을 수 있음
+                }
+            }
+        } catch {
+            // lsof가 없거나 오류 발생 시 무시
+        }
+    }
+
+    /**
      * ChromaDB 서버 시작
      */
     async startChromaDB(): Promise<{ success: boolean; message: string }> {
@@ -47,6 +91,15 @@ class ProcessManager {
         }
 
         try {
+            // 포트 8000이 사용 중인지 확인
+            const portInUse = await this.isPortInUse(8000);
+            if (portInUse) {
+                console.log('⚠️ 포트 8000이 사용 중입니다. 기존 프로세스를 종료합니다...');
+                await this.killChromaDBOnPort8000();
+                // 프로세스 종료 대기
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
             managed.status = 'starting';
             managed.lastOutput = [];
 
@@ -82,6 +135,12 @@ class ProcessManager {
                 const output = data.toString();
                 managed.lastOutput.push(`[stderr] ${output}`);
                 if (managed.lastOutput.length > 50) managed.lastOutput.shift();
+                
+                // 포트 충돌 오류 감지
+                if (output.includes('Address localhost:8000 is not available')) {
+                    console.error('❌ 포트 8000 충돌 감지');
+                    managed.status = 'error';
+                }
             });
 
             proc.on('error', (err) => {
@@ -108,10 +167,32 @@ class ProcessManager {
                 return { success: true, message: 'ChromaDB started successfully' };
             } else if (managed.status === 'starting') {
                 // 프로세스는 실행 중이지만 서버가 아직 준비되지 않음
+                // 포트 충돌 확인
+                const portStillInUse = await this.isPortInUse(8000);
+                if (portStillInUse) {
+                    // 포트가 여전히 사용 중이지만 우리 프로세스가 아닐 수 있음
+                    const lastOutput = managed.lastOutput.join('\n');
+                    if (lastOutput.includes('Address localhost:8000 is not available')) {
+                        managed.status = 'error';
+                        return { 
+                            success: false, 
+                            message: '포트 8000이 사용 중입니다. 기존 ChromaDB 프로세스를 종료한 후 다시 시도하세요.' 
+                        };
+                    }
+                }
                 managed.status = 'starting';
                 return { success: false, message: 'ChromaDB is starting, please wait...' };
             } else {
                 managed.status = 'error';
+                // 포트 충돌 확인
+                const portStillInUse = await this.isPortInUse(8000);
+                const lastOutput = managed.lastOutput.join('\n');
+                if (portStillInUse || lastOutput.includes('Address localhost:8000 is not available')) {
+                    return { 
+                        success: false, 
+                        message: '포트 8000이 사용 중입니다. 기존 ChromaDB 프로세스를 종료한 후 다시 시도하세요.' 
+                    };
+                }
                 return { success: false, message: 'ChromaDB failed to start. Check logs for details.' };
             }
 

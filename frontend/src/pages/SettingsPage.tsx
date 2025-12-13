@@ -95,12 +95,10 @@ export default function SettingsPage() {
 
     try {
       const result = action === 'start' ? await startChromaDB() : await stopChromaDB();
-      if (!result) {
-        setError('Control 서버에 연결할 수 없습니다. Control 서버가 실행 중인지 확인하세요.');
-        return;
-      }
       if (!result.success) {
         setError(result.message);
+      } else {
+        setError(null);
       }
       // 상태 갱신
       const status = await getServerStatus();
@@ -122,12 +120,10 @@ export default function SettingsPage() {
 
     try {
       const result = action === 'start' ? await startAPIServer() : await stopAPIServer();
-      if (!result) {
-        setError('Control 서버에 연결할 수 없습니다. Control 서버가 실행 중인지 확인하세요.');
-        return;
-      }
       if (!result.success) {
         setError(result.message);
+      } else {
+        setError(null);
       }
       // 상태 갱신
       const status = await getServerStatus();
