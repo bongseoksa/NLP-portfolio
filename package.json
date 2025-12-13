@@ -12,6 +12,7 @@
     "pipeline": "tsx src/pipeline/runPipeline.ts",
     "fetch:all": "tsx src/index.ts commits",
     "ask": "tsx src/index.ts ask",
+    "reindex": "tsx src/index.ts reindex",
     "chroma:setup": "./scripts/setup_chroma.sh",
     "chroma:start": "./scripts/run_chroma.sh"
   },
@@ -27,6 +28,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
     "@chroma-core/default-embed": "^0.1.9",
     "@octokit/rest": "^22.0.1",
     "chromadb": "^3.1.6",

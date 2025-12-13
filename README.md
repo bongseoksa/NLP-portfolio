@@ -11,11 +11,29 @@ pnpm install
 ## Usage
 
 ```bash
-# 파이프라인 실행 (데이터 수집 및 적재)
-pnpm run start
+# 파이프라인 실행 (데이터 수집 + 임베딩 + 벡터 저장)
+pnpm run dev
+
+# 컬렉션 리셋 후 파이프라인 실행 (임베딩 차원 변경 시)
+pnpm run dev --reset
+
+# 기존 데이터로 재임베딩 (데이터 수집 건너뛰기)
+pnpm run reindex
 
 # 질의응답 (QA) 모드 실행
 pnpm run ask "이 프로젝트의 최근 변경사항은 무엇인가요?"
+
+# 도움말 보기
+pnpm run dev help
+```
+
+### 임베딩 재생성이 필요한 경우
+
+OpenAI에서 Chroma 기본 임베딩으로 전환하거나, 그 반대의 경우 임베딩 차원이 다르므로 기존 데이터를 재임베딩해야 합니다:
+
+```bash
+# 권장: 기존 데이터로 빠른 재임베딩
+pnpm run reindex
 ```
 
 ## 프로젝트 구조 (Project Structure)
@@ -39,18 +57,46 @@ pnpm run ask "이 프로젝트의 최근 변경사항은 무엇인가요?"
   - **`vectors/`**: 임베딩 벡터 데이터 (예정)
 - **`output/`**: (Legacy) 이전 출력 경로, `data/`로 통합 예정
 
-## OpenAI API 설정 (OpenAI API Setup)
+## AI API 설정 (AI API Setup)
 
-NLP 임베딩 기능을 사용하기 위해서는 OpenAI API 키가 필요합니다.
+이 프로젝트는 **OpenAI**와 **Claude(Anthropic)** API를 지원하며, 자동 fallback 기능이 있습니다.
+
+### Fallback 동작 방식
+
+| 기능 | 1순위 | 2순위 (Fallback) |
+|------|-------|------------------|
+| **임베딩 생성** | OpenAI (`text-embedding-3-small`) | Chroma 기본 임베딩 (로컬) |
+| **답변 생성** | OpenAI (`gpt-4o`) | Claude (`claude-sonnet-4-20250514`) |
+
+- OpenAI API가 실패하면 자동으로 fallback으로 전환됩니다.
+- API 키가 없어도 Chroma 기본 임베딩으로 임베딩 생성이 가능합니다.
+
+### OpenAI 설정 (선택)
 
 1. [OpenAI Platform](https://platform.openai.com/)에 접속하여 가입 또는 로그인합니다.
 2. [API Keys 페이지](https://platform.openai.com/api-keys)로 이동합니다.
 3. **"Create new secret key"** 버튼을 클릭하여 새로운 키를 발급받습니다.
-4. 발급된 키를 복사하여 `.env` 파일에 `OPENAI_API_KEY` 변수로 추가합니다.
+4. 발급된 키를 `.env` 파일에 추가합니다.
+
+### Claude (Anthropic) 설정 (선택)
+
+1. [Anthropic Console](https://console.anthropic.com/)에 접속하여 가입 또는 로그인합니다.
+2. [API Keys 페이지](https://console.anthropic.com/settings/keys)로 이동합니다.
+3. **"Create Key"** 버튼을 클릭하여 새로운 키를 발급받습니다.
+4. 발급된 키를 `.env` 파일에 추가합니다.
+
+### `.env` 파일 예시
 
 ```env
+# OpenAI API (선택 - 없으면 Chroma 기본 임베딩 사용)
 OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
+
+# Anthropic API (선택 - OpenAI 실패 시 fallback으로 사용)
+CLAUDE_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxxxx
 ```
+
+> [!TIP]
+> 두 API 키 중 하나만 있어도 동작합니다. OpenAI 없이 Anthropic만 설정해도 됩니다.
 
 > [!WARNING]
 > API 키는 외부에 노출되지 않도록 주의하세요. GitHub 등 공개 저장소에 `.env` 파일이 업로드되지 않도록 확인해야 합니다.
@@ -120,8 +166,42 @@ docker run -p 8000:8000 chromadb/chroma
 *   [x] TypeScript 기반 프로젝트 환경 구성 완료
 *   [x] Github API + 로컬 프로젝트를 통한 전처리 파일 추출 (Pipeline Steps 1~5)
 *   [x] NLP 입력용 데이터 정제 (Pipeline Step 6)
-*   [ ] NLP 기반 질의응답 시스템 구축 (임베딩 및 검색)
+*   [x] NLP 기반 질의응답 시스템 구축 (임베딩 및 검색) ✅
 *   [ ] 시각화 및 모니터링 대시보드
+
+### 질의응답 성공 예시
+
+```bash
+$ pnpm ask "기술스택 알려줘"
+
+🔍 Searching in collection: portfolio-commits
+❓ Question: 기술스택 알려줘
+
+... 검색 중 (Retrieving contexts) ...
+✅ Chroma default embedding successful
+   → Found 5 relevant documents.
+
+... 답변 생성 중 (Generating answer) ...
+✅ Claude answer generation successful
+
+🤖 Answer:
+---------------------------------------------------
+주어진 정보에서는 구체적인 기술스택의 전체 목록을 알 수 없습니다.
+
+다만 커밋 내용을 통해 확인할 수 있는 일부 기술들은 다음과 같습니다:
+
+**프론트엔드 관련:**
+- **React** (TypeScript 사용)
+- **TypeScript** - `.tsx`, `.ts` 파일 확장자로 확인
+- **React i18n** - 다국어 지원
+- **Motion/Framer Motion** - 애니메이션 라이브러리
+
+**백엔드/인프라:**
+- **Supabase** - 데이터베이스
+- **Vercel** - 서버리스 환경
+- **GitHub Actions** - CI/CD 파이프라인
+---------------------------------------------------
+```
 
 ## 향후 확장 가능성 (Future Plans)
 
@@ -237,6 +317,40 @@ pnpm ask "테스트 질문"
 ```
 
 **참고**: `setup_chroma.sh` 스크립트가 이미 호환되는 버전을 설치하도록 업데이트되었습니다. 새로 설정하는 경우 `pnpm run chroma:setup`을 실행하면 됩니다.
+
+---
+
+### 4. 임베딩 차원 불일치로 검색 결과 0건
+
+**증상**
+```
+✅ Chroma default embedding successful
+   → Found 0 relevant documents.
+```
+
+**원인**
+- 기존 데이터가 OpenAI 임베딩(1536차원)으로 저장됨
+- 현재 Chroma 기본 임베딩(384차원)을 사용 중
+- 임베딩 차원이 다르면 벡터 검색이 정상 동작하지 않음
+
+**해결 방법**
+`reindex` 명령어로 기존 데이터를 현재 임베딩 방식으로 재저장:
+```bash
+pnpm run reindex
+```
+
+이 명령은:
+1. 기존 벡터 컬렉션 삭제
+2. `refined_data.json`에서 데이터 로드 (GitHub API 재호출 없음)
+3. 현재 설정된 임베딩 방식으로 새 벡터 생성
+4. ChromaDB에 저장
+
+**확인**
+```bash
+# 재인덱싱 후 질의응답 테스트
+pnpm ask "기술스택 알려줘"
+# → Found 5 relevant documents. (0이 아닌 결과)
+```
 
 ---
 
