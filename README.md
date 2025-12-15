@@ -187,38 +187,193 @@ pnpm run chroma:start
 pnpm run dev
 ```
 
-### Step 6: 서버 실행
+### Step 6: 백엔드 서버 실행
 
-#### 방법 1: CLI 모드 (간단)
+백엔드를 정상적으로 실행하려면 **3개의 서버가 모두 실행**되어야 합니다:
+
+#### 필수 실행 서버
+
+1. **ChromaDB 서버** (포트 8000)
+   - **역할**: 벡터 데이터베이스 서버
+   - **관리**: 벡터 임베딩 저장 및 검색
+   - **실행**: `pnpm run chroma:start`
+   - **설명**: 질의응답 시 관련 코드/커밋을 검색하기 위한 벡터 DB
+
+2. **Control 서버** (포트 3000)
+   - **역할**: 서버 관리 서버 (로컬 개발용)
+   - **관리**: ChromaDB 및 API 서버의 시작/종료 제어
+   - **실행**: `pnpm run control`
+   - **설명**: 프론트엔드에서 서버 상태 확인 및 제어를 위한 관리 서버
+
+3. **API 서버** (포트 3001)
+   - **역할**: 메인 애플리케이션 서버
+   - **관리**: 질의응답 API, 대시보드 통계, 이력 조회 등
+   - **실행**: `pnpm run server`
+   - **설명**: 프론트엔드와 통신하는 메인 API 엔드포인트 제공
+
+#### 실행 방법
+
+**방법 1: 각각 별도 터미널에서 실행 (권장)**
 
 ```bash
+# 터미널 1: ChromaDB 서버
+pnpm run chroma:start
+# → ChromaDB running on http://localhost:8000
+
+# 터미널 2: Control 서버
+pnpm run control
+# → Control Server running on http://localhost:3000
+
+# 터미널 3: API 서버
+pnpm run server
+# → API Server running on http://localhost:3001
+
+# 터미널 4: 프론트엔드
+cd frontend && pnpm run dev
+# → Frontend running on http://localhost:5173
+```
+
+**방법 2: Control + API 서버 동시 실행**
+
+```bash
+# 터미널 1: ChromaDB 서버
+pnpm run chroma:start
+
+# 터미널 2: Control + API 서버 동시 실행
+pnpm run start:local
+# → Control Server + API Server 동시 실행
+
+# 터미널 3: 프론트엔드
+cd frontend && pnpm run dev
+```
+
+**방법 3: CLI 모드 (간단, 웹 UI 없음)**
+
+```bash
+# ChromaDB만 실행하고
+pnpm run chroma:start
+
+# 다른 터미널에서 CLI로 질문
 pnpm run ask "이 프로젝트에서 사용하는 기술스택은?"
 ```
 
-#### 방법 2: 웹 UI 모드 (권장)
+#### 서버 실행 순서
 
-**터미널 1: Control 서버**
-```bash
-pnpm run control
-# Control Server running on http://localhost:3000
+1. **ChromaDB 먼저 실행** (포트 8000)
+   - 벡터 데이터베이스가 없으면 질의응답이 불가능합니다
+   - `pnpm run chroma:start` 실행
+
+2. **Control 서버 실행** (포트 3000)
+   - 프론트엔드에서 서버 상태 확인 및 제어를 위해 필요
+   - `pnpm run control` 실행
+
+3. **API 서버 실행** (포트 3001)
+   - 질의응답, 대시보드 등 메인 기능 제공
+   - `pnpm run server` 실행
+
+4. **프론트엔드 실행** (포트 5173)
+   - 웹 UI 접근
+   - `cd frontend && pnpm run dev` 실행
+
+**⚠️ 중요**: 
+- ChromaDB는 반드시 먼저 실행해야 합니다
+- Control 서버와 API 서버는 순서에 관계없이 실행 가능하지만, 둘 다 실행되어야 정상 동작합니다
+- 프론트엔드는 마지막에 실행합니다
+
+---
+
+## 최종 동작 프로세스 (System Flow)
+
+### 전체 시스템 동작 흐름
+
+```
+1. 사용자 질문 입력
+   ↓
+2. 프론트엔드 (포트 5173)
+   - Q&A 페이지에서 질문 입력
+   - API 서버로 POST /api/ask 요청
+   ↓
+3. API 서버 (포트 3001)
+   - 질문을 받아 임베딩 생성 (OpenAI 또는 Chroma 기본)
+   - ChromaDB에 벡터 검색 요청
+   ↓
+4. ChromaDB 서버 (포트 8000)
+   - 벡터 검색 수행
+   - 관련 코드/커밋 정보 반환
+   ↓
+5. API 서버 (포트 3001)
+   - 검색 결과를 LLM에 전달 (OpenAI 또는 Claude)
+   - 답변 생성 및 근거 정보 포함
+   - Supabase에 이력 저장
+   ↓
+6. 프론트엔드 (포트 5173)
+   - 답변 표시
+   - 근거 정보 (소스 파일, 커밋) 표시
+   - 질문 이력 업데이트
 ```
 
-**터미널 2: API 서버**
-```bash
-pnpm run server
-# API Server running on http://localhost:3001
+### 서버 간 통신 흐름
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    프론트엔드 (포트 5173)                    │
+│  - Q&A 페이지: API 서버와 통신                               │
+│  - Dashboard: API 서버와 통신                                │
+│  - Settings: Control 서버와 통신 (로컬만)                     │
+└─────────────────┬───────────────────┬───────────────────────┘
+                  │                   │
+        ┌─────────▼─────────┐  ┌─────▼──────────┐
+        │  API 서버 (3001)   │  │Control 서버(3000)│
+        │  - 질의응답 처리   │  │  - 서버 관리     │
+        │  - 이력 조회       │  │  - 상태 확인     │
+        │  - 통계 제공       │  └─────┬──────────┘
+        └─────────┬─────────┘        │
+                  │                   │
+        ┌─────────▼─────────┐  ┌─────▼──────────┐
+        │ ChromaDB (8000)   │  │  Supabase      │
+        │  - 벡터 검색       │  │  - 이력 저장    │
+        │  - 임베딩 저장     │  │  - 통계 저장    │
+        └───────────────────┘  └────────────────┘
 ```
 
-**터미널 3: 프론트엔드**
-```bash
-cd frontend && pnpm run dev
-# http://localhost:5173
-```
+### 상태 확인 프로세스
 
-또는 한 번에 실행:
-```bash
-pnpm run start:local
-```
+1. **프론트엔드 → Control 서버** (로컬만)
+   - `GET /control/status`: 모든 서버 상태 조회
+   - Control 서버가 ChromaDB와 API 서버의 실제 HTTP 응답 확인
+   - 1분 캐시 적용
+
+2. **프론트엔드 → API 서버**
+   - `GET /api/health`: API 서버 및 Supabase 상태 확인
+   - `GET /api/health/chromadb`: ChromaDB 상태 확인 (포트 8000)
+   - 1분 캐시 적용
+
+3. **Control 서버 → ChromaDB/API 서버**
+   - 실제 HTTP 요청으로 서버 응답 확인
+   - 포트가 열려있고 응답이 있으면 `running` 상태로 표시
+
+### 서버 시작/종료 프로세스
+
+1. **ChromaDB 시작** (`POST /control/chromadb/start`)
+   - Control 서버가 ChromaDB 프로세스 시작
+   - 포트 8000에서 응답 확인
+   - 상태를 `running`으로 업데이트
+
+2. **API 서버 시작** (`POST /control/api/start`)
+   - Control 서버가 API 서버 프로세스 시작
+   - 포트 3001에서 응답 확인
+   - 상태를 `running`으로 업데이트
+
+3. **서버 종료** (`POST /control/chromadb/stop`, `/control/api/stop`)
+   - 프로세스 종료
+   - 상태를 `stopped`로 업데이트
+   - 캐시 무효화
+
+### 캐싱 전략
+
+- **프론트엔드**: 상태 조회 결과 1분 캐시, 중복 요청 방지
+- **백엔드**: Supabase 연결 상태 1분 캐시, ChromaDB 상태 1분 캐시
+- **서버 시작/종료 시**: 캐시 자동 무효화
 
 ---
 
@@ -293,23 +448,31 @@ ChatGPT 스타일의 질의응답 인터페이스:
 
 ### API Server (:3001)
 
-| 엔드포인트 | 메서드 | 설명 |
-|-----------|--------|------|
-| `/api/health` | GET | 서버 상태 확인 |
-| `/api/ask` | POST | 질의응답 (question 필드 필요) |
-| `/api/history` | GET | 질문 이력 조회 |
-| `/api/dashboard/summary` | GET | 대시보드 통계 |
+| 엔드포인트 | 메서드 | 설명 | 캐싱 |
+|-----------|--------|------|------|
+| `/api/health` | GET | 서버 상태 확인 (API 서버, Supabase) | 1분 |
+| `/api/health/chromadb` | GET | ChromaDB 상태 확인 (포트 8000) | 1분 |
+| `/api/ask` | POST | 질의응답 (question 필드 필요) | - |
+| `/api/history` | GET | 질문 이력 조회 | - |
+| `/api/dashboard/summary` | GET | 대시보드 통계 | - |
+| `/api/dashboard/daily` | GET | 일별 통계 | - |
+| `/api/dashboard/categories` | GET | 카테고리 분포 | - |
+| `/api/dashboard/sources` | GET | 소스 기여도 | - |
 
 ### Control Server (:3000) - 로컬 전용
 
-| 엔드포인트 | 메서드 | 설명 |
-|-----------|--------|------|
-| `/control/status` | GET | 모든 서버 상태 |
-| `/control/chromadb/start` | POST | ChromaDB 시작 |
-| `/control/chromadb/stop` | POST | ChromaDB 종료 |
-| `/control/api/start` | POST | API 서버 시작 |
-| `/control/api/stop` | POST | API 서버 종료 |
-| `/control/logs/:server` | GET | 서버 로그 조회 |
+| 엔드포인트 | 메서드 | 설명 | 캐싱 |
+|-----------|--------|------|------|
+| `/control/status` | GET | 모든 서버 상태 (Control, ChromaDB, API) | 1분 |
+| `/control/chromadb/start` | POST | ChromaDB 시작 | - |
+| `/control/chromadb/stop` | POST | ChromaDB 종료 | - |
+| `/control/api/start` | POST | API 서버 시작 | - |
+| `/control/api/stop` | POST | API 서버 종료 | - |
+| `/control/logs/:server` | GET | 서버 로그 조회 | - |
+
+**참고**: 
+- 상태 확인 엔드포인트는 1분 캐시를 사용하여 과도한 요청을 방지합니다
+- 서버 시작/종료 시 캐시가 자동으로 무효화됩니다
 
 ---
 
