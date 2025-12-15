@@ -97,7 +97,13 @@ export default function DashboardPage() {
     { type: 'history' as const, count: 36, percentage: 18.3 },
   ];
 
-  const displaySummary = summary || mockSummary;
+  const displaySummary = {
+    ...mockSummary,
+    ...summary,
+    // dailyTokenUsage와 totalTokenUsage가 없을 경우 기본값 사용
+    dailyTokenUsage: summary?.dailyTokenUsage ?? mockSummary.dailyTokenUsage,
+    totalTokenUsage: summary?.totalTokenUsage ?? mockSummary.totalTokenUsage,
+  };
   const displayDailyStats = dailyStats.length > 0 ? dailyStats : mockDailyStats;
   const displayCategoryDist = categoryDist.length > 0 ? categoryDist : mockCategoryDist;
   const displaySourceDist = sourceDist.length > 0 ? sourceDist : mockSourceDist;
@@ -144,7 +150,7 @@ export default function DashboardPage() {
         />
         <SummaryCard
           title="일일 토큰 사용량"
-          value={displaySummary.dailyTokenUsage.toLocaleString()}
+          value={(displaySummary.dailyTokenUsage ?? 0).toLocaleString()}
           icon="🔤"
           color="purple"
         />
@@ -156,7 +162,7 @@ export default function DashboardPage() {
         />
         <SummaryCard
           title="누적 토큰"
-          value={displaySummary.totalTokenUsage.toLocaleString()}
+          value={(displaySummary.totalTokenUsage ?? 0).toLocaleString()}
           icon="📈"
         />
       </div>

@@ -221,6 +221,8 @@ export async function getDashboardStats(): Promise<{
     failureRate: number;
     averageResponseTimeMs: number;
     todayQuestions: number;
+    dailyTokenUsage: number;
+    totalTokenUsage: number;
 }> {
     const client = getSupabaseClient();
     if (!client) {
@@ -230,6 +232,8 @@ export async function getDashboardStats(): Promise<{
             failureRate: 0,
             averageResponseTimeMs: 0,
             todayQuestions: 0,
+            dailyTokenUsage: 0,
+            totalTokenUsage: 0,
         };
     }
 
@@ -237,7 +241,7 @@ export async function getDashboardStats(): Promise<{
         // 전체 통계
         const { data: allData } = await client
             .from('qa_history')
-            .select('status, response_time_ms');
+            .select('status, response_time_ms, token_usage, created_at');
 
         if (!allData || allData.length === 0) {
             return {
@@ -246,6 +250,8 @@ export async function getDashboardStats(): Promise<{
                 failureRate: 0,
                 averageResponseTimeMs: 0,
                 todayQuestions: 0,
+                dailyTokenUsage: 0,
+                totalTokenUsage: 0,
             };
         }
 
@@ -253,20 +259,28 @@ export async function getDashboardStats(): Promise<{
         const successCount = allData.filter(r => r.status === 'success').length;
         const failureCount = allData.filter(r => r.status === 'failed').length;
         const avgResponseTime = allData.reduce((sum, r) => sum + (r.response_time_ms || 0), 0) / totalQuestions;
-
-        // 오늘 질문 수
+        
+        // 토큰 사용량 계산
+        const totalTokenUsage = allData.reduce((sum, r) => sum + (r.token_usage || 0), 0);
+        
+        // 오늘 질문 수 및 일일 토큰 사용량
         const today = new Date().toISOString().split('T')[0];
-        const { count: todayCount } = await client
-            .from('qa_history')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', today);
+        const todayData = allData.filter(r => {
+            if (!r.created_at) return false;
+            const recordDate = new Date(r.created_at).toISOString().split('T')[0];
+            return recordDate === today;
+        });
+        const todayCount = todayData.length;
+        const dailyTokenUsage = todayData.reduce((sum, r) => sum + (r.token_usage || 0), 0);
 
         return {
             totalQuestions,
             successRate: (successCount / totalQuestions) * 100,
             failureRate: (failureCount / totalQuestions) * 100,
             averageResponseTimeMs: Math.round(avgResponseTime),
-            todayQuestions: todayCount || 0,
+            todayQuestions: todayCount,
+            dailyTokenUsage,
+            totalTokenUsage,
         };
     } catch (err) {
         console.error('❌ 대시보드 통계 조회 오류:', err);
@@ -276,6 +290,8 @@ export async function getDashboardStats(): Promise<{
             failureRate: 0,
             averageResponseTimeMs: 0,
             todayQuestions: 0,
+            dailyTokenUsage: 0,
+            totalTokenUsage: 0,
         };
     }
 }
