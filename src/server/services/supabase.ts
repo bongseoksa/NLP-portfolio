@@ -1,26 +1,42 @@
 /**
  * Supabase 클라이언트
  */
+import dotenv from 'dotenv';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// 환경 변수에서 Supabase 설정 로드
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+// 환경 변수 로드 (이 파일이 import될 때 dotenv.config()가 실행되도록 보장)
+dotenv.config();
 
 // Supabase 클라이언트 인스턴스
 let supabase: SupabaseClient | null = null;
 
 /**
+ * 환경 변수에서 Supabase 설정 가져오기 (지연 평가)
+ */
+function getSupabaseConfig(): { url: string; key: string } | null {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return null;
+    }
+
+    return { url: supabaseUrl, key: supabaseAnonKey };
+}
+
+/**
  * Supabase 클라이언트 가져오기
  */
 export function getSupabaseClient(): SupabaseClient | null {
-    if (!supabaseUrl || !supabaseAnonKey) {
+    const config = getSupabaseConfig();
+    
+    if (!config) {
         console.warn('⚠️ Supabase 환경 변수가 설정되지 않았습니다. 이력 저장이 비활성화됩니다.');
         return null;
     }
 
     if (!supabase) {
-        supabase = createClient(supabaseUrl, supabaseAnonKey);
+        supabase = createClient(config.url, config.key);
     }
 
     return supabase;

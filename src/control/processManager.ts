@@ -351,8 +351,12 @@ class ProcessManager {
             });
             clearTimeout(timeoutId);
             return response.ok;
-        } catch {
+        } catch (error: any) {
             clearTimeout(timeoutId);
+            // 연결 거부 오류는 서버가 꺼져있음을 의미
+            if (error.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED') || error.message?.includes('ERR_CONNECTION_REFUSED')) {
+                return false;
+            }
             // 다른 엔드포인트도 시도
             const controller2 = new AbortController();
             const timeoutId2 = setTimeout(() => controller2.abort(), 2000);
@@ -363,8 +367,12 @@ class ProcessManager {
                 });
                 clearTimeout(timeoutId2);
                 return response.ok;
-            } catch {
+            } catch (error2: any) {
                 clearTimeout(timeoutId2);
+                // 연결 거부 오류는 서버가 꺼져있음을 의미
+                if (error2.code === 'ECONNREFUSED' || error2.message?.includes('ECONNREFUSED') || error2.message?.includes('ERR_CONNECTION_REFUSED')) {
+                    return false;
+                }
                 return false;
             }
         }
@@ -384,8 +392,18 @@ class ProcessManager {
             });
             clearTimeout(timeoutId);
             return response.ok;
-        } catch {
+        } catch (error: any) {
             clearTimeout(timeoutId);
+            // 연결 거부 오류는 서버가 꺼져있음을 의미
+            // ECONNREFUSED는 시스템 레벨 오류 코드
+            // ERR_CONNECTION_REFUSED는 브라우저/Node.js에서 사용하는 메시지
+            if (error.code === 'ECONNREFUSED' || 
+                error.message?.includes('ECONNREFUSED') || 
+                error.message?.includes('ERR_CONNECTION_REFUSED') ||
+                error.cause?.code === 'ECONNREFUSED') {
+                return false;
+            }
+            // 타임아웃이나 다른 오류도 false 반환
             return false;
         }
     }
