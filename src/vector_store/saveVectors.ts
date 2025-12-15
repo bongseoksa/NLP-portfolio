@@ -60,14 +60,36 @@ export async function saveVectors(
         // Metadata 처리가 까다로울 수 있음 (nested object 지원 여부 확인 필요)
         // Chroma는 flat metadata를 선호하므로, metadata를 flat하게 변환하거나 
         // 필요한 필드만 string/number/boolean으로 변환해야 함.
-        const metadatas = items.map(item => ({
-            sha: item.metadata.sha,
-            author: item.metadata.author,
-            date: item.metadata.date,
-            message: item.metadata.message,
-            fileCount: item.metadata.fileCount
-            // type: item.type // 필요 시 추가
-        }));
+        const metadatas = items.map(item => {
+            const baseMetadata: any = {
+                type: item.type,
+            };
+
+            // 커밋 메타데이터
+            if (item.type === 'commit') {
+                baseMetadata.sha = item.metadata.sha || '';
+                baseMetadata.author = item.metadata.author || '';
+                baseMetadata.date = item.metadata.date || '';
+                baseMetadata.message = item.metadata.message || '';
+                baseMetadata.fileCount = item.metadata.fileCount || 0;
+            }
+
+            // 파일 메타데이터
+            if (item.type === 'file') {
+                baseMetadata.path = item.metadata.path || '';
+                baseMetadata.fileType = item.metadata.type || '';
+                baseMetadata.size = item.metadata.size || 0;
+                baseMetadata.extension = item.metadata.extension || '';
+                if (item.metadata.chunkIndex !== undefined) {
+                    baseMetadata.chunkIndex = item.metadata.chunkIndex;
+                }
+                if (item.metadata.totalChunks !== undefined) {
+                    baseMetadata.totalChunks = item.metadata.totalChunks;
+                }
+            }
+
+            return baseMetadata;
+        });
 
         console.log(`📌 Upserting ${ids.length} items to Chroma collection '${collectionName}'...`);
 

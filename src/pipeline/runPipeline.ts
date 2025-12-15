@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fetchAllCommits } from "../data_sources/github/fetchCommit.js";
 import { fetchFiles } from "../data_sources/github/fetchFiles.js";
+import { fetchRepositoryFiles } from "../data_sources/github/fetchRepositoryFiles.js";
 import { parseLog } from "../data_sources/git/parseLog.js";
 import { extractDiff } from "../data_sources/git/extractDiff.js";
 import type { CommitItem, LocalCommitLog } from "../models/Commit.js";
@@ -75,7 +76,8 @@ export async function runPipeline(options: PipelineOptions = {}) {
             commits: [],
             commitFiles: {},
             commitDiffs: [],
-            localLogs: []
+            localLogs: [],
+            repositoryFiles: []
         };
 
         // 1️⃣ GitHub 커밋 전체 가져오기
@@ -104,6 +106,24 @@ export async function runPipeline(options: PipelineOptions = {}) {
         console.log("\n📌 Saving local git logs...");
         result.localLogs = localCommits;
         console.log(`   → ${localCommits.length} logs saved.`);
+
+        // 5️⃣ 레포지토리 모든 파일 내용 가져오기 (소스 코드 레벨 질문용)
+        console.log("\n📌 Fetching repository files (source code)...");
+        try {
+            // 기본 브랜치 자동 감지 (null 전달 시 자동으로 기본 브랜치 사용)
+            const repositoryFiles = await fetchRepositoryFiles(owner, repo, null, {
+                maxFileSize: 500000, // 500KB
+                excludeExtensions: ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.pdf'],
+                excludePaths: ['node_modules', '.git', 'dist', 'build', '.next', '.venv', '__pycache__', '.chroma_venv'],
+                concurrency: 5, // 동시 요청 수
+            });
+            result.repositoryFiles = repositoryFiles;
+            console.log(`   → ${repositoryFiles.length} files fetched.`);
+        } catch (error: any) {
+            console.error("❌ Repository files fetch failed:", error.message);
+            console.warn("   → Continuing without repository files...");
+            result.repositoryFiles = [];
+        }
 
         // 5️⃣ JSON 파일로 저장 (Raw)
         fs.writeFileSync(
