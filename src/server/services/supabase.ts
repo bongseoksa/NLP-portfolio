@@ -281,6 +281,197 @@ export async function getDashboardStats(): Promise<{
 }
 
 /**
+ * 일별 통계 조회
+ */
+export async function getDailyStats(startDate?: string, endDate?: string): Promise<Array<{
+    date: string;
+    questionCount: number;
+    successCount: number;
+    failureCount: number;
+    averageResponseTimeMs: number;
+}>> {
+    const client = getSupabaseClient();
+    if (!client) return [];
+
+    try {
+        let query = client
+            .from('qa_history')
+            .select('created_at, status, response_time_ms');
+
+        if (startDate) {
+            query = query.gte('created_at', startDate);
+        }
+        if (endDate) {
+            query = query.lte('created_at', endDate);
+        }
+
+        const { data, error } = await query;
+
+        if (error || !data || data.length === 0) {
+            return [];
+        }
+
+        // 날짜별로 그룹화
+        const dailyMap = new Map<string, {
+            questionCount: number;
+            successCount: number;
+            failureCount: number;
+            totalResponseTime: number;
+        }>();
+
+        data.forEach((record) => {
+            if (!record.created_at) return;
+            
+            const date = new Date(record.created_at).toISOString().split('T')[0];
+            if (!date) return;
+            
+            const dateKey = new Date(date).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
+            
+            if (!dailyMap.has(dateKey)) {
+                dailyMap.set(dateKey, {
+                    questionCount: 0,
+                    successCount: 0,
+                    failureCount: 0,
+                    totalResponseTime: 0,
+                });
+            }
+
+            const day = dailyMap.get(dateKey)!;
+            day.questionCount++;
+            if (record.status === 'success') {
+                day.successCount++;
+            } else if (record.status === 'failed') {
+                day.failureCount++;
+            }
+            day.totalResponseTime += record.response_time_ms || 0;
+        });
+
+        // 결과 배열로 변환
+        return Array.from(dailyMap.entries())
+            .map(([date, stats]) => ({
+                date,
+                questionCount: stats.questionCount,
+                successCount: stats.successCount,
+                failureCount: stats.failureCount,
+                averageResponseTimeMs: Math.round(stats.totalResponseTime / stats.questionCount),
+            }))
+            .sort((a, b) => {
+                // 날짜 순서 정렬 (MM/DD 형식)
+                const aParts = a.date.split('/').map(Number);
+                const bParts = b.date.split('/').map(Number);
+                if (aParts.length !== 2 || bParts.length !== 2) return 0;
+                
+                const [aMonth, aDay] = aParts;
+                const [bMonth, bDay] = bParts;
+                if (aMonth !== undefined && bMonth !== undefined && aMonth !== bMonth) {
+                    return aMonth - bMonth;
+                }
+                if (aDay !== undefined && bDay !== undefined) {
+                    return aDay - bDay;
+                }
+                return 0;
+            });
+    } catch (err) {
+        console.error('❌ 일별 통계 조회 오류:', err);
+        return [];
+    }
+}
+
+/**
+ * 카테고리 분포 조회
+ */
+export async function getCategoryDistribution(): Promise<Array<{
+    category: string;
+    count: number;
+    percentage: number;
+}>> {
+    const client = getSupabaseClient();
+    if (!client) return [];
+
+    try {
+        const { data, error } = await client
+            .from('qa_history')
+            .select('category');
+
+        if (error || !data || data.length === 0) {
+            return [];
+        }
+
+        // 카테고리별 집계
+        const categoryMap = new Map<string, number>();
+        data.forEach((record) => {
+            const category = record.category;
+            categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
+        });
+
+        const total = data.length;
+
+        // 결과 배열로 변환
+        return Array.from(categoryMap.entries())
+            .map(([category, count]) => ({
+                category,
+                count,
+                percentage: Math.round((count / total) * 100 * 10) / 10, // 소수점 첫째 자리까지
+            }))
+            .sort((a, b) => b.count - a.count);
+    } catch (err) {
+        console.error('❌ 카테고리 분포 조회 오류:', err);
+        return [];
+    }
+}
+
+/**
+ * 소스 기여도 조회
+ */
+export async function getSourceContribution(): Promise<Array<{
+    type: string;
+    count: number;
+    percentage: number;
+}>> {
+    const client = getSupabaseClient();
+    if (!client) return [];
+
+    try {
+        const { data, error } = await client
+            .from('qa_history')
+            .select('sources');
+
+        if (error || !data || data.length === 0) {
+            return [];
+        }
+
+        // 소스 타입별 집계
+        const sourceMap = new Map<string, number>();
+        let totalSources = 0;
+
+        data.forEach((record) => {
+            const sources = record.sources || [];
+            sources.forEach((source: any) => {
+                const type = source.type || 'unknown';
+                sourceMap.set(type, (sourceMap.get(type) || 0) + 1);
+                totalSources++;
+            });
+        });
+
+        if (totalSources === 0) {
+            return [];
+        }
+
+        // 결과 배열로 변환
+        return Array.from(sourceMap.entries())
+            .map(([type, count]) => ({
+                type,
+                count,
+                percentage: Math.round((count / totalSources) * 100 * 10) / 10, // 소수점 첫째 자리까지
+            }))
+            .sort((a, b) => b.count - a.count);
+    } catch (err) {
+        console.error('❌ 소스 기여도 조회 오류:', err);
+        return [];
+    }
+}
+
+/**
  * 서버 상태 로그 저장
  */
 export async function logServerStatus(log: Omit<ServerStatusLog, 'id' | 'checked_at'>): Promise<void> {

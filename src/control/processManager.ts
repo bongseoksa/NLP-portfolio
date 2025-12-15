@@ -12,7 +12,18 @@ const execAsync = promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PROJECT_ROOT = path.resolve(__dirname, '../../..');
+// 프로젝트 루트: src/control에서 ../..가 프로젝트 루트
+// __dirname이 dist/control일 수도 있으므로 확인
+let PROJECT_ROOT = path.resolve(__dirname, '../..');
+// NLP-portfolio가 포함되어 있는지 확인
+if (!PROJECT_ROOT.includes('NLP-portfolio')) {
+    // 한 단계 더 올라가기
+    PROJECT_ROOT = path.resolve(__dirname, '../../..');
+}
+// 여전히 없으면 현재 작업 디렉토리 사용
+if (!PROJECT_ROOT.includes('NLP-portfolio') && process.cwd().includes('NLP-portfolio')) {
+    PROJECT_ROOT = process.cwd();
+}
 
 interface ManagedProcess {
     process: ChildProcess | null;
