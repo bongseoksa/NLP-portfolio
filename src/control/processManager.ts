@@ -34,6 +34,15 @@ interface ManagedProcess {
 
 class ProcessManager {
     private processes: Map<string, ManagedProcess> = new Map();
+    private statusCache: {
+        data: {
+            chromadb: { status: string; startedAt: string | null; pid: number | null };
+            api: { status: string; startedAt: string | null; pid: number | null };
+            control: { status: string; startedAt: string | null; pid: number | null };
+        } | null;
+        timestamp: number;
+    } = { data: null, timestamp: 0 };
+    private readonly CACHE_TTL = 1000 * 60; // 1분 캐시
 
     constructor() {
         this.processes.set('chromadb', {
@@ -329,6 +338,8 @@ class ProcessManager {
             if (isServerReady) {
                 managed.status = 'running';
                 managed.startedAt = new Date();
+                // 상태 캐시 무효화
+                this.invalidateStatusCache();
                 return { success: true, message: 'ChromaDB started successfully' };
             } else if (managed.status === 'starting') {
                 // 프로세스는 실행 중이지만 서버가 아직 준비되지 않음
@@ -388,6 +399,9 @@ class ProcessManager {
             managed.status = 'stopped';
             managed.process = null;
             managed.startedAt = null;
+
+            // 상태 캐시 무효화
+            this.invalidateStatusCache();
 
             // ChromaDB 종료 후 Control 서버도 종료
             console.log('🛑 Control 서버 종료 중...');
@@ -462,6 +476,8 @@ class ProcessManager {
             if (isServerReady) {
                 managed.status = 'running';
                 managed.startedAt = new Date();
+                // 상태 캐시 무효화
+                this.invalidateStatusCache();
                 return { success: true, message: 'API Server started successfully' };
             } else if (managed.status === 'starting') {
                 // 프로세스는 실행 중이지만 서버가 아직 준비되지 않음
@@ -499,6 +515,9 @@ class ProcessManager {
             managed.status = 'stopped';
             managed.process = null;
             managed.startedAt = null;
+
+            // 상태 캐시 무효화
+            this.invalidateStatusCache();
 
             return { success: true, message: 'API Server stopped' };
 
@@ -579,47 +598,78 @@ class ProcessManager {
     }
 
     /**
-     * 모든 서버 상태 조회 (실제 서버 응답 확인 포함)
+     * Control 서버 헬스체크 (포트 3000 확인만, 순환 참조 방지)
+     */
+    private async checkControlServerHealth(): Promise<boolean> {
+        // 포트만 확인 (자기 자신에게 HTTP 요청하지 않음 - 순환 참조 방지)
+        return await this.isPortInUse(3000);
+    }
+
+    /**
+     * 모든 서버 상태 조회 (실제 서버 응답 확인 포함, 캐싱 적용)
      */
     async getStatus(): Promise<{
         chromadb: { status: string; startedAt: string | null; pid: number | null };
         api: { status: string; startedAt: string | null; pid: number | null };
         control: { status: string; startedAt: string | null; pid: number | null };
     }> {
+        // 캐시 확인 (1분 이내면 캐시된 데이터 반환)
+        const now = Date.now();
+        if (this.statusCache.data && (now - this.statusCache.timestamp) < this.CACHE_TTL) {
+            return this.statusCache.data;
+        }
+
         const chromadb = this.processes.get('chromadb')!;
         const api = this.processes.get('api')!;
         const control = this.processes.get('control')!;
 
-        // Control 서버 상태 확인 (포트 3000 확인)
-        if (control.status !== 'running') {
-            const portInUse = await this.isPortInUse(3000);
-            if (portInUse) {
-                control.status = 'running';
+        // Control 서버 상태 확인 (포트만 확인, 순환 참조 방지)
+        const controlHealthy = await this.checkControlServerHealth();
+        if (controlHealthy) {
+            control.status = 'running';
+            if (!control.startedAt) {
+                control.startedAt = new Date();
             }
+        } else if (control.status === 'running' && !control.process) {
+            // 프로세스가 없는데 상태가 running이면 stopped로 변경
+            control.status = 'stopped';
         }
 
-        // 프로세스가 실행 중이면 실제 서버 응답 확인
-        if (chromadb.status === 'running' || chromadb.status === 'starting') {
-            const isHealthy = await this.checkChromaDBHealth();
-            if (!isHealthy && chromadb.status === 'running') {
-                chromadb.status = 'error';
-            } else if (isHealthy && chromadb.status === 'starting') {
-                chromadb.status = 'running';
-                chromadb.startedAt = chromadb.startedAt || new Date();
+        // ChromaDB 상태 확인 (실제 HTTP 응답 확인)
+        const chromadbHealthy = await this.checkChromaDBHealth();
+        if (chromadbHealthy) {
+            chromadb.status = 'running';
+            if (!chromadb.startedAt) {
+                chromadb.startedAt = new Date();
             }
+        } else if (chromadb.status === 'running' && !chromadb.process) {
+            // 프로세스가 없는데 상태가 running이면 stopped로 변경
+            chromadb.status = 'stopped';
+        } else if (chromadb.status === 'starting' && chromadbHealthy) {
+            chromadb.status = 'running';
+            chromadb.startedAt = chromadb.startedAt || new Date();
+        } else if (chromadb.status === 'running' && !chromadbHealthy) {
+            chromadb.status = 'error';
         }
 
-        if (api.status === 'running' || api.status === 'starting') {
-            const isHealthy = await this.checkAPIServerHealth();
-            if (!isHealthy && api.status === 'running') {
-                api.status = 'error';
-            } else if (isHealthy && api.status === 'starting') {
-                api.status = 'running';
-                api.startedAt = api.startedAt || new Date();
+        // API 서버 상태 확인 (실제 HTTP 응답 확인)
+        const apiHealthy = await this.checkAPIServerHealth();
+        if (apiHealthy) {
+            api.status = 'running';
+            if (!api.startedAt) {
+                api.startedAt = new Date();
             }
+        } else if (api.status === 'running' && !api.process) {
+            // 프로세스가 없는데 상태가 running이면 stopped로 변경
+            api.status = 'stopped';
+        } else if (api.status === 'starting' && apiHealthy) {
+            api.status = 'running';
+            api.startedAt = api.startedAt || new Date();
+        } else if (api.status === 'running' && !apiHealthy) {
+            api.status = 'error';
         }
 
-        return {
+        const result = {
             chromadb: {
                 status: chromadb.status,
                 startedAt: chromadb.startedAt?.toISOString() || null,
@@ -636,6 +686,18 @@ class ProcessManager {
                 pid: control.process?.pid || null,
             },
         };
+
+        // 캐시 저장
+        this.statusCache = { data: result, timestamp: now };
+
+        return result;
+    }
+
+    /**
+     * 상태 캐시 무효화 (서버 시작/종료 시 호출)
+     */
+    invalidateStatusCache(): void {
+        this.statusCache = { data: null, timestamp: 0 };
     }
 
     /**

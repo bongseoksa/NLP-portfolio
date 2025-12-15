@@ -121,8 +121,8 @@ export function useServerHealth() {
       // null이면 기본값 반환
       return result || { status: 'offline', timestamp: new Date().toISOString() };
     },
-    staleTime: 1000 * 10, // 10초
-    refetchInterval: 1000 * 30, // 30초마다 자동 갱신
+    staleTime: 1000 * 60, // 1분
+    refetchInterval: 1000 * 60, // 1분마다 자동 갱신
     retry: 0, // API 서버가 없을 때 재시도하지 않음
   });
 }

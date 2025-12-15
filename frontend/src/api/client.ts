@@ -194,6 +194,11 @@ export interface ServerStatus {
     startedAt: string | null;
     pid: number | null;
   };
+  control: {
+    status: 'stopped' | 'starting' | 'running' | 'error';
+    startedAt: string | null;
+    pid: number | null;
+  };
 }
 
 export interface ControlResponse {
@@ -201,15 +206,62 @@ export interface ControlResponse {
   message: string;
 }
 
+// 서버 상태 캐시 (프론트엔드 레벨)
+let serverStatusCache: {
+  data: ServerStatus | null;
+  timestamp: number;
+  pending: Promise<ServerStatus | null> | null;
+} = {
+  data: null,
+  timestamp: 0,
+  pending: null,
+};
+const STATUS_CACHE_TTL = 1000 * 60; // 1분 캐시
+
 /**
- * 모든 서버 상태 조회
+ * 모든 서버 상태 조회 (중복 호출 방지 및 캐싱)
  */
 export async function getServerStatus(): Promise<ServerStatus | null> {
-  try {
-    return await apiRequest<ServerStatus>('/control/status', undefined, CONTROL_BASE_URL, true);
-  } catch {
-    return null;
+  const now = Date.now();
+  
+  // 캐시가 유효하면 반환
+  if (serverStatusCache.data && (now - serverStatusCache.timestamp) < STATUS_CACHE_TTL) {
+    return serverStatusCache.data;
   }
+
+  // 이미 요청 중이면 기존 요청 반환 (중복 호출 방지)
+  if (serverStatusCache.pending) {
+    return serverStatusCache.pending;
+  }
+
+  // 새로운 요청 생성
+  serverStatusCache.pending = (async () => {
+    try {
+      const result = await apiRequest<ServerStatus>('/control/status', undefined, CONTROL_BASE_URL, true);
+      if (result) {
+        serverStatusCache.data = result;
+        serverStatusCache.timestamp = now;
+      }
+      return result;
+    } catch {
+      return null;
+    } finally {
+      serverStatusCache.pending = null;
+    }
+  })();
+
+  return serverStatusCache.pending;
+}
+
+/**
+ * 서버 상태 캐시 무효화 (서버 시작/종료 후 호출)
+ */
+export function invalidateServerStatusCache(): void {
+  serverStatusCache = {
+    data: null,
+    timestamp: 0,
+    pending: null,
+  };
 }
 
 /**

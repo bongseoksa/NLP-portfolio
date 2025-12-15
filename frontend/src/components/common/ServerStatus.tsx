@@ -49,7 +49,7 @@ export default function ServerStatus() {
     };
 
     checkStatus();
-    const interval = setInterval(checkStatus, 10000); // 10초마다 체크
+    const interval = setInterval(checkStatus, 60000); // 1분마다 체크
 
     return () => clearInterval(interval);
   }, []);

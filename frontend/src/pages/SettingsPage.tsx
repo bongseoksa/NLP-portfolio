@@ -10,7 +10,7 @@ import {
   stopChromaDB,
   startAPIServer,
   stopAPIServer,
-  checkControlServerHealth,
+  invalidateServerStatusCache,
   type ServerStatus,
 } from '../api/client';
 import { checkSupabaseConnection } from '../api/supabase';
@@ -37,7 +37,6 @@ const statusLabels: Record<ProcessStatus, string> = {
 
 export default function SettingsPage() {
   const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
-  const [controlServerOnline, setControlServerOnline] = useState(false);
   const [supabaseConnected, setSupabaseConnected] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState<{
     qa_history: boolean;
@@ -56,23 +55,24 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        // Control 서버 연결 확인
-        const controlOnline = await checkControlServerHealth();
-        setControlServerOnline(controlOnline);
+        // Control 서버 상태 조회 (서버 상태에 control 포함)
+        const status = await getServerStatus();
+        setServerStatus(status);
 
-        if (controlOnline) {
-          const status = await getServerStatus();
-          setServerStatus(status);
-        }
+        // Control 서버가 실행 중이면 Supabase 및 마이그레이션 상태 확인
+        const controlStatus = status?.control?.status || 'stopped';
+        const controlServerOnline = controlStatus === 'running';
 
-        // Supabase 연결 확인
-        const supabaseOk = await checkSupabaseConnection();
-        setSupabaseConnected(supabaseOk);
+        if (controlServerOnline) {
+          // Supabase 연결 확인
+          const supabaseOk = await checkSupabaseConnection();
+          setSupabaseConnected(supabaseOk);
 
-        // 마이그레이션 상태 확인
-        const migration = await checkMigrationStatus();
-        if (migration) {
-          setMigrationStatus(migration);
+          // 마이그레이션 상태 확인
+          const migration = await checkMigrationStatus();
+          if (migration) {
+            setMigrationStatus(migration);
+          }
         }
 
         setError(null);
@@ -83,7 +83,7 @@ export default function SettingsPage() {
     };
 
     fetchStatus();
-    const interval = setInterval(fetchStatus, 5000); // 5초마다 갱신
+    const interval = setInterval(fetchStatus, 60000); // 1분마다 갱신
 
     return () => clearInterval(interval);
   }, []);
@@ -100,7 +100,8 @@ export default function SettingsPage() {
       } else {
         setError(null);
       }
-      // 상태 갱신
+      // 상태 갱신 (캐시 무효화 후 조회)
+      invalidateServerStatusCache();
       const status = await getServerStatus();
       if (status) {
         setServerStatus(status);
@@ -125,7 +126,8 @@ export default function SettingsPage() {
       } else {
         setError(null);
       }
-      // 상태 갱신
+      // 상태 갱신 (캐시 무효화 후 조회)
+      invalidateServerStatusCache();
       const status = await getServerStatus();
       if (status) {
         setServerStatus(status);
@@ -196,31 +198,18 @@ export default function SettingsPage() {
 
       {/* Control 서버 상태 */}
       {isLocalDev && (
-        <div className={css({
-          bg: 'white',
-          borderRadius: 'lg',
-          boxShadow: 'sm',
-          p: '4',
-          mb: '6',
-        })}>
-          <h2 className={css({ fontWeight: 'bold', mb: '3' })}>
-            Control 서버
-          </h2>
-          <div className={css({ display: 'flex', alignItems: 'center', gap: '2' })}>
-            <span>{controlServerOnline ? '🟢' : '🔴'}</span>
-            <span className={css({ 
-              color: controlServerOnline ? 'green.700' : 'red.700',
-              fontWeight: '500',
-            })}>
-              {controlServerOnline ? '연결됨' : '연결 안됨'}
-            </span>
-            {!controlServerOnline && (
-              <span className={css({ fontSize: 'sm', color: 'gray.500' })}>
-                - `pnpm run control` 실행 필요
-              </span>
-            )}
-          </div>
-        </div>
+        <ServerCard
+          name="Control 서버"
+          description="서버 관리 서버 (포트: 3000)"
+          icon="🔧"
+          status={serverStatus?.control?.status || 'stopped'}
+          startedAt={serverStatus?.control?.startedAt ?? null}
+          pid={serverStatus?.control?.pid ?? null}
+          loading={false}
+          disabled={true}
+          onStart={() => {}}
+          onStop={() => {}}
+        />
       )}
 
       {/* 서버 상태 카드 */}
@@ -239,7 +228,7 @@ export default function SettingsPage() {
           startedAt={serverStatus?.chromadb.startedAt ?? null}
           pid={serverStatus?.chromadb.pid ?? null}
           loading={loading.chromadb}
-          disabled={!isLocalDev || !controlServerOnline}
+          disabled={!isLocalDev || (serverStatus?.control?.status !== 'running')}
           onStart={() => handleChromaDB('start')}
           onStop={() => handleChromaDB('stop')}
         />
@@ -253,7 +242,7 @@ export default function SettingsPage() {
           startedAt={serverStatus?.api.startedAt ?? null}
           pid={serverStatus?.api.pid ?? null}
           loading={loading.api}
-          disabled={!isLocalDev || !controlServerOnline}
+          disabled={!isLocalDev || (serverStatus?.control?.status !== 'running')}
           onStart={() => handleAPIServer('start')}
           onStop={() => handleAPIServer('stop')}
         />
