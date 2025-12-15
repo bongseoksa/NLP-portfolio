@@ -2,7 +2,12 @@
  * Supabase 테이블 마이그레이션
  * 테이블이 없을 때 자동으로 생성
  */
+import dotenv from 'dotenv';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import fetch from 'node-fetch';
 import { getSupabaseClient } from './supabase.js';
+
+dotenv.config();
 
 const SCHEMA_SQL = `
 -- 질문-응답 이력 테이블
@@ -64,6 +69,25 @@ CREATE POLICY "Allow anonymous insert to server_status_log"
 `;
 
 /**
+ * Service Role Key를 사용한 Supabase 클라이언트 생성
+ */
+function getServiceRoleClient(): SupabaseClient | null {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+        return null;
+    }
+
+    return createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+        },
+    });
+}
+
+/**
  * 테이블 존재 여부 확인
  */
 export async function checkTableExists(tableName: string): Promise<boolean> {
@@ -77,7 +101,7 @@ export async function checkTableExists(tableName: string): Promise<boolean> {
             .limit(1);
         
         // PGRST205는 테이블이 없다는 의미
-        if (error && error.code === 'PGRST205') {
+        if (error && (error.code === 'PGRST205' || error.message?.includes('does not exist'))) {
             return false;
         }
         
@@ -88,10 +112,108 @@ export async function checkTableExists(tableName: string): Promise<boolean> {
 }
 
 /**
+ * Supabase Management API를 통해 SQL 실행
+ * Service Role Key가 필요합니다.
+ */
+async function executeSQL(sql: string): Promise<{ success: boolean; message: string }> {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+        return {
+            success: false,
+            message: 'SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다. .env 파일에 추가하세요.',
+        };
+    }
+
+    try {
+        // Supabase Management API를 통해 SQL 실행
+        // Supabase 프로젝트 ID 추출 (URL에서)
+        const projectId = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/)?.[1];
+        if (!projectId) {
+            return {
+                success: false,
+                message: 'Supabase URL 형식이 올바르지 않습니다.',
+            };
+        }
+
+        // Management API를 통해 SQL 실행
+        // 참고: Supabase Management API는 별도의 엔드포인트를 사용합니다
+        const managementUrl = `https://api.supabase.com/v1/projects/${projectId}/database/query`;
+        
+        const response = await fetch(managementUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${serviceRoleKey}`,
+            },
+            body: JSON.stringify({ query: sql }),
+        });
+
+        if (response.ok) {
+            return { success: true, message: '테이블이 성공적으로 생성되었습니다.' };
+        }
+
+        const errorText = await response.text();
+        return {
+            success: false,
+            message: `SQL 실행 실패: ${errorText}`,
+        };
+    } catch (error: any) {
+        // Management API가 작동하지 않으면 PostgreSQL 함수를 사용
+        // exec_sql 함수가 있는지 확인
+        return {
+            success: false,
+            message: `SQL 실행 오류: ${error.message}. PostgreSQL 함수를 사용하여 재시도합니다.`,
+        };
+    }
+}
+
+/**
+ * PostgreSQL 함수를 통해 SQL 실행
+ * exec_sql 함수가 먼저 생성되어 있어야 합니다.
+ */
+async function executeSQLViaFunction(sql: string): Promise<{ success: boolean; message: string }> {
+    const serviceRoleClient = getServiceRoleClient();
+    if (!serviceRoleClient) {
+        return {
+            success: false,
+            message: 'Service Role Key가 설정되지 않았습니다.',
+        };
+    }
+
+    try {
+        // exec_sql 함수 호출 시도
+        const { data, error } = await serviceRoleClient.rpc('exec_sql', { 
+            sql_query: sql 
+        });
+
+        if (error) {
+            // 함수가 없으면 생성해야 함
+            if (error.code === 'PGRST204' || error.message?.includes('function') || error.message?.includes('does not exist')) {
+                return {
+                    success: false,
+                    message: 'exec_sql 함수가 없습니다. 먼저 함수를 생성해야 합니다.',
+                };
+            }
+            return {
+                success: false,
+                message: `SQL 실행 실패: ${error.message}`,
+            };
+        }
+
+        return { success: true, message: '테이블이 성공적으로 생성되었습니다.' };
+    } catch (error: any) {
+        return {
+            success: false,
+            message: `SQL 실행 오류: ${error.message}`,
+        };
+    }
+}
+
+/**
  * 테이블 초기화 (마이그레이션 실행)
- * 주의: Supabase 클라이언트는 SQL을 직접 실행할 수 없으므로,
- * 이 함수는 Supabase Management API를 사용하거나
- * 사용자에게 SQL Editor에서 실행하도록 안내해야 합니다.
+ * Service Role Key가 있으면 자동으로 생성 시도
  */
 export async function initializeTables(): Promise<{ success: boolean; message: string }> {
     const client = getSupabaseClient();
@@ -113,12 +235,59 @@ export async function initializeTables(): Promise<{ success: boolean; message: s
         };
     }
 
-    // Supabase 클라이언트는 SQL을 직접 실행할 수 없으므로
-    // 사용자에게 SQL Editor에서 실행하도록 안내
+    // Service Role Key가 있으면 자동으로 테이블 생성 시도
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (serviceRoleKey) {
+        console.log('🔧 Service Role Key가 설정되어 있습니다. 자동 마이그레이션을 시도합니다...');
+        
+        // 먼저 Management API를 통해 시도
+        const managementResult = await executeSQL(SCHEMA_SQL);
+        if (managementResult.success) {
+            return managementResult;
+        }
+
+        // Management API 실패 시 PostgreSQL 함수를 통해 시도
+        const functionResult = await executeSQLViaFunction(SCHEMA_SQL);
+        if (functionResult.success) {
+            return functionResult;
+        }
+
+        // 두 방법 모두 실패 시 사용자에게 안내
+        console.warn('⚠️ 자동 마이그레이션 실패:', functionResult.message);
+    }
+
+    // Service Role Key가 없거나 자동 실행 실패 시 사용자에게 안내
+    const setupInstructions = serviceRoleKey 
+        ? `\n\n또는 Supabase SQL Editor에서 다음 스키마를 실행하세요:`
+        : `\n\nService Role Key를 설정하면 자동으로 테이블을 생성할 수 있습니다.\n또는 Supabase SQL Editor에서 다음 스키마를 실행하세요:`;
+    
     return {
         success: false,
-        message: `테이블이 없습니다. Supabase SQL Editor에서 다음 스키마를 실행하세요:\n\n${SCHEMA_SQL}`,
+        message: `테이블이 없습니다.${setupInstructions}\n\n${SCHEMA_SQL}`,
     };
+}
+
+/**
+ * 자동 마이그레이션 실행 (테이블이 없을 때 자동으로 호출)
+ */
+export async function ensureTablesExist(): Promise<boolean> {
+    const qaHistoryExists = await checkTableExists('qa_history');
+    const serverLogExists = await checkTableExists('server_status_log');
+
+    if (qaHistoryExists && serverLogExists) {
+        return true;
+    }
+
+    console.log('📋 테이블이 없습니다. 자동 마이그레이션을 시도합니다...');
+    const result = await initializeTables();
+    
+    if (result.success) {
+        console.log('✅ 자동 마이그레이션 성공:', result.message);
+        return true;
+    } else {
+        console.warn('⚠️ 자동 마이그레이션 실패:', result.message);
+        return false;
+    }
 }
 
 /**

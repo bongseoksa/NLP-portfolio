@@ -95,6 +95,29 @@ export async function saveQAHistory(record: Omit<QAHistoryRecord, 'id' | 'create
             .single();
 
         if (error) {
+            // 테이블이 없으면 자동 마이그레이션 시도
+            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                console.log('📋 테이블이 없습니다. 자동 마이그레이션을 시도합니다...');
+                const { ensureTablesExist } = await import('./supabaseMigration.js');
+                const migrated = await ensureTablesExist();
+                
+                if (migrated) {
+                    // 마이그레이션 성공 후 재시도
+                    const { data: retryData, error: retryError } = await client
+                        .from('qa_history')
+                        .insert(record)
+                        .select()
+                        .single();
+                    
+                    if (retryError) {
+                        console.error('❌ QA 이력 저장 실패 (재시도 후):', retryError.message);
+                        return null;
+                    }
+                    
+                    return retryData;
+                }
+            }
+            
             console.error('❌ QA 이력 저장 실패:', error.message);
             return null;
         }
@@ -143,6 +166,15 @@ export async function getQAHistory(params?: {
         const { data, error } = await query;
 
         if (error) {
+            // 테이블이 없으면 자동 마이그레이션 시도
+            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                console.log('📋 테이블이 없습니다. 자동 마이그레이션을 시도합니다...');
+                const { ensureTablesExist } = await import('./supabaseMigration.js');
+                await ensureTablesExist();
+                // 마이그레이션 후 빈 배열 반환 (테이블이 새로 생성되었으므로 데이터 없음)
+                return [];
+            }
+            
             console.error('❌ QA 이력 조회 실패:', error.message);
             return [];
         }

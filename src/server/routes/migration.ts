@@ -3,7 +3,7 @@
  * Supabase 테이블 초기화
  */
 import { Router, type Request, type Response, type IRouter } from 'express';
-import { checkTableExists, getSchemaSQL } from '../services/supabaseMigration.js';
+import { checkTableExists, getSchemaSQL, initializeTables, ensureTablesExist } from '../services/supabaseMigration.js';
 
 const router: IRouter = Router();
 
@@ -24,6 +24,39 @@ router.get('/status', async (_req: Request, res: Response) => {
     } catch (error: any) {
         console.error('❌ 마이그레이션 상태 확인 오류:', error.message);
         res.status(500).json({ error: '마이그레이션 상태 확인 중 오류가 발생했습니다.' });
+    }
+});
+
+/**
+ * POST /api/migration/run
+ * 자동 마이그레이션 실행
+ */
+router.post('/run', async (_req: Request, res: Response) => {
+    try {
+        const result = await initializeTables();
+        
+        if (result.success) {
+            res.json({ success: true, message: result.message });
+        } else {
+            res.status(400).json({ success: false, message: result.message });
+        }
+    } catch (error: any) {
+        console.error('❌ 마이그레이션 실행 오류:', error.message);
+        res.status(500).json({ error: '마이그레이션 실행 중 오류가 발생했습니다.' });
+    }
+});
+
+/**
+ * POST /api/migration/ensure
+ * 테이블이 없으면 자동으로 생성
+ */
+router.post('/ensure', async (_req: Request, res: Response) => {
+    try {
+        const success = await ensureTablesExist();
+        res.json({ success, message: success ? '모든 테이블이 준비되었습니다.' : '테이블 생성에 실패했습니다.' });
+    } catch (error: any) {
+        console.error('❌ 테이블 확인 오류:', error.message);
+        res.status(500).json({ error: '테이블 확인 중 오류가 발생했습니다.' });
     }
 });
 
