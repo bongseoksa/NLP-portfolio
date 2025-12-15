@@ -150,10 +150,12 @@ TARGET_REPO_NAME=your-repo-name          # 레포지토리 이름
 LOCAL_REPO_PATH=/path/to/local/clone     # 로컬에 클론된 레포지토리 경로
 
 # ========================================
-# 선택 설정: AI API 키 (둘 중 하나만 있어도 동작)
+# 필수 설정: AI API 키 (질의응답 기능 사용 시 필수)
 # ========================================
-OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxx  # OpenAI API (없으면 Chroma 기본 임베딩 사용)
-CLAUDE_API_KEY=sk-ant-xxxxxxxxxxxxxxxx   # Claude API (OpenAI 실패 시 fallback)
+# ⚠️ 중요: 질의응답 기능을 사용하려면 OpenAI 또는 Claude API 키 중 최소 1개가 필요합니다
+# 둘 다 없으면 "오류가 발생하여 답변을 생성할 수 없습니다" 메시지가 표시됩니다
+OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxx  # OpenAI API (1순위, GPT-4o 사용)
+CLAUDE_API_KEY=sk-ant-xxxxxxxxxxxxxxxx   # Claude API (OpenAI 실패 시 fallback, Claude Sonnet 4 사용)
 
 # ========================================
 # 선택 설정: Supabase (이력 저장용)
@@ -478,13 +480,17 @@ ChatGPT 스타일의 질의응답 인터페이스:
 
 ## AI API Fallback 동작
 
-| 기능 | 1순위 | 2순위 (Fallback) |
-|------|-------|------------------|
-| **임베딩 생성** | OpenAI (`text-embedding-3-small`) | Chroma 기본 임베딩 (로컬, 무료) |
-| **답변 생성** | OpenAI (`gpt-4o`) | Claude (`claude-sonnet-4-20250514`) |
+| 기능 | 1순위 | 2순위 (Fallback) | 필수 여부 |
+|------|-------|------------------|----------|
+| **임베딩 생성** | OpenAI (`text-embedding-3-small`) | Chroma 기본 임베딩 (로컬, 무료) | 선택 |
+| **답변 생성** | OpenAI (`gpt-4o`) | Claude (`claude-sonnet-4-20250514`) | **필수** |
 
-- API 키가 없거나 할당량 초과 시 자동으로 fallback으로 전환
-- **API 키 없이도 Chroma 기본 임베딩으로 동작 가능**
+**중요 사항**:
+- **임베딩 생성**: API 키가 없어도 Chroma 기본 임베딩으로 동작 가능 (무료)
+- **답변 생성**: OpenAI 또는 Claude API 키 중 **최소 1개가 필수**입니다
+  - 둘 다 없으면 질의응답이 실패하며 `status: "failed"`로 표시됩니다
+  - API 키가 없거나 할당량 초과 시 자동으로 fallback으로 전환됩니다
+  - OpenAI 실패 시 Claude로 자동 전환됩니다
 
 ---
 
@@ -557,6 +563,92 @@ Settings 페이지에서 "Control 서버 연결 안됨" 표시
 ```bash
 pnpm run control
 ```
+
+### 문제: 질의응답 시 "오류가 발생하여 답변을 생성할 수 없습니다" 메시지 표시
+
+**원인**: OpenAI 또는 Claude API 키가 설정되지 않았거나 유효하지 않음
+
+**해결 방법**:
+
+1. **API 키 확인**
+   ```bash
+   # .env 파일에서 API 키 확인
+   cat .env | grep -E "OPENAI_API_KEY|CLAUDE_API_KEY"
+   ```
+
+2. **API 키 설정**
+   - OpenAI API 키: [OpenAI Platform](https://platform.openai.com/api-keys)에서 발급
+   - Claude API 키: [Anthropic Console](https://console.anthropic.com/)에서 발급
+   - `.env` 파일에 추가:
+     ```env
+     OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxx
+     # 또는
+     CLAUDE_API_KEY=sk-ant-xxxxxxxxxxxxxxxx
+     ```
+
+3. **서버 재시작**
+   ```bash
+   # API 서버 재시작 (변경사항 반영)
+   # Control 서버를 통해 재시작하거나 수동으로 재시작
+   ```
+
+4. **상태 확인**
+   - 질의응답이 실패하면 `status: "failed"`로 표시됩니다
+   - 성공하면 `status: "success"` 또는 `status: "partial"`로 표시됩니다
+
+**참고**:
+- OpenAI와 Claude API 키 중 하나만 있어도 동작합니다
+- OpenAI가 1순위, 실패 시 Claude로 자동 fallback됩니다
+- 둘 다 없으면 답변 생성이 불가능하며 `status: "failed"`로 표시됩니다
+
+### 문제: 브라우저에서 질문 시 오류 발생 (커맨드는 정상 동작)
+
+**증상**: 
+- 커맨드 라인(`pnpm run ask`)으로는 정상 동작
+- 브라우저에서 질문하면 오류 발생
+
+**원인**:
+- CORS 설정 문제
+- 요청 헤더 문제
+- API 서버 연결 문제
+
+**해결 방법**:
+
+1. **API 서버 실행 확인**
+   ```bash
+   # API 서버가 실행 중인지 확인
+   curl http://localhost:3001/api/health
+   ```
+
+2. **CORS 설정 확인**
+   - API 서버의 CORS 설정이 프론트엔드 URL을 포함하는지 확인
+   - 기본값: `http://localhost:5173`, `http://localhost:3000`
+
+3. **브라우저 콘솔 확인**
+   - 개발자 도구(F12) → Console 탭에서 오류 메시지 확인
+   - Network 탭에서 요청/응답 상태 확인
+
+4. **서버 로그 확인**
+   - API 서버 터미널에서 요청 로그 확인
+   - `📥 요청 본문:` 로그로 요청이 제대로 전달되는지 확인
+
+5. **프론트엔드 재시작**
+   ```bash
+   cd frontend
+   pnpm run dev
+   ```
+
+6. **API 서버 재시작**
+   ```bash
+   # Control 서버를 통해 재시작
+   # 또는 수동으로 재시작
+   pnpm run server
+   ```
+
+**참고**:
+- 브라우저 콘솔에 `[API]`로 시작하는 로그가 표시됩니다
+- 서버 로그에 `📥 요청 본문:` 로그가 표시됩니다
+- 오류가 발생하면 상세한 에러 메시지가 콘솔에 표시됩니다
 
 ---
 

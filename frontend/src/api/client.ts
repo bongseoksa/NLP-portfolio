@@ -27,11 +27,15 @@ async function apiRequest<T>(
   silent: boolean = false
 ): Promise<T> {
   try {
+    // headers 병합 (기본 Content-Type 유지)
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      ...(options?.headers as Record<string, string> || {}),
+    });
+
     const response = await fetch(`${baseUrl}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
       ...options,
+      headers,
     });
 
     if (!response.ok) {
@@ -44,10 +48,12 @@ async function apiRequest<T>(
       throw error;
     }
 
-    return response.json();
+    const data = await response.json();
+    return data;
   } catch (error: unknown) {
     // 네트워크 오류 (연결 거부 등)
     if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('[API] Network error:', error);
       if (silent) {
         // 조용한 모드: null 반환
         return null as T;
@@ -55,7 +61,16 @@ async function apiRequest<T>(
       // 일반 모드: 에러 throw
       throw new Error(`API 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요. (${baseUrl})`);
     }
+    // JSON 파싱 오류
+    if (error instanceof SyntaxError) {
+      console.error('[API] JSON parse error:', error);
+      if (silent) {
+        return null as T;
+      }
+      throw new Error('서버 응답을 파싱할 수 없습니다.');
+    }
     // 기타 오류
+    console.error('[API] Unknown error:', error);
     if (silent) {
       return null as T;
     }
@@ -71,10 +86,18 @@ async function apiRequest<T>(
  * 질문 전송 및 답변 받기
  */
 export async function askQuestion(request: AskRequest): Promise<AskResponse> {
-  return apiRequest<AskResponse>('/api/ask', {
-    method: 'POST',
-    body: JSON.stringify(request),
-  }, API_BASE_URL, false); // 실제 작업이므로 에러 throw
+  console.log('[API] 질문 전송:', request);
+  try {
+    const response = await apiRequest<AskResponse>('/api/ask', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }, API_BASE_URL, false); // 실제 작업이므로 에러 throw
+    console.log('[API] 질문 응답:', response);
+    return response;
+  } catch (error) {
+    console.error('[API] 질문 전송 실패:', error);
+    throw error;
+  }
 }
 
 /**

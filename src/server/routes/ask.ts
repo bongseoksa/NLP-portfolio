@@ -14,9 +14,15 @@ const router: IRouter = Router();
  */
 router.post('/', async (req: Request, res: Response) => {
     const startTime = Date.now();
+    
+    // 요청 본문 로깅 (디버깅용)
+    console.log('📥 요청 본문:', JSON.stringify(req.body));
+    console.log('📥 Content-Type:', req.headers['content-type']);
+    
     const { question } = req.body;
 
     if (!question || typeof question !== 'string') {
+        console.error('❌ 잘못된 요청: question이 없거나 문자열이 아님');
         res.status(400).json({ error: '질문을 입력해주세요.' });
         return;
     }
@@ -37,7 +43,13 @@ router.post('/', async (req: Request, res: Response) => {
 
         // 응답 상태 결정
         let status: 'success' | 'partial' | 'failed' = 'success';
-        if (contexts.length === 0) {
+        
+        // 답변 생성 실패 확인 (에러 메시지인 경우)
+        const isErrorAnswer = answer.includes('오류가 발생하여 답변을 생성할 수 없습니다') ||
+                              answer.includes('관련 정보를 찾을 수 없습니다') ||
+                              answer.includes('답변을 생성할 수 없습니다');
+        
+        if (contexts.length === 0 || isErrorAnswer) {
             status = 'failed';
         } else if (contexts.length < 3) {
             status = 'partial';
