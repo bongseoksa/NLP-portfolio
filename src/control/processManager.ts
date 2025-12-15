@@ -530,40 +530,50 @@ class ProcessManager {
      * ChromaDB 헬스체크 (포트 8000)
      */
     private async checkChromaDBHealth(): Promise<boolean> {
+        // v2 API를 먼저 시도 (v1은 deprecated)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
 
         try {
-            const response = await fetch('http://localhost:8000/api/v1/heartbeat', {
+            const response = await fetch('http://localhost:8000/api/v2/heartbeat', {
                 method: 'GET',
                 signal: controller.signal,
             });
             clearTimeout(timeoutId);
-            return response.ok;
+            // 응답이 있으면 서버가 실행 중 (상태 코드와 관계없이)
+            return true;
         } catch (error: any) {
             clearTimeout(timeoutId);
             // 연결 거부 오류는 서버가 꺼져있음을 의미
-            if (error.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED') || error.message?.includes('ERR_CONNECTION_REFUSED')) {
-                return false;
-            }
-            // 다른 엔드포인트도 시도
-            const controller2 = new AbortController();
-            const timeoutId2 = setTimeout(() => controller2.abort(), 2000);
-            try {
-                const response = await fetch('http://localhost:8000/api/v2/heartbeat', {
-                    method: 'GET',
-                    signal: controller2.signal,
-                });
-                clearTimeout(timeoutId2);
-                return response.ok;
-            } catch (error2: any) {
-                clearTimeout(timeoutId2);
-                // 연결 거부 오류는 서버가 꺼져있음을 의미
-                if (error2.code === 'ECONNREFUSED' || error2.message?.includes('ECONNREFUSED') || error2.message?.includes('ERR_CONNECTION_REFUSED')) {
+            if (error.code === 'ECONNREFUSED' || 
+                error.message?.includes('ECONNREFUSED') || 
+                error.message?.includes('ERR_CONNECTION_REFUSED') ||
+                error.cause?.code === 'ECONNREFUSED') {
+                // v1 API도 시도 (fallback)
+                const controller2 = new AbortController();
+                const timeoutId2 = setTimeout(() => controller2.abort(), 2000);
+                try {
+                    const response = await fetch('http://localhost:8000/api/v1/heartbeat', {
+                        method: 'GET',
+                        signal: controller2.signal,
+                    });
+                    clearTimeout(timeoutId2);
+                    // 응답이 있으면 서버가 실행 중 (deprecated 메시지여도 응답이 있으면 실행 중)
+                    return true;
+                } catch (error2: any) {
+                    clearTimeout(timeoutId2);
+                    // 연결 거부 오류는 서버가 꺼져있음을 의미
+                    if (error2.code === 'ECONNREFUSED' || 
+                        error2.message?.includes('ECONNREFUSED') || 
+                        error2.message?.includes('ERR_CONNECTION_REFUSED') ||
+                        error2.cause?.code === 'ECONNREFUSED') {
+                        return false;
+                    }
                     return false;
                 }
-                return false;
             }
+            // 타임아웃이나 다른 오류도 false 반환
+            return false;
         }
     }
 
@@ -635,38 +645,42 @@ class ProcessManager {
             control.status = 'stopped';
         }
 
-        // ChromaDB 상태 확인 (실제 HTTP 응답 확인)
+        // ChromaDB 상태 확인 (실제 HTTP 응답 확인 - 우선순위)
         const chromadbHealthy = await this.checkChromaDBHealth();
         if (chromadbHealthy) {
+            // 포트가 열려있고 응답하면 무조건 running
             chromadb.status = 'running';
             if (!chromadb.startedAt) {
                 chromadb.startedAt = new Date();
             }
-        } else if (chromadb.status === 'running' && !chromadb.process) {
-            // 프로세스가 없는데 상태가 running이면 stopped로 변경
-            chromadb.status = 'stopped';
-        } else if (chromadb.status === 'starting' && chromadbHealthy) {
-            chromadb.status = 'running';
-            chromadb.startedAt = chromadb.startedAt || new Date();
-        } else if (chromadb.status === 'running' && !chromadbHealthy) {
-            chromadb.status = 'error';
+        } else {
+            // 응답이 없으면 프로세스 상태에 따라 결정
+            if (chromadb.process) {
+                // 프로세스는 있지만 응답 없음 = error
+                chromadb.status = 'error';
+            } else {
+                // 프로세스도 없고 응답도 없음 = stopped
+                chromadb.status = 'stopped';
+            }
         }
 
-        // API 서버 상태 확인 (실제 HTTP 응답 확인)
+        // API 서버 상태 확인 (실제 HTTP 응답 확인 - 우선순위)
         const apiHealthy = await this.checkAPIServerHealth();
         if (apiHealthy) {
+            // 포트가 열려있고 응답하면 무조건 running
             api.status = 'running';
             if (!api.startedAt) {
                 api.startedAt = new Date();
             }
-        } else if (api.status === 'running' && !api.process) {
-            // 프로세스가 없는데 상태가 running이면 stopped로 변경
-            api.status = 'stopped';
-        } else if (api.status === 'starting' && apiHealthy) {
-            api.status = 'running';
-            api.startedAt = api.startedAt || new Date();
-        } else if (api.status === 'running' && !apiHealthy) {
-            api.status = 'error';
+        } else {
+            // 응답이 없으면 프로세스 상태에 따라 결정
+            if (api.process) {
+                // 프로세스는 있지만 응답 없음 = error
+                api.status = 'error';
+            } else {
+                // 프로세스도 없고 응답도 없음 = stopped
+                api.status = 'stopped';
+            }
         }
 
         const result = {

@@ -108,6 +108,7 @@ app.listen(PORT, () => {
 📍 URL: http://localhost:${PORT}
 📋 Endpoints:
    GET  /api/health              - 서버 상태 확인
+   GET  /api/health/chromadb     - ChromaDB 상태 확인
    POST /api/ask                 - 질의응답
    GET  /api/history             - 이력 조회
    GET  /api/dashboard/summary    - 대시보드 통계

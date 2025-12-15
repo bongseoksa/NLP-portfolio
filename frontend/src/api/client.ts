@@ -179,6 +179,58 @@ export async function checkAPIServerHealth(): Promise<{ status: string; timestam
   }
 }
 
+// ChromaDB 헬스체크 캐시
+let chromadbHealthCache: {
+  data: { status: string; timestamp: string; service: string; port: number } | null;
+  timestamp: number;
+  pending: Promise<{ status: string; timestamp: string; service: string; port: number } | null> | null;
+} = {
+  data: null,
+  timestamp: 0,
+  pending: null,
+};
+const CHROMADB_HEALTH_CACHE_TTL = 1000 * 60; // 1분 캐시
+
+/**
+ * ChromaDB 서버 상태 확인 (중복 호출 방지 및 캐싱)
+ */
+export async function checkChromaDBHealth(): Promise<{ status: string; timestamp: string; service: string; port: number } | null> {
+  const now = Date.now();
+  
+  // 캐시가 유효하면 반환
+  if (chromadbHealthCache.data && (now - chromadbHealthCache.timestamp) < CHROMADB_HEALTH_CACHE_TTL) {
+    return chromadbHealthCache.data;
+  }
+
+  // 이미 요청 중이면 기존 요청 반환 (중복 호출 방지)
+  if (chromadbHealthCache.pending) {
+    return chromadbHealthCache.pending;
+  }
+
+  // 새로운 요청 생성
+  chromadbHealthCache.pending = (async () => {
+    try {
+      const result = await apiRequest<{ status: string; timestamp: string; service: string; port: number }>(
+        '/api/health/chromadb', 
+        undefined, 
+        API_BASE_URL, 
+        true
+      );
+      if (result) {
+        chromadbHealthCache.data = result;
+        chromadbHealthCache.timestamp = now;
+      }
+      return result;
+    } catch {
+      return null;
+    } finally {
+      chromadbHealthCache.pending = null;
+    }
+  })();
+
+  return chromadbHealthCache.pending;
+}
+
 // ============================================
 // Control Server 엔드포인트 (로컬 개발용)
 // ============================================

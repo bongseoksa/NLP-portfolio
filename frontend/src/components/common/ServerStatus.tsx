@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '../../../styled-system/css';
-import { getServerStatus, checkControlServerHealth, checkAPIServerHealth } from '../../api/client';
+import { checkAPIServerHealth, checkChromaDBHealth } from '../../api/client';
 
 type Status = 'online' | 'offline' | 'checking';
 
@@ -16,7 +16,7 @@ export default function ServerStatus() {
 
   useEffect(() => {
     const checkStatus = async () => {
-      // API 서버 직접 체크
+      // API 서버 상태 체크
       try {
         const health = await checkAPIServerHealth();
         setApiStatus(health ? 'online' : 'offline');
@@ -24,25 +24,10 @@ export default function ServerStatus() {
         setApiStatus('offline');
       }
 
-      // Control 서버를 통해 ChromaDB 상태 체크
+      // ChromaDB 상태 체크 (포트 8000)
       try {
-        const controlOnline = await checkControlServerHealth();
-        if (controlOnline) {
-          const status = await getServerStatus();
-          if (status) {
-            setChromaStatus(status.chromadb.status === 'running' ? 'online' : 'offline');
-          } else {
-            setChromaStatus('offline');
-          }
-        } else {
-          // Control 서버가 없으면 ChromaDB 직접 체크
-          try {
-            const response = await fetch('http://localhost:8000/api/v2/heartbeat');
-            setChromaStatus(response.ok ? 'online' : 'offline');
-          } catch {
-            setChromaStatus('offline');
-          }
-        }
+        const chromadbHealth = await checkChromaDBHealth();
+        setChromaStatus(chromadbHealth?.status === 'online' ? 'online' : 'offline');
       } catch {
         setChromaStatus('offline');
       }
