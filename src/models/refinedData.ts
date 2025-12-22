@@ -5,7 +5,7 @@ export interface RefinedItem {
     /** 고유 식별자 (예: Commit SHA 또는 파일 경로) */
     id: string;
     /** 데이터 타입 */
-    type: "commit" | "file";
+    type: "commit" | "diff" | "file";
     /** 임베딩 생성을 위한 전체 텍스트 청크 */
     content: string;
     /** 데이터에 대한 메타데이터 */
@@ -19,13 +19,34 @@ export interface RefinedItem {
         date?: string;
         /** 커밋 메시지 */
         message?: string;
+        /** 영향받은 파일 경로들 */
+        affectedFiles?: string[];
         /** 변경된 파일 수 */
         fileCount?: number;
+        /** 총 추가된 라인 수 */
+        additions?: number;
+        /** 총 삭제된 라인 수 */
+        deletions?: number;
+        // Diff 관련 메타데이터
+        /** 이 Diff가 속한 커밋 ID */
+        commitId?: string;
+        /** Diff의 파일 경로 */
+        filePath?: string;
+        /** Diff 타입 */
+        diffType?: "add" | "modify" | "delete" | "rename";
+        /** 파일별 추가된 라인 수 */
+        fileAdditions?: number;
+        /** 파일별 삭제된 라인 수 */
+        fileDeletions?: number;
+        /** 변경 카테고리 */
+        changeCategory?: "feat" | "fix" | "refactor" | "docs" | "style" | "test" | "chore";
+        /** 의미론적 힌트 */
+        semanticHint?: string[];
         // 파일 관련 메타데이터
         /** 파일 경로 */
         path?: string;
         /** 파일 타입 */
-        type?: string;
+        fileType?: string;
         /** 파일 크기 */
         size?: number;
         /** 파일 확장자 */

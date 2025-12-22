@@ -72,12 +72,31 @@ export async function saveVectors(
                 baseMetadata.date = item.metadata.date || '';
                 baseMetadata.message = item.metadata.message || '';
                 baseMetadata.fileCount = item.metadata.fileCount || 0;
+                baseMetadata.additions = item.metadata.additions || 0;
+                baseMetadata.deletions = item.metadata.deletions || 0;
+                if (item.metadata.affectedFiles && item.metadata.affectedFiles.length > 0) {
+                    // ChromaDB는 배열을 지원하지 않으므로 JSON 문자열로 저장
+                    baseMetadata.affectedFiles = JSON.stringify(item.metadata.affectedFiles);
+                }
+            }
+
+            // Diff 메타데이터
+            if (item.type === 'diff') {
+                baseMetadata.commitId = item.metadata.commitId || '';
+                baseMetadata.filePath = item.metadata.filePath || '';
+                baseMetadata.diffType = item.metadata.diffType || 'modify';
+                baseMetadata.fileAdditions = item.metadata.fileAdditions || 0;
+                baseMetadata.fileDeletions = item.metadata.fileDeletions || 0;
+                baseMetadata.changeCategory = item.metadata.changeCategory || 'chore';
+                if (item.metadata.semanticHint && item.metadata.semanticHint.length > 0) {
+                    baseMetadata.semanticHint = JSON.stringify(item.metadata.semanticHint);
+                }
             }
 
             // 파일 메타데이터
             if (item.type === 'file') {
                 baseMetadata.path = item.metadata.path || '';
-                baseMetadata.fileType = item.metadata.type || '';
+                baseMetadata.fileType = item.metadata.fileType || '';
                 baseMetadata.size = item.metadata.size || 0;
                 baseMetadata.extension = item.metadata.extension || '';
                 if (item.metadata.chunkIndex !== undefined) {

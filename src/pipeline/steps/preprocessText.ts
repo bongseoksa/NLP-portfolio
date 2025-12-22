@@ -18,13 +18,13 @@ export function refineData(data: PipelineOutput): RefinedData {
     const diffMap = new Map<string, CommitDiff>();
     data.commitDiffs.forEach(d => diffMap.set(d.sha, d));
 
-    // 1. 커밋 데이터 정제
+    // 1. 커밋 데이터 정제 (Diff 제외, 메타데이터만)
     for (const commit of data.commits) {
         const sha = commit.sha;
         const fileModels = data.commitFiles[sha] || [];
         const commitDiff = diffMap.get(sha);
 
-        // Construct the text content
+        // Commit Entity: 히스토리 정보만 포함 (Diff 제외)
         const lines: string[] = [];
 
         lines.push(`Commit: ${sha}`);
@@ -34,35 +34,26 @@ export function refineData(data: PipelineOutput): RefinedData {
         lines.push("");
 
         lines.push("Affected Files:");
+        const affectedFiles: string[] = [];
+        let totalAdditions = 0;
+        let totalDeletions = 0;
+
         if (fileModels.length > 0) {
             for (const file of fileModels) {
-                lines.push(`- ${file.filename} (${file.status}) +${file.additions} -${file.deletions}`);
+                lines.push(`- ${file.filename} (${file.status}) +${file.additions || 0} -${file.deletions || 0}`);
+                affectedFiles.push(file.filename);
+                totalAdditions += file.additions || 0;
+                totalDeletions += file.deletions || 0;
             }
         } else {
             lines.push("(No file changes detected or fetched)");
         }
-        lines.push("");
-
-        lines.push("Diff Summary:");
-        if (commitDiff && commitDiff.files.length > 0) {
-            for (const fileDiff of commitDiff.files) {
-                lines.push(`File: ${fileDiff.filePath}`);
-                // Limit patch size to avoid extremely large chunks
-                let patch = fileDiff.patch || "";
-                if (patch.length > 2000) {
-                    patch = patch.slice(0, 2000) + "\n...(Truncated)...";
-                }
-                lines.push(patch);
-                lines.push("---");
-            }
-        } else {
-            lines.push("(No diff details available)");
-        }
 
         const content = lines.join("\n");
 
+        // Commit Entity 생성
         items.push({
-            id: sha,
+            id: `commit-${sha}`,
             type: "commit",
             content: content,
             metadata: {
@@ -70,9 +61,73 @@ export function refineData(data: PipelineOutput): RefinedData {
                 author: commit.author || "Unknown",
                 date: commit.date,
                 message: commit.message,
-                fileCount: fileModels.length
+                affectedFiles: affectedFiles,
+                fileCount: fileModels.length,
+                additions: totalAdditions,
+                deletions: totalDeletions
             }
         });
+
+        // 2. Diff Entity 생성 (각 파일별로 독립적으로)
+        if (commitDiff && commitDiff.files.length > 0) {
+            for (const fileDiff of commitDiff.files) {
+                const diffLines: string[] = [];
+
+                diffLines.push(`Diff for File: ${fileDiff.filePath}`);
+                diffLines.push(`Commit: ${sha}`);
+                diffLines.push(`Changes: +${fileDiff.additions} -${fileDiff.deletions}`);
+                diffLines.push("");
+
+                // Limit patch size to avoid extremely large chunks
+                let patch = fileDiff.patch || "";
+                if (patch.length > 2000) {
+                    patch = patch.slice(0, 2000) + "\n...(Truncated)...";
+                }
+
+                diffLines.push("Patch:");
+                diffLines.push(patch);
+
+                const diffContent = diffLines.join("\n");
+
+                // Diff 타입 결정
+                const fileModel = fileModels.find(f => f.filename === fileDiff.filePath);
+                const diffType = fileModel?.status === "added" ? "add" :
+                                fileModel?.status === "removed" ? "delete" :
+                                fileModel?.status === "renamed" ? "rename" : "modify";
+
+                // 변경 카테고리 추론 (커밋 메시지 기반)
+                const message = commit.message.toLowerCase();
+                const changeCategory = message.includes("feat") ? "feat" :
+                                      message.includes("fix") ? "fix" :
+                                      message.includes("refactor") ? "refactor" :
+                                      message.includes("docs") ? "docs" :
+                                      message.includes("style") ? "style" :
+                                      message.includes("test") ? "test" : "chore";
+
+                // 의미론적 힌트 추출
+                const semanticHint: string[] = [];
+                if (patch.includes("if (") || patch.includes("if(")) semanticHint.push("조건문 변경");
+                if (patch.includes("import ")) semanticHint.push("의존성 변경");
+                if (patch.includes("export ")) semanticHint.push("export 변경");
+                if (patch.includes("function ") || patch.includes("const ") || patch.includes("let ")) semanticHint.push("함수/변수 정의");
+                if (patch.includes("//") || patch.includes("/*")) semanticHint.push("주석 변경");
+
+                items.push({
+                    id: `diff-${sha}-${fileDiff.filePath.replace(/\//g, '-')}`,
+                    type: "diff",
+                    content: diffContent,
+                    metadata: {
+                        commitId: sha,
+                        filePath: fileDiff.filePath,
+                        diffType: diffType,
+                        fileAdditions: fileDiff.additions,
+                        fileDeletions: fileDiff.deletions,
+                        changeCategory: changeCategory,
+                        ...(semanticHint.length > 0 && { semanticHint })
+                    }
+                });
+            }
+        }
     }
 
     // 2. 레포지토리 파일 데이터 정제 (소스 코드 레벨 질문용)
@@ -108,7 +163,7 @@ export function refineData(data: PipelineOutput): RefinedData {
                     content: content,
                     metadata: {
                         path: file.path,
-                        type: file.type,
+                        fileType: file.type,
                         size: file.size,
                         extension: file.extension,
                         sha: file.sha,
@@ -123,6 +178,17 @@ export function refineData(data: PipelineOutput): RefinedData {
 
         console.log(`   → ${items.filter(item => item.type === 'file').length}개 파일 청크 생성됨`);
     }
+
+    // 로그: 생성된 엔티티 통계
+    const commitCount = items.filter(item => item.type === 'commit').length;
+    const diffCount = items.filter(item => item.type === 'diff').length;
+    const fileCount = items.filter(item => item.type === 'file').length;
+
+    console.log(`\n📊 생성된 엔티티:`);
+    console.log(`   - Commit: ${commitCount}개 (히스토리)`);
+    console.log(`   - Diff: ${diffCount}개 (변경사항)`);
+    console.log(`   - File: ${fileCount}개 (소스코드)`);
+    console.log(`   - 총합: ${items.length}개`);
 
     return { items };
 }
