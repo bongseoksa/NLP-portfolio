@@ -3,6 +3,11 @@ import type { FileModel } from "../../models/File.js";
 import type { CommitDiff } from "../../models/Diff.js";
 import type { RefinedData, RefinedItem } from "../../models/refinedData.js";
 import type { PipelineOutput } from "../../models/PipelineOutput.js";
+import {
+    generateCommitEmbeddingText,
+    generateDiffEmbeddingText,
+    generateFileEmbeddingText
+} from "../../nlp/embedding/embeddingTextGenerator.js";
 
 /**
  * 수집된 Raw Data(PipelineOutput)를 NLP 모델이 이해하기 쉬운 텍스트 포맷으로 변환(정제)합니다.
@@ -52,10 +57,11 @@ export function refineData(data: PipelineOutput): RefinedData {
         const content = lines.join("\n");
 
         // Commit Entity 생성
-        items.push({
+        const commitItem: RefinedItem = {
             id: `commit-${sha}`,
             type: "commit",
             content: content,
+            embeddingText: "", // 임시로 빈 문자열, 아래에서 생성
             metadata: {
                 sha: sha,
                 author: commit.author || "Unknown",
@@ -66,7 +72,12 @@ export function refineData(data: PipelineOutput): RefinedData {
                 additions: totalAdditions,
                 deletions: totalDeletions
             }
-        });
+        };
+
+        // Embedding text 생성
+        commitItem.embeddingText = generateCommitEmbeddingText(commitItem);
+
+        items.push(commitItem);
 
         // 2. Diff Entity 생성 (각 파일별로 독립적으로)
         if (commitDiff && commitDiff.files.length > 0) {
@@ -112,10 +123,11 @@ export function refineData(data: PipelineOutput): RefinedData {
                 if (patch.includes("function ") || patch.includes("const ") || patch.includes("let ")) semanticHint.push("함수/변수 정의");
                 if (patch.includes("//") || patch.includes("/*")) semanticHint.push("주석 변경");
 
-                items.push({
+                const diffItem: RefinedItem = {
                     id: `diff-${sha}-${fileDiff.filePath.replace(/\//g, '-')}`,
                     type: "diff",
                     content: diffContent,
+                    embeddingText: "", // 임시로 빈 문자열, 아래에서 생성
                     metadata: {
                         commitId: sha,
                         filePath: fileDiff.filePath,
@@ -125,7 +137,12 @@ export function refineData(data: PipelineOutput): RefinedData {
                         changeCategory: changeCategory,
                         ...(semanticHint.length > 0 && { semanticHint })
                     }
-                });
+                };
+
+                // Embedding text 생성
+                diffItem.embeddingText = generateDiffEmbeddingText(diffItem);
+
+                items.push(diffItem);
             }
         }
     }
@@ -157,10 +174,11 @@ export function refineData(data: PipelineOutput): RefinedData {
 
                 const content = lines.join("\n");
 
-                items.push({
+                const fileItem: RefinedItem = {
                     id: `file-${file.path}-${index}`,
                     type: "file",
                     content: content,
+                    embeddingText: "", // 임시로 빈 문자열, 아래에서 생성
                     metadata: {
                         path: file.path,
                         fileType: file.type,
@@ -172,7 +190,12 @@ export function refineData(data: PipelineOutput): RefinedData {
                             totalChunks: chunks.length
                         })
                     }
-                });
+                };
+
+                // Embedding text 생성
+                fileItem.embeddingText = generateFileEmbeddingText(fileItem);
+
+                items.push(fileItem);
             });
         }
 

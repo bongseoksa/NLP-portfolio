@@ -17,7 +17,10 @@
     "chroma:start": "./scripts/run_chroma.sh",
     "server": "tsx src/server/index.ts",
     "control": "tsx src/control/index.ts",
-    "start:local": "concurrently \"pnpm run control\" \"sleep 2 && pnpm run server\""
+    "start:local": "concurrently \"pnpm run control\" \"sleep 2 && pnpm run server\"",
+    "test:embedding": "tsx scripts/test-embedding-quality.ts",
+    "verify:diff": "tsx scripts/verify-diff-entity.ts",
+    "test:search": "tsx scripts/test-diff-search.ts"
   },
   "keywords": [],
   "author": "bongseok.sa",

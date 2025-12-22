@@ -8,6 +8,8 @@ export interface RefinedItem {
     type: "commit" | "diff" | "file";
     /** 임베딩 생성을 위한 전체 텍스트 청크 */
     content: string;
+    /** 임베딩 최적화를 위한 자연어 변환 텍스트 */
+    embeddingText: string;
     /** 데이터에 대한 메타데이터 */
     metadata: {
         // 커밋 관련 메타데이터

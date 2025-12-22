@@ -150,7 +150,8 @@ export async function runPipeline(options: PipelineOptions = {}) {
         // Batch processing to avoid huge payload
         for (let i = 0; i < items.length; i += batchSize) {
             const batch = items.slice(i, i + batchSize);
-            const texts = batch.map((item: any) => item.content);
+            // Use embeddingText (자연어 변환) instead of content (raw data)
+            const texts = batch.map((item: any) => item.embeddingText);
             console.log(`   Processing batch ${i / batchSize + 1}/${Math.ceil(items.length / batchSize)}...`);
 
             const batchEmbeddings = await generateEmbeddings(texts);
