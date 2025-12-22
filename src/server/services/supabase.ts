@@ -63,7 +63,7 @@ export interface QAHistoryRecord {
     question: string;
     question_summary: string;
     answer: string;
-    category: 'planning' | 'technical' | 'history' | 'cs' | 'status' | 'unknown';
+    category: 'issue' | 'implementation' | 'structure' | 'history' | 'data' | 'planning' | 'status' | 'techStack' | 'cs' | 'testing' | 'summary' | 'etc';
     category_confidence: number;
     sources: any[];
     status: 'success' | 'partial' | 'failed';

@@ -5,6 +5,7 @@ import { Router, type Request, type Response, type IRouter } from 'express';
 import { searchVectors } from '../../vector_store/searchVectors.js';
 import { generateAnswer } from '../../qa/answer.js';
 import { saveQAHistory } from '../services/supabase.js';
+import { classifyQuestionWithConfidence } from '../../qa/classifier.js';
 
 const router: IRouter = Router();
 
@@ -28,12 +29,16 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     try {
+        // 1. 질문 분류 (LLM 호출 이전, rule-based)
+        const { category, confidence } = classifyQuestionWithConfidence(question);
+        console.log(`📂 질문 분류: ${category} (신뢰도: ${confidence})`);
+
         const repoName = process.env.TARGET_REPO_NAME || 'portfolio';
         const collectionName = `${repoName}-commits`;
 
         console.log(`🔍 API 질의: "${question}"`);
 
-        // 벡터 검색
+        // 2. 벡터 검색
         const contexts = await searchVectors(collectionName, question, 5);
         console.log(`   → ${contexts.length}개 문서 검색됨`);
 
@@ -69,26 +74,32 @@ router.post('/', async (req: Request, res: Response) => {
             relevanceScore: ctx.score || 0,
         }));
 
-        // Supabase에 이력 저장
-        await saveQAHistory({
-            question,
-            question_summary: questionSummary,
-            answer,
-            category: 'unknown', // TODO: 질문 분류 기능 추가
-            category_confidence: 0,
-            sources,
-            status,
-            response_time_ms: responseTimeMs,
-            token_usage: 0, // TODO: 토큰 사용량 추적
-        });
+        // 3. Supabase에 이력 저장 (부수 효과, 실패해도 응답 흐름 중단 안됨)
+        try {
+            await saveQAHistory({
+                question,
+                question_summary: questionSummary,
+                answer,
+                category,
+                category_confidence: confidence,
+                sources,
+                status,
+                response_time_ms: responseTimeMs,
+                token_usage: 0, // TODO: 토큰 사용량 추적
+            });
+        } catch (dbError: any) {
+            // Supabase 저장 실패는 로그만 남기고 계속 진행
+            console.warn('⚠️ Supabase 이력 저장 실패:', dbError.message);
+        }
 
         console.log(`✅ 답변 생성 완료 (${responseTimeMs}ms)`);
 
+        // 4. 클라이언트 응답
         res.json({
             answer,
             sources,
-            category: 'unknown',
-            categoryConfidence: 0,
+            category,
+            categoryConfidence: confidence,
             status,
             responseTimeMs,
             tokenUsage: 0,

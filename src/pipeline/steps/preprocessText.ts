@@ -112,8 +112,10 @@ export function refineData(data: PipelineOutput): RefinedData {
                         size: file.size,
                         extension: file.extension,
                         sha: file.sha,
-                        chunkIndex: chunks.length > 1 ? index : undefined,
-                        totalChunks: chunks.length > 1 ? chunks.length : undefined,
+                        ...(chunks.length > 1 && {
+                            chunkIndex: index,
+                            totalChunks: chunks.length
+                        })
                     }
                 });
             });

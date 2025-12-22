@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS qa_history (
     question TEXT NOT NULL,
     question_summary VARCHAR(30) NOT NULL,
     answer TEXT NOT NULL,
-    category VARCHAR(20) NOT NULL CHECK (category IN ('planning', 'technical', 'history', 'cs', 'status', 'unknown')),
+    category VARCHAR(20) NOT NULL CHECK (category IN ('issue', 'implementation', 'structure', 'history', 'data', 'planning', 'status', 'techStack', 'cs', 'testing', 'summary', 'etc')),
     category_confidence FLOAT DEFAULT 0,
     sources JSONB DEFAULT '[]'::jsonb,
     status VARCHAR(20) NOT NULL CHECK (status IN ('success', 'partial', 'failed')),
