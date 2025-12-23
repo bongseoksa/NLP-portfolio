@@ -272,14 +272,17 @@ function analyzeFileContent(content: string): {
     for (const line of lines) {
         // export function/const/class/interface/type
         const exportMatch = line.match(/export\s+(function|const|let|class|interface|type|enum)\s+(\w+)/);
-        if (exportMatch) {
+        if (exportMatch && exportMatch[2]) {
             exports.push(exportMatch[2]);
         }
 
         // export { ... }
         const exportBlockMatch = line.match(/export\s+\{([^}]+)\}/);
-        if (exportBlockMatch) {
-            const items = exportBlockMatch[1].split(',').map(s => s.trim().split(/\s+as\s+/)[0]);
+        if (exportBlockMatch && exportBlockMatch[1]) {
+            const items = exportBlockMatch[1].split(',').map(s => {
+                const parts = s.trim().split(/\s+as\s+/);
+                return parts[0] || '';
+            }).filter(s => s.length > 0);
             exports.push(...items);
         }
     }
@@ -287,7 +290,7 @@ function analyzeFileContent(content: string): {
     // Import 추출
     for (const line of lines) {
         const importMatch = line.match(/import\s+.*\s+from\s+['"]([^'"]+)['"]/);
-        if (importMatch) {
+        if (importMatch && importMatch[1]) {
             imports.push(importMatch[1]);
         }
     }
