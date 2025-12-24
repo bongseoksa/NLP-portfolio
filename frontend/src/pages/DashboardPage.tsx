@@ -28,7 +28,7 @@ import {
 } from '../hooks/useQueries';
 import type { QuestionCategory } from '../types';
 
-// 카테고리 색상
+// 카테고리 색상 (기본)
 const CATEGORY_COLORS: Record<QuestionCategory, string> = {
   planning: '#8B5CF6',   // 보라
   technical: '#3B82F6',  // 파랑
@@ -37,13 +37,57 @@ const CATEGORY_COLORS: Record<QuestionCategory, string> = {
   status: '#EF4444',     // 빨강
 };
 
-// 카테고리 한글 매핑
-const categoryLabels: Record<QuestionCategory, string> = {
+// 다양한 색상 팔레트 (동적 카테고리용)
+const COLOR_PALETTE = [
+  '#8B5CF6', // 보라
+  '#3B82F6', // 파랑
+  '#10B981', // 초록
+  '#F59E0B', // 주황
+  '#EF4444', // 빨강
+  '#EC4899', // 핑크
+  '#06B6D4', // 청록
+  '#6366F1', // 인디고
+  '#84CC16', // 라임
+  '#F97316', // 오렌지
+  '#14B8A6', // 틸
+  '#A855F7', // 자주
+  '#22C55E', // 에메랄드
+  '#0EA5E9', // 스카이
+  '#F43F5E', // 로즈
+];
+
+// 카테고리에 색상 할당하는 헬퍼 함수
+const getCategoryColor = (category: string, index: number): string => {
+  // 알려진 카테고리는 기본 색상 사용
+  if (category in CATEGORY_COLORS) {
+    return CATEGORY_COLORS[category as QuestionCategory];
+  }
+  // 알려지지 않은 카테고리는 팔레트에서 순환적으로 할당
+  return COLOR_PALETTE[index % COLOR_PALETTE.length];
+};
+
+// 카테고리 한글 매핑 (12개 카테고리 전체)
+const categoryLabels: Record<string, string> = {
+  // 기존 카테고리
   planning: '기획',
   technical: '기술',
   history: '히스토리',
   cs: 'CS',
   status: '현황',
+  // 새로운 카테고리 (12개)
+  issue: '이슈/버그',
+  implementation: '구현',
+  structure: '구조',
+  data: '데이터',
+  techStack: '기술스택',
+  testing: '테스트',
+  summary: '요약',
+  etc: '기타',
+};
+
+// 카테고리 라벨을 안전하게 가져오는 헬퍼 함수
+const getCategoryLabel = (category: string): string => {
+  return categoryLabels[category] || category || '알 수 없음';
 };
 
 // 소스 타입 색상
@@ -54,7 +98,7 @@ const SOURCE_COLORS = {
 };
 
 export default function DashboardPage() {
-  const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
+  const { data: summary } = useDashboardSummary();
   const { data: dailyStats = [] } = useDailyStats();
   const { data: categoryDist = [] } = useCategoryDistribution();
   const { data: sourceDist = [] } = useSourceContribution();
@@ -218,6 +262,7 @@ export default function DashboardPage() {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
+                // @ts-expect-error - Recharts type compatibility issue
                 data={displayCategoryDist}
                 dataKey="count"
                 nameKey="category"
@@ -225,19 +270,21 @@ export default function DashboardPage() {
                 cy="50%"
                 outerRadius={100}
                 innerRadius={60}
-                label={({ category, percentage }) => 
-                  `${categoryLabels[category as QuestionCategory]} ${percentage.toFixed(0)}%`
-                }
+                label={({ name, percent, payload }) => {
+                  const category = name || payload?.category || '';
+                  const percentage = payload?.percentage ?? (percent ? percent * 100 : 0);
+                  return `${getCategoryLabel(category)} ${percentage.toFixed(0)}%`;
+                }}
               >
                 {displayCategoryDist.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={CATEGORY_COLORS[entry.category as QuestionCategory]} 
+                    fill={getCategoryColor(entry.category, index)} 
                   />
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value, name) => [value, categoryLabels[name as QuestionCategory] || name]}
+                formatter={(value, name) => [value, getCategoryLabel(name as string)]}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -275,7 +322,7 @@ export default function DashboardPage() {
                 }}
               />
               <Tooltip 
-                formatter={(value, name, props) => [
+                formatter={(value, _name, props) => [
                   `${value}건 (${props.payload.percentage}%)`,
                   '응답 수'
                 ]}
@@ -387,14 +434,6 @@ function SummaryCard({
   icon: string;
   color?: 'gray' | 'green' | 'blue' | 'purple' | 'red';
 }) {
-  const bgColors = {
-    gray: 'gray.50',
-    green: 'green.50',
-    blue: 'blue.50',
-    purple: 'purple.50',
-    red: 'red.50',
-  };
-
   return (
     <div className={css({
       bg: 'white',
