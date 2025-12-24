@@ -27,12 +27,12 @@ jobs:
       - name: Ping Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           node -e "
           const startTime = Date.now();
           const supabaseUrl = process.env.SUPABASE_URL;
-          const apiKey = process.env.SUPABASE_ANON_KEY;
+          const apiKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
           // SUPABASE_URL이 이미 https://xxx.supabase.co 형태이므로 그대로 사용
           const healthUrl = supabaseUrl + '/rest/v1/';
