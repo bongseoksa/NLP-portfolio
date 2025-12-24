@@ -64,13 +64,3 @@ export async function fetchAllCommits(): Promise<CommitItem[]> {
 
     return commits;
 }
-
-// 테스트 실행용 (node src/api/fetchCommits.ts)
-// if (require.main === module) {
-//     fetchAllCommits()
-//         .then(commits => {
-//             console.log(`\n📌 Total fetched commits: ${commits.length}`);
-//             console.log("📝 Sample:", commits[0]);
-//         })
-//         .catch(err => console.error("❌ Error:", err));
-// }

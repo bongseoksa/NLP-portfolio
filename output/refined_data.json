@@ -1,6 +1,184 @@
 {
   "items": [
     {
+      "id": "commit-6370a8cbaa726fa955fc00ffc88e891d35219510",
+      "type": "commit",
+      "content": "Commit: 6370a8cbaa726fa955fc00ffc88e891d35219510\nAuthor: bongseok.sa\nDate: 2025-12-24T11:54:16Z\nMessage: feat: 중복 내용 제거\n\nAffected Files:\n- docs/supabase-setup.md (modified) +0 -4",
+      "embeddingText": "이 커밋은 새로운 기능 추가을(를) 위한 변경사항입니다.\n작성자: bongseok.sa\n날짜: 2025-12-24T11:54:16Z\n변경된 파일: docs/supabase-setup.md\n\n변경 목적: feat: 중복 내용 제거\n\n이 업데이트는 새로운 기능 추가과(와) 관련된 작업을 수행합니다.",
+      "metadata": {
+        "sha": "6370a8cbaa726fa955fc00ffc88e891d35219510",
+        "author": "bongseok.sa",
+        "date": "2025-12-24T11:54:16Z",
+        "message": "feat: 중복 내용 제거",
+        "affectedFiles": [
+          "docs/supabase-setup.md"
+        ],
+        "fileCount": 1,
+        "additions": 0,
+        "deletions": 4
+      }
+    },
+    {
+      "id": "diff-6370a8cbaa726fa955fc00ffc88e891d35219510-docs-supabase-setup.md",
+      "type": "diff",
+      "content": "Diff for File: docs/supabase-setup.md\nCommit: 6370a8cbaa726fa955fc00ffc88e891d35219510\nChanges: +0 -4\n\nPatch:\ndiff --git a/docs/supabase-setup.md b/docs/supabase-setup.md\nindex 338fc57..3a0e7a8 100644\n--- a/docs/supabase-setup.md\n+++ b/docs/supabase-setup.md\n@@ -4,10 +4,6 @@ This document contains the SQL queries needed to set up the database schema for\n \n ## Table Schema\n \n-### `web_vitals` Table\n-\n-This table stores Core Web Vitals metrics collected from the live website.\n-\n ### `ping` Table\n \n This table records health check pings to keep the Supabase project active and prevent free tier auto-pause.",
+      "embeddingText": "docs/supabase-setup.md 파일에서 수정된 변경사항입니다.\n\n변경 유형: 새로운 기능 추가\n변경 규모: 0줄 추가, 4줄 삭제\n\n변경 전:\n### `web_vitals` Table\n\nThis table stores Core Web Vitals metrics collected from the live website.\n...\n\n변경 후:\n없음\n\n이 변경은 새로운 기능 추가을(를) 목적으로 docs/supabase-setup.md의 로직을 수정했습니다.",
+      "metadata": {
+        "commitId": "6370a8cbaa726fa955fc00ffc88e891d35219510",
+        "filePath": "docs/supabase-setup.md",
+        "diffType": "modify",
+        "fileAdditions": 0,
+        "fileDeletions": 4,
+        "changeCategory": "feat"
+      }
+    },
+    {
+      "id": "commit-15e9eb8f669ac921de32ea424d16e0967a645c66",
+      "type": "commit",
+      "content": "Commit: 15e9eb8f669ac921de32ea424d16e0967a645c66\nAuthor: bongseok.sa\nDate: 2025-12-24T11:28:42Z\nMessage: fix: ping.ts 수정\n\nAffected Files:\n- api/ping.ts (modified) +6 -5",
+      "embeddingText": "이 커밋은 버그 수정을(를) 위한 변경사항입니다.\n작성자: bongseok.sa\n날짜: 2025-12-24T11:28:42Z\n변경된 파일: api/ping.ts\n\n변경 목적: fix: ping.ts 수정\n\n이 업데이트는 버그 수정과(와) 관련된 작업을 수행합니다.",
+      "metadata": {
+        "sha": "15e9eb8f669ac921de32ea424d16e0967a645c66",
+        "author": "bongseok.sa",
+        "date": "2025-12-24T11:28:42Z",
+        "message": "fix: ping.ts 수정",
+        "affectedFiles": [
+          "api/ping.ts"
+        ],
+        "fileCount": 1,
+        "additions": 6,
+        "deletions": 5
+      }
+    },
+    {
+      "id": "diff-15e9eb8f669ac921de32ea424d16e0967a645c66-api-ping.ts",
+      "type": "diff",
+      "content": "Diff for File: api/ping.ts\nCommit: 15e9eb8f669ac921de32ea424d16e0967a645c66\nChanges: +6 -5\n\nPatch:\ndiff --git a/api/ping.ts b/api/ping.ts\nindex 3f5b460..d8fcd8b 100644\n--- a/api/ping.ts\n+++ b/api/ping.ts\n@@ -65,9 +65,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {\n \n     // 에러 발생 시에도 테이블에 기록 시도\n     const responseTime = Date.now() - startTime;\n-    await supabase\n-      .from('ping')\n-      .insert([\n+    try {\n+      await supabase.from('ping').insert([\n         {\n           status: 'error',\n           http_code: 500,\n@@ -75,8 +74,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {\n           error_message: String(err),\n           triggered_by: 'github_actions'\n         }\n-      ])\n-      .catch(console.error);\n+      ]);\n+    } catch (insertErr) {\n+      console.error('[Failed to log error]', insertErr);\n+    }\n \n     return res.status(500).json({\n       success: false,",
+      "embeddingText": "api/ping.ts 파일에서 수정된 변경사항입니다.\n\n변경 유형: 버그 수정\n변경 규모: 6줄 추가, 5줄 삭제\n의미론적 변화: export 변경, 함수/변수 정의, 주석 변경\n\n변경 전:\nawait supabase\n.from('ping')\n.insert([\n...\n\n변경 후:\ntry {\nawait supabase.from('ping').insert([\n]);\n...\n\n이 변경은 버그 수정을(를) 목적으로 api/ping.ts의 로직을 수정했습니다.",
+      "metadata": {
+        "commitId": "15e9eb8f669ac921de32ea424d16e0967a645c66",
+        "filePath": "api/ping.ts",
+        "diffType": "modify",
+        "fileAdditions": 6,
+        "fileDeletions": 5,
+        "changeCategory": "fix",
+        "semanticHint": [
+          "export 변경",
+          "함수/변수 정의",
+          "주석 변경"
+        ]
+      }
+    },
+    {
+      "id": "commit-7123a33272305493c7c6d1514e9b3a6308933ea7",
+      "type": "commit",
+      "content": "Commit: 7123a33272305493c7c6d1514e9b3a6308933ea7\nAuthor: bongseok.sa\nDate: 2025-12-24T11:26:52Z\nMessage: feat: github actions를 통한 supabase 자동ping 처리\n\nAffected Files:\n- .github/workflows/weekly-ping.yml (added) +39 -0\n- api/ping.ts (added) +87 -0\n- docs/supabase-setup.md (modified) +152 -0",
+      "embeddingText": "이 커밋은 새로운 기능 추가을(를) 위한 변경사항입니다.\n작성자: bongseok.sa\n날짜: 2025-12-24T11:26:52Z\n변경된 파일: .github/workflows/weekly-ping.yml, api/ping.ts, docs/supabase-setup.md\n\n변경 목적: feat: github actions를 통한 supabase 자동ping 처리\n\n이 업데이트는 새로운 기능 추가과(와) 관련된 작업을 수행합니다.",
+      "metadata": {
+        "sha": "7123a33272305493c7c6d1514e9b3a6308933ea7",
+        "author": "bongseok.sa",
+        "date": "2025-12-24T11:26:52Z",
+        "message": "feat: github actions를 통한 supabase 자동ping 처리",
+        "affectedFiles": [
+          ".github/workflows/weekly-ping.yml",
+          "api/ping.ts",
+          "docs/supabase-setup.md"
+        ],
+        "fileCount": 3,
+        "additions": 278,
+        "deletions": 0
+      }
+    },
+    {
+      "id": "diff-7123a33272305493c7c6d1514e9b3a6308933ea7-docs-supabase-setup.md",
+      "type": "diff",
+      "content": "Diff for File: docs/supabase-setup.md\nCommit: 7123a33272305493c7c6d1514e9b3a6308933ea7\nChanges: +152 -0\n\nPatch:\ndiff --git a/.github/workflows/weekly-ping.yml b/.github/workflows/weekly-ping.yml\nnew file mode 100644\nindex 0000000..353a8e5\n--- /dev/null\n+++ b/.github/workflows/weekly-ping.yml\n@@ -0,0 +1,39 @@\n+name: Weekly Supabase Ping\n+\n+# 매주 일요일 24:00 KST (월요일 00:00 KST) 실행\n+# KST는 UTC+9이므로 일요일 15:00 UTC = 월요일 00:00 KST\n+on:\n+  schedule:\n+    - cron: '0 15 * * 0' # 매주 일요일 15:00 UTC\n+  workflow_dispatch: # 수동 트리거 허용 (테스트용)\n+\n+jobs:\n+  ping-supabase:\n+    runs-on: ubuntu-latest\n+\n+    steps:\n+      - name: Ping Supabase via API\n+        run: |\n+          echo \"Pinging Supabase at $(date)\"\n+\n+          # API 호출 및 응답 캡처\n+          response=$(curl -s -w \"\\n%{http_code}\" https://portfolio-wheat-eight-88.vercel.app/api/ping)\n+          http_code=$(echo \"$response\" | tail -n1)\n+          body=$(echo \"$response\" | head -n-1)\n+\n+          echo \"HTTP Status: $http_code\"\n+          echo \"Response: $body\"\n+\n+          # HTTP 200 상태 코드 확인\n+          if [ \"$http_code\" != \"200\" ]; then\n+            echo \"::error::Ping failed with status $http_code\"\n+            echo \"::error::Response body: $body\"\n+            exit 1\n+          fi\n+\n+          echo \"::notice::Supabase ping successful\"\n+\n+      - name: Notify on failure\n+        if: failure()\n+        run: |\n+          echo \"::error::Weekly Supabase ping failed. Check logs above for details.\"\ndiff --git a/api/ping.ts b/api/ping.ts\nnew file mode 100644\nindex 0000000..3f5b460\n--- /dev/null\n+++ b/api/ping.ts\n@@ -0,0 +1,87 @@\n+/** 서버리스 api - Supabase ping health check */\n+import type { VercelRequest, VercelResponse } from '@vercel/node';\n+import { createClient } from '@supabase/supabase-js';\n+\n+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);\n+\n+export default async function handler(req: VercelRequest, res: VercelResponse) {\n+  // GET 메소드만 허용\n+  if (req.method !== 'GET') {\n+    return res.status(405).json({ success: false, error: 'Method not allowed' });\n+  }\n+\n+  const startTime = Date.now();\n+ \n...(Truncated)...",
+      "embeddingText": "docs/supabase-setup.md 파일에서 수정된 변경사항입니다.\n\n변경 유형: 새로운 기능 추가\n변경 규모: 152줄 추가, 0줄 삭제\n의미론적 변화: 조건문 변경, 의존성 변경, export 변경, 함수/변수 정의, 주석 변경\n\n변경 전:\n없음\n\n변경 후:\nname: Weekly Supabase Ping\n\n# 매주 일요일 24:00 KST (월요일 00:00 KST) 실행\n...\n\n이 변경은 새로운 기능 추가을(를) 목적으로 docs/supabase-setup.md의 로직을 수정했습니다.",
+      "metadata": {
+        "commitId": "7123a33272305493c7c6d1514e9b3a6308933ea7",
+        "filePath": "docs/supabase-setup.md",
+        "diffType": "modify",
+        "fileAdditions": 152,
+        "fileDeletions": 0,
+        "changeCategory": "feat",
+        "semanticHint": [
+          "조건문 변경",
+          "의존성 변경",
+          "export 변경",
+          "함수/변수 정의",
+          "주석 변경"
+        ]
+      }
+    },
+    {
+      "id": "commit-9b57d072d03bd7297a741c6fd86378a3acf071fd",
+      "type": "commit",
+      "content": "Commit: 9b57d072d03bd7297a741c6fd86378a3acf071fd\nAuthor: bongseok.sa\nDate: 2025-12-24T11:11:52Z\nMessage: feat: 수파베이스 프로젝트 재생성\n\nAffected Files:\n- .claude/settings.local.json (added) +7 -0\n- docs/supabase-setup.md (added) +217 -0",
+      "embeddingText": "이 커밋은 새로운 기능 추가을(를) 위한 변경사항입니다.\n작성자: bongseok.sa\n날짜: 2025-12-24T11:11:52Z\n변경된 파일: .claude/settings.local.json, docs/supabase-setup.md\n\n변경 목적: feat: 수파베이스 프로젝트 재생성\n\n이 업데이트는 새로운 기능 추가과(와) 관련된 작업을 수행합니다.",
+      "metadata": {
+        "sha": "9b57d072d03bd7297a741c6fd86378a3acf071fd",
+        "author": "bongseok.sa",
+        "date": "2025-12-24T11:11:52Z",
+        "message": "feat: 수파베이스 프로젝트 재생성",
+        "affectedFiles": [
+          ".claude/settings.local.json",
+          "docs/supabase-setup.md"
+        ],
+        "fileCount": 2,
+        "additions": 224,
+        "deletions": 0
+      }
+    },
+    {
+      "id": "diff-9b57d072d03bd7297a741c6fd86378a3acf071fd-docs-supabase-setup.md",
+      "type": "diff",
+      "content": "Diff for File: docs/supabase-setup.md\nCommit: 9b57d072d03bd7297a741c6fd86378a3acf071fd\nChanges: +217 -0\n\nPatch:\ndiff --git a/.claude/settings.local.json b/.claude/settings.local.json\nnew file mode 100644\nindex 0000000..c01124d\n--- /dev/null\n+++ b/.claude/settings.local.json\n@@ -0,0 +1,7 @@\n+{\n+  \"permissions\": {\n+    \"allow\": [\n+      \"Bash(mkdir:*)\"\n+    ]\n+  }\n+}\ndiff --git a/docs/supabase-setup.md b/docs/supabase-setup.md\nnew file mode 100644\nindex 0000000..0f9276f\n--- /dev/null\n+++ b/docs/supabase-setup.md\n@@ -0,0 +1,217 @@\n+# Supabase SQL Setup\n+\n+This document contains the SQL queries needed to set up the database schema for the portfolio web vitals monitoring dashboard.\n+\n+## Table Schema\n+\n+### `web_vitals` Table\n+\n+This table stores Core Web Vitals metrics collected from the live website.\n+\n+```sql\n+-- Create web_vitals table\n+CREATE TABLE IF NOT EXISTS public.web_vitals (\n+  id BIGSERIAL PRIMARY KEY,\n+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n+  name TEXT NOT NULL CHECK (name IN ('CLS', 'FCP', 'LCP', 'TTFB', 'INP')),\n+  value FLOAT8 NOT NULL,\n+  delta FLOAT8 NOT NULL,\n+  rating TEXT NOT NULL CHECK (rating IN ('good', 'needs-improvement', 'poor')),\n+  navigation_type TEXT\n+);\n+\n+-- Create index on created_at for faster sorting\n+CREATE INDEX IF NOT EXISTS idx_web_vitals_created_at\n+  ON public.web_vitals (created_at DESC);\n+\n+-- Create index on name for faster filtering by metric type\n+CREATE INDEX IF NOT EXISTS idx_web_vitals_name\n+  ON public.web_vitals (name);\n+\n+-- Create composite index for common query patterns\n+CREATE INDEX IF NOT EXISTS idx_web_vitals_name_created_at\n+  ON public.web_vitals (name, created_at DESC);\n+```\n+\n+## Row Level Security (RLS)\n+\n+Enable RLS and set up policies for secure access:\n+\n+```sql\n+-- Enable Row Level Security\n+ALTER TABLE public.web_vitals ENABLE ROW LEVEL SECURITY;\n+\n+-- Policy: Allow anonymous inserts (for web-vitals collection)\n+CREATE POLICY \"Allow anonymous inserts\"\n+  ON public.web_vitals\n+  FOR INSERT\n+  TO anon\n+  WITH CHECK (true);\n+\n+-- Policy: Allow anonymous reads (for dashboard)\n+CREATE POLICY \"Allow anonymo\n...(Truncated)...",
+      "embeddingText": "docs/supabase-setup.md 파일에서 새로 추가된 변경사항입니다.\n\n변경 유형: 새로운 기능 추가\n변경 규모: 217줄 추가, 0줄 삭제\n\n변경 전:\n없음\n\n변경 후:\n{\n\"permissions\": {\n\"allow\": [\n...\n\n이 변경은 새로운 기능 추가을(를) 목적으로 docs/supabase-setup.md의 로직을 수정했습니다.",
+      "metadata": {
+        "commitId": "9b57d072d03bd7297a741c6fd86378a3acf071fd",
+        "filePath": "docs/supabase-setup.md",
+        "diffType": "add",
+        "fileAdditions": 217,
+        "fileDeletions": 0,
+        "changeCategory": "feat"
+      }
+    },
+    {
+      "id": "commit-5c48bcf5f31355e26a086c78be408630419a037e",
+      "type": "commit",
+      "content": "Commit: 5c48bcf5f31355e26a086c78be408630419a037e\nAuthor: bongseok.sa\nDate: 2025-12-24T10:22:03Z\nMessage: feat: claude.md 추가\n\nAffected Files:\n- CLAUDE.md (added) +111 -0",
+      "embeddingText": "이 커밋은 새로운 기능 추가을(를) 위한 변경사항입니다.\n작성자: bongseok.sa\n날짜: 2025-12-24T10:22:03Z\n변경된 파일: CLAUDE.md\n\n변경 목적: feat: claude.md 추가\n\n이 업데이트는 새로운 기능 추가과(와) 관련된 작업을 수행합니다.",
+      "metadata": {
+        "sha": "5c48bcf5f31355e26a086c78be408630419a037e",
+        "author": "bongseok.sa",
+        "date": "2025-12-24T10:22:03Z",
+        "message": "feat: claude.md 추가",
+        "affectedFiles": [
+          "CLAUDE.md"
+        ],
+        "fileCount": 1,
+        "additions": 111,
+        "deletions": 0
+      }
+    },
+    {
+      "id": "diff-5c48bcf5f31355e26a086c78be408630419a037e-CLAUDE.md",
+      "type": "diff",
+      "content": "Diff for File: CLAUDE.md\nCommit: 5c48bcf5f31355e26a086c78be408630419a037e\nChanges: +111 -0\n\nPatch:\ndiff --git a/CLAUDE.md b/CLAUDE.md\nnew file mode 100644\nindex 0000000..e54eac4\n--- /dev/null\n+++ b/CLAUDE.md\n@@ -0,0 +1,111 @@\n+# CLAUDE.md\n+\n+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.\n+\n+## Project Overview\n+\n+This is a personal portfolio website built with React 19, TypeScript, and Vite. The site features internationalization (Korean/English), web performance monitoring via Supabase, and a dashboard for viewing web vitals metrics.\n+\n+**Live site**: https://portfolio-wheat-eight-88.vercel.app/\n+\n+**Tech stack**: React 19, TypeScript 5.8.3, Vite 7.0.0, Tailwind CSS, shadcn/ui, Supabase, Vercel\n+\n+**Package manager**: pnpm 10.13.1\n+**Node version**: v22.18.0\n+\n+## Development Commands\n+\n+```bash\n+# Start development server with HMR\n+pnpm dev\n+\n+# Type-check and build for production\n+pnpm build\n+\n+# Lint code with ESLint\n+pnpm lint\n+\n+# Preview production build locally\n+pnpm preview\n+```\n+\n+## Architecture Overview\n+\n+### Routing Structure\n+\n+The application uses React Router with two main routes:\n+- `/` - Home page ([App.tsx](src/App.tsx)) with sections: Hero, Skills, Career, Projects\n+- `/dashboard` - Analytics dashboard ([page.tsx](src/app/dashboard/page.tsx)) showing web vitals metrics\n+\n+### Environment-Based Data Flow\n+\n+The application has **dual-path architecture** based on environment:\n+\n+**Local Development** (`VITE_ENV=local`):\n+- Web vitals → Direct Supabase client ([superbaseClient.ts](src/lib/superbaseClient.ts))\n+- Uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` environment variables\n+- Direct database calls via [vitals.ts](src/api/vitals.ts)\n+\n+**Production** (Vercel):\n+- Web vitals → Vercel serverless API → Supabase\n+- API endpoint: `/api/vitals` ([api/vitals.ts](api/vitals.ts))\n+- Uses `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` environment variables\n+- This routing is controlled by [vitals.ts](src/api/vitals.ts) using `import.meta.env.VITE_ENV`\n+\n+### Key Directories\n+\n+- [src/com\n...(Truncated)...",
+      "embeddingText": "CLAUDE.md 파일에서 새로 추가된 변경사항입니다.\n\n변경 유형: 새로운 기능 추가\n변경 규모: 111줄 추가, 0줄 삭제\n의미론적 변화: 주석 변경\n\n변경 전:\n없음\n\n변경 후:\n# CLAUDE.md\n\nThis file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.\n...\n\n이 변경은 새로운 기능 추가을(를) 목적으로 CLAUDE.md의 로직을 수정했습니다.",
+      "metadata": {
+        "commitId": "5c48bcf5f31355e26a086c78be408630419a037e",
+        "filePath": "CLAUDE.md",
+        "diffType": "add",
+        "fileAdditions": 111,
+        "fileDeletions": 0,
+        "changeCategory": "feat",
+        "semanticHint": [
+          "주석 변경"
+        ]
+      }
+    },
+    {
       "id": "commit-b311fe634ea2654758c2da9b9ab733a3cb808a29",
       "type": "commit",
       "content": "Commit: b311fe634ea2654758c2da9b9ab733a3cb808a29\nAuthor: bongseoksa\nDate: 2025-08-08T07:03:03Z\nMessage: README 업데이트\n\nAffected Files:\n- README.md (modified) +2 -2\n- pnpm-lock.yaml (modified) +1179 -1185",
@@ -2739,6 +2917,19 @@
       }
     },
     {
+      "id": "file-.claude/settings.local.json-0",
+      "type": "file",
+      "content": "File: .claude/settings.local.json\nType: text\nSize: 70 bytes\nExtension: .json\n\nContent:\n{\n  \"permissions\": {\n    \"allow\": [\n      \"Bash(mkdir:*)\"\n    ]\n  }\n}\n",
+      "embeddingText": "이 파일은 .claude/settings.local.json에 위치한 undefined입니다.\n\n기술 스택: .JSON\n파일 크기: 70 bytes\n\n제공하는 기능:\n코드 파일\n\nExport하는 항목: 없음\nImport하는 모듈: 없음\n\n이 파일은 코드 파일을(를) 담당합니다.",
+      "metadata": {
+        "path": ".claude/settings.local.json",
+        "fileType": "text",
+        "size": 70,
+        "extension": ".json",
+        "sha": "c01124dda524887b0554a9ded16495b41e3ffe8b"
+      }
+    },
+    {
       "id": "file-.prettierrc-0",
       "type": "file",
       "content": "File: .prettierrc\nType: text\nSize: 107 bytes\nExtension: .prettierrc\n\nContent:\n{\n  \"semi\": true,\n  \"singleQuote\": true,\n  \"printWidth\": 100,\n  \"tabWidth\": 2,\n  \"trailingComma\": \"none\"\n}\n",
@@ -2752,6 +2943,19 @@
       }
     },
     {
+      "id": "file-CLAUDE.md-0",
+      "type": "file",
+      "content": "File: CLAUDE.md\nType: text\nSize: 4534 bytes\nExtension: .md\n\nContent:\n# CLAUDE.md\n\nThis file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.\n\n## Project Overview\n\nThis is a personal portfolio website built with React 19, TypeScript, and Vite. The site features internationalization (Korean/English), web performance monitoring via Supabase, and a dashboard for viewing web vitals metrics.\n\n**Live site**: https://portfolio-wheat-eight-88.vercel.app/\n\n**Tech stack**: React 19, TypeScript 5.8.3, Vite 7.0.0, Tailwind CSS, shadcn/ui, Supabase, Vercel\n\n**Package manager**: pnpm 10.13.1\n**Node version**: v22.18.0\n\n## Development Commands\n\n```bash\n# Start development server with HMR\npnpm dev\n\n# Type-check and build for production\npnpm build\n\n# Lint code with ESLint\npnpm lint\n\n# Preview production build locally\npnpm preview\n```\n\n## Architecture Overview\n\n### Routing Structure\n\nThe application uses React Router with two main routes:\n- `/` - Home page ([App.tsx](src/App.tsx)) with sections: Hero, Skills, Career, Projects\n- `/dashboard` - Analytics dashboard ([page.tsx](src/app/dashboard/page.tsx)) showing web vitals metrics\n\n### Environment-Based Data Flow\n\nThe application has **dual-path architecture** based on environment:\n\n**Local Development** (`VITE_ENV=local`):\n- Web vitals → Direct Supabase client ([superbaseClient.ts](src/lib/superbaseClient.ts))\n- Uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` environment variables\n- Direct database calls via [vitals.ts](src/api/vitals.ts)\n\n**Production** (Vercel):\n- Web vitals → Vercel serverless API → Supabase\n- API endpoint: `/api/vitals` ([api/vitals.ts](api/vitals.ts))\n- Uses `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` environment variables\n- This routing is controlled by [vitals.ts](src/api/vitals.ts) using `import.meta.env.VITE_ENV`\n\n### Key Directories\n\n- [src/components/](src/components/) - Page sections (Hero, Skills, Career, Projects, Header, Footer)\n- [src/components/ui/](src/components/ui/) - shadcn/ui components (54 components installed)\n- [src/lib/](src/lib/) - Utilities, i18n setup, Supabase client\n- [src/api/](src/api/) - Client-side API helpers for web vitals\n- [src/data/](src/data/) - Portfolio content data (skills, experiences, projects)\n- [src/types/](src/types/) - TypeScript type definitions\n- [src/locales/](src/locales/) - Translation files (ko.json, en.json)\n- [api/](api/) - Vercel serverless functions\n\n### Critical Files\n\n- [src/App.tsx](src/App.tsx) - Root component, routing, web vitals initialization\n- [src/api/vitals.ts](src/api/vitals.ts) - Environment-based web vitals collection/retrieval\n- [api/vitals.ts](api/vitals.ts) - Vercel serverless API for production vitals handling\n- [src/lib/i18n.ts](src/lib/i18n.ts) - i18next configuration with browser language detection\n- [src/lib/superbaseClient.ts](src/lib/superbaseClient.ts) - Supabase client (note: typo in filename)\n- [src/data/portfolio.ts](src/data/portfolio.ts) - Portfolio content data\n\n### Path Aliasing\n\nThe project uses `@` as an alias for `src/`:\n```typescript\nimport { supabase } from '@/lib/superbaseClient';\nimport { Button } from '@/components/ui/button';\n```\n\nConfigured in [vite.config.ts](vite.config.ts) and [tsconfig.app.json](tsconfig.app.json).\n\n## CI/CD Pipeline\n\n**DO NOT** configure Vercel GitHub integration. Deployment is controlled exclusively by GitHub Actions:\n\n1. **CI** (`.github/workflows/ci.yml`) - Runs on push/PR to master\n   - Node 20, pnpm setup\n   - Linting and build checks\n\n2. **CD** (`.github/workflows/cd.yml`) - Triggered after CI success\n   - Deploys to Vercel using secrets: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `VERCEL_TOKEN`\n\n## Styling & UI\n\n- **Tailwind CSS** with custom color variables defined in [tailwind.config.ts](tailwind.config.ts)\n- **Dark mode** support via `next-themes` (class-based)\n- **shadcn/ui** components configured in [components.json](components.json)\n- **Code formatting**: Prettier with single quotes, semicolons, 100 char width ([.prettierrc](.prettierrc))\n\n## Important Notes\n\n1. **Typo in filename**: The Supabase client is in `superbaseClient.ts` (not `supabaseClient.ts`)\n2. **Environment variables required**:\n   - Local: `VITE_ENV=local`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`\n   - Production: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (Vercel secrets)\n3. **SPA routing**: [vercel.json](vercel.json) rewrites all routes to `/` for client-side routing\n4. **i18n**: Default language is Korean, with English support\n5. **Web vitals**: Automatically collected on page load via [App.tsx](src/App.tsx)\n",
+      "embeddingText": "이 파일은 CLAUDE.md에 위치한 undefined입니다.\n\n기술 스택: .MD\n파일 크기: 4.4 KB\n\n제공하는 기능:\nAPI 라우팅 처리\n\nExport하는 항목: 없음\nImport하는 모듈: @/lib/superbaseClient, @/components/ui/button\n\n이 파일은 API 라우팅 처리을(를) 담당합니다.",
+      "metadata": {
+        "path": "CLAUDE.md",
+        "fileType": "text",
+        "size": 4534,
+        "extension": ".md",
+        "sha": "e54eac40e57584ac837b35e0b2467e6463fa491b"
+      }
+    },
+    {
       "id": "file-README.md-0",
       "type": "file",
       "content": "File: README.md\nType: text\nSize: 2639 bytes\nExtension: .md\n\nContent:\n# React + TypeScript + Vite\n\n## 사이트 주소\n\n[https://portfolio-wheat-eight-88.vercel.app/](https://portfolio-wheat-eight-88.vercel.app/)\n\n## 환경 세팅\n\n※ github actions의 cd.yml이 완료되는 경우 vercel 배포 진행. vercel project에서 github 연동하지 않음.\n\n```\n  Package Manager: pnpm@10.13.1\n  node version: v22.18.0\n  bundler: vite\n  deployment: vercel, github actions\n```\n\nThis template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.\n\nCurrently, two official plugins are available:\n\n- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh\n- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh\n\n## Expanding the ESLint configuration\n\nIf you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:\n\n```js\nexport default tseslint.config([\n  globalIgnores(['dist']),\n  {\n    files: ['**/*.{ts,tsx}'],\n    extends: [\n      // Other configs...\n\n      // Remove tseslint.configs.recommended and replace with this\n      ...tseslint.configs.recommendedTypeChecked,\n      // Alternatively, use this for stricter rules\n      ...tseslint.configs.strictTypeChecked,\n      // Optionally, add this for stylistic rules\n      ...tseslint.configs.stylisticTypeChecked\n\n      // Other configs...\n    ],\n    languageOptions: {\n      parserOptions: {\n        project: ['./tsconfig.node.json', './tsconfig.app.json'],\n        tsconfigRootDir: import.meta.dirname\n      }\n      // other options...\n    }\n  }\n]);\n```\n\nYou can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:\n\n```js\n// eslint.config.js\nimport reactX from 'eslint-plugin-react-x';\nimport reactDom from 'eslint-plugin-react-dom';\n\nexport default tseslint.config([\n  globalIgnores(['dist']),\n  {\n    files: ['**/*.{ts,tsx}'],\n    extends: [\n      // Other configs...\n      // Enable lint rules for React\n      reactX.configs['recommended-typescript'],\n      // Enable lint rules for React DOM\n      reactDom.configs.recommended\n    ],\n    languageOptions: {\n      parserOptions: {\n        project: ['./tsconfig.node.json', './tsconfig.app.json'],\n        tsconfigRootDir: import.meta.dirname\n      }\n      // other options...\n    }\n  }\n]);\n```\n",
@@ -2762,6 +2966,19 @@
         "size": 2639,
         "extension": ".md",
         "sha": "512a5684489cfe246433422d129e975a7aab6729"
+      }
+    },
+    {
+      "id": "file-api/ping.ts-0",
+      "type": "file",
+      "content": "File: api/ping.ts\nType: text\nSize: 2758 bytes\nExtension: .ts\n\nContent:\n/** 서버리스 api - Supabase ping health check */\nimport type { VercelRequest, VercelResponse } from '@vercel/node';\nimport { createClient } from '@supabase/supabase-js';\n\nconst supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);\n\nexport default async function handler(req: VercelRequest, res: VercelResponse) {\n  // GET 메소드만 허용\n  if (req.method !== 'GET') {\n    return res.status(405).json({ success: false, error: 'Method not allowed' });\n  }\n\n  const startTime = Date.now();\n  let status: 'success' | 'error' = 'success';\n  let httpCode = 200;\n  let errorMessage: string | null = null;\n\n  try {\n    // Supabase 연결 테스트 - ping 테이블에 가벼운 쿼리 수행\n    const { error } = await supabase.from('ping').select('id', { count: 'exact', head: true });\n\n    if (error) {\n      console.error('[Supabase ping error]', error);\n      status = 'error';\n      httpCode = 500;\n      errorMessage = error.message;\n    }\n\n    // 응답 시간 계산\n    const responseTime = Date.now() - startTime;\n\n    // User-agent 확인하여 트리거 소스 결정\n    const userAgent = req.headers['user-agent'] || '';\n    const triggeredBy = userAgent.includes('github-actions') ? 'github_actions' : 'manual';\n\n    // ping 결과를 테이블에 기록\n    const { error: insertError } = await supabase.from('ping').insert([\n      {\n        status,\n        http_code: httpCode,\n        response_time_ms: responseTime,\n        error_message: errorMessage,\n        triggered_by: triggeredBy\n      }\n    ]);\n\n    if (insertError) {\n      console.error('[Supabase insert error]', insertError);\n      // 로깅 실패해도 ping 자체는 성공으로 처리\n      return res.status(200).json({\n        success: true,\n        message: 'Ping successful but logging failed',\n        response_time_ms: responseTime\n      });\n    }\n\n    return res.status(httpCode).json({\n      success: status === 'success',\n      message: status === 'success' ? 'Ping successful' : 'Ping failed',\n      response_time_ms: responseTime,\n      error: errorMessage\n    });\n  } catch (err) {\n    console.error('[Unexpected ping error]', err);\n\n    // 에러 발생 시에도 테이블에 기록 시도\n    const responseTime = Date.now() - startTime;\n    try {\n      await supabase.from('ping').insert([\n        {\n          status: 'error',\n          http_code: 500,\n          response_time_ms: responseTime,\n          error_message: String(err),\n          triggered_by: 'github_actions'\n        }\n      ]);\n    } catch (insertErr) {\n      console.error('[Failed to log error]', insertErr);\n    }\n\n    return res.status(500).json({\n      success: false,\n      error: String(err),\n      response_time_ms: responseTime\n    });\n  }\n}\n",
+      "embeddingText": "이 파일은 api/ping.ts에 위치한 undefined입니다.\n\n기술 스택: .TS\n파일 크기: 2.7 KB\n\n제공하는 기능:\n비동기 로직 처리\n\nExport하는 항목: 없음\nImport하는 모듈: @vercel/node, @supabase/supabase-js\n\n이 파일은 비동기 로직 처리을(를) 담당합니다.",
+      "metadata": {
+        "path": "api/ping.ts",
+        "fileType": "text",
+        "size": 2758,
+        "extension": ".ts",
+        "sha": "d8fcd8b7b0489ed91a29f81a6cba6b2bb3ce215c"
       }
     },
     {
@@ -2788,6 +3005,36 @@
         "size": 444,
         "extension": ".json",
         "sha": "13f24bf4a7199593d611210596d3f953930a5768"
+      }
+    },
+    {
+      "id": "file-docs/supabase-setup.md-0",
+      "type": "file",
+      "content": "File: docs/supabase-setup.md\nType: text\nSize: 9158 bytes\nExtension: .md\n\n[Chunk 1/2]\n\nContent:\n# Supabase SQL Setup\n\nThis document contains the SQL queries needed to set up the database schema for the portfolio web vitals monitoring dashboard.\n\n## Table Schema\n\n### `ping` Table\n\nThis table records health check pings to keep the Supabase project active and prevent free tier auto-pause.\n\n```sql\n-- Create ping table\nCREATE TABLE IF NOT EXISTS public.ping (\n  id BIGSERIAL PRIMARY KEY,\n  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,\n  status TEXT NOT NULL CHECK (status IN ('success', 'error')),\n  http_code INTEGER NOT NULL,\n  response_time_ms INTEGER,\n  error_message TEXT,\n  triggered_by TEXT DEFAULT 'github_actions' NOT NULL\n);\n\n-- Create index on created_at for faster sorting\nCREATE INDEX IF NOT EXISTS idx_ping_created_at\n  ON public.ping (created_at DESC);\n\n-- Create index on status for filtering\nCREATE INDEX IF NOT EXISTS idx_ping_status\n  ON public.ping (status);\n\n-- Enable Row Level Security\nALTER TABLE public.ping ENABLE ROW LEVEL SECURITY;\n\n-- Policy: Allow service role to insert\nCREATE POLICY \"Allow service role to insert\"\n  ON public.ping\n  FOR INSERT\n  WITH CHECK (true);\n\n-- Policy: Allow service role to select\nCREATE POLICY \"Allow service role to select\"\n  ON public.ping\n  FOR SELECT\n  USING (true);\n```\n\n### `web_vitals` Table\n\n```sql\n-- Create web_vitals table\nCREATE TABLE IF NOT EXISTS public.web_vitals (\n  id BIGSERIAL PRIMARY KEY,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  name TEXT NOT NULL CHECK (name IN ('CLS', 'FCP', 'LCP', 'TTFB', 'INP')),\n  value FLOAT8 NOT NULL,\n  delta FLOAT8 NOT NULL,\n  rating TEXT NOT NULL CHECK (rating IN ('good', 'needs-improvement', 'poor')),\n  navigation_type TEXT\n);\n\n-- Create index on created_at for faster sorting\nCREATE INDEX IF NOT EXISTS idx_web_vitals_created_at\n  ON public.web_vitals (created_at DESC);\n\n-- Create index on name for faster filtering by metric type\nCREATE INDEX IF NOT EXISTS idx_web_vitals_name\n  ON public.web_vitals (name);\n\n-- Create composite index for common query patterns\nCREATE INDEX IF NOT EXISTS idx_web_vitals_name_created_at\n  ON public.web_vitals (name, created_at DESC);\n```\n\n## Row Level Security (RLS)\n\nEnable RLS and set up policies for secure access:\n\n```sql\n-- Enable Row Level Security\nALTER TABLE public.web_vitals ENABLE ROW LEVEL SECURITY;\n\n-- Policy: Allow anonymous inserts (for web-vitals collection)\nCREATE POLICY \"Allow anonymous inserts\"\n  ON public.web_vitals\n  FOR INSERT\n  TO anon\n  WITH CHECK (true);\n\n-- Policy: Allow anonymous reads (for dashboard)\nCREATE POLICY \"Allow anonymous reads\"\n  ON public.web_vitals\n  FOR SELECT\n  TO anon\n  USING (true);\n\n-- Policy: Allow service role full access\nCREATE POLICY \"Allow service role full access\"\n  ON public.web_vitals\n  FOR ALL\n  TO service_role\n  USING (true)\n  WITH CHECK (true);\n```\n\n## Useful Queries\n\n### Get Latest Metrics by Type\n\n```sql\n-- Get the most recent value for each metric type\nSELECT DISTINCT ON (name)\n  name,\n  value,\n  rating,\n  created_at,\n  delta,\n  navigation_type\nFROM public.web_vitals\nORDER BY name, created_at DESC;\n```\n\n### Get All Metrics Ordered by Time\n\n```sql\n-- Get all metrics sorted by creation time (newest first)\nSELECT\n  name,\n  value,\n  rating,\n  created_at,\n  delta,\n  navigation_type\nFROM public.web_vitals\nORDER BY created_at DESC;\n```\n\n### Get Metrics for Last 24 Hours\n\n```sql\n-- Get metrics from the last 24 hours\nSELECT\n  name,\n  value,\n  rating,\n  created_at\nFROM public.web_vitals\nWHERE created_at >= NOW() - INTERVAL '24 hours'\nORDER BY created_at DESC;\n```\n\n### Get Average Values by Metric Type\n\n```sql\n-- Calculate average values for each metric type\nSELECT\n  name,\n  ROUND(AVG(value)::numeric, 2) as avg_value,\n  COUNT(*) as sample_count,\n  MODE() WITHIN GROUP (ORDER BY rating) as most_common_rating\nFROM public.web_vitals\nGROUP BY name\nORDER BY name;\n```\n\n### Get Rating Distribution\n\n```sql\n-- Count metrics by rating for each type\nSELECT\n  name,\n  rating,\n  COUNT(*) as count,\n  ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (PARTITION BY name))::numeric, 2) as percentage\nFROM public.web_vitals\nGROUP BY name, rating\nORDER BY name, rating;\n```\n\n### Get Metrics by Date Range\n\n```sql\n-- Get metrics within a specific date range\nSELECT\n  name,\n  value,\n  rating,\n  created_at\nFROM public.web_vitals\nWHERE created_at BETWEEN '2025-01-01' AND '2025-12-31'\nORDER BY created_at DESC;\n```\n\n### Clean Up Old Data\n\n```sql\n-- Delete metrics older than 30 days (run periodically)\nDELETE FROM public.web_vitals\nWHERE created_at < NOW() - INTERVAL '30 days';\n```\n\n## Field Descriptions\n\n| Field | Type | Description |\n|-------|------|-------------|\n| `id` | BIGSERIAL | Auto-incrementing primary key |\n| `created_at` | TIMESTAMPTZ | Timestamp when the metric was recorded (UTC) |\n| `name` | TEXT | Metric type: CLS, FCP, LCP, TTFB, or INP |\n| `value` | FLOAT8 | Metric value in milliseconds (or unitless for CLS) |\n| `delta` | FLOAT8 | Change in metric value since last measurement |\n| `rating` | TEXT | Performance rating: 'good', 'needs-improvement', or 'poor' |",
+      "embeddingText": "이 파일은 docs/supabase-setup.md에 위치한 undefined입니다.\n\n기술 스택: .MD\n파일 크기: 8.9 KB\n\n제공하는 기능:\n코드 파일\n\nExport하는 항목: 없음\nImport하는 모듈: 없음\n이 문서는 전체 2개 청크 중 1번째 부분입니다.\n\n이 파일은 코드 파일을(를) 담당합니다.",
+      "metadata": {
+        "path": "docs/supabase-setup.md",
+        "fileType": "text",
+        "size": 9158,
+        "extension": ".md",
+        "sha": "3a0e7a8634d6810fb5203d92fb4c4bfd5892cf29",
+        "chunkIndex": 0,
+        "totalChunks": 2
+      }
+    },
+    {
+      "id": "file-docs/supabase-setup.md-1",
+      "type": "file",
+      "content": "File: docs/supabase-setup.md\nType: text\nSize: 9158 bytes\nExtension: .md\n\n[Chunk 2/2]\n\nContent:\n| `navigation_type` | TEXT | Navigation type from web-vitals library |\n\n## Metric Value Ranges\n\nBased on [Web Vitals thresholds](https://web.dev/articles/vitals):\n\n| Metric | Good | Needs Improvement | Poor |\n|--------|------|-------------------|------|\n| **CLS** | ≤ 0.1 | 0.1 - 0.25 | > 0.25 |\n| **FCP** | ≤ 1800ms | 1800 - 3000ms | > 3000ms |\n| **LCP** | ≤ 2500ms | 2500 - 4000ms | > 4000ms |\n| **TTFB** | ≤ 800ms | 800 - 1800ms | > 1800ms |\n| **INP** | ≤ 200ms | 200 - 500ms | > 500ms |\n\n## Environment Variables\n\nMake sure to set these in your Vercel project:\n\n- `SUPABASE_URL`: Your Supabase project URL\n- `SUPABASE_SERVICE_ROLE_KEY`: Service role key (for server-side access)\n\nFor local development, add to `.env`:\n\n- `VITE_ENV=local`\n- `VITE_SUPABASE_URL`: Your Supabase project URL\n- `VITE_SUPABASE_ANON_KEY`: Anonymous public key\n\n## Setup Instructions\n\n1. Go to your Supabase project dashboard\n2. Navigate to **SQL Editor**\n3. Create a new query\n4. Copy and paste the table schema SQL above\n5. Run the query\n6. Copy and paste the RLS policies SQL\n7. Run the query\n8. Verify the table exists in **Table Editor**\n9. Test by inserting a sample row:\n\n```sql\nINSERT INTO public.web_vitals (name, value, delta, rating, navigation_type)\nVALUES ('LCP', 1234.5, 100.0, 'good', 'navigate');\n```\n\n10. Verify the data appears in the dashboard at `/dashboard`\n\n## Ping Table Queries\n\n### Get Recent Pings\n\n```sql\n-- Get the most recent ping records\nSELECT\n  created_at,\n  status,\n  http_code,\n  response_time_ms,\n  triggered_by,\n  error_message\nFROM public.ping\nORDER BY created_at DESC\nLIMIT 20;\n```\n\n### Check Ping Success Rate\n\n```sql\n-- Calculate ping success rate and average response time\nSELECT\n  status,\n  COUNT(*) as count,\n  ROUND(AVG(response_time_ms)::numeric, 2) as avg_response_ms,\n  ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER ())::numeric, 2) as percentage\nFROM public.ping\nWHERE created_at > NOW() - INTERVAL '30 days'\nGROUP BY status;\n```\n\n### Check Ping Frequency\n\n```sql\n-- Verify pings are occurring weekly\nSELECT\n  DATE(created_at) as date,\n  COUNT(*) as ping_count,\n  STRING_AGG(DISTINCT triggered_by, ', ') as sources\nFROM public.ping\nWHERE created_at > NOW() - INTERVAL '60 days'\nGROUP BY DATE(created_at)\nORDER BY date DESC;\n```\n\n### Monitor Response Time Trends\n\n```sql\n-- Track response time trends over time\nSELECT\n  DATE_TRUNC('week', created_at) as week,\n  AVG(response_time_ms) as avg_response_ms,\n  MIN(response_time_ms) as min_response_ms,\n  MAX(response_time_ms) as max_response_ms\nFROM public.ping\nWHERE status = 'success'\n  AND created_at > NOW() - INTERVAL '90 days'\nGROUP BY DATE_TRUNC('week', created_at)\nORDER BY week DESC;\n```\n\n## Ping Table Field Descriptions\n\n| Field | Type | Description |\n|-------|------|-------------|\n| `id` | BIGSERIAL | Auto-incrementing primary key |\n| `created_at` | TIMESTAMPTZ | Timestamp when ping was executed (UTC) |\n| `status` | TEXT | Ping result: 'success' or 'error' |\n| `http_code` | INTEGER | HTTP status code (200, 500, etc.) |\n| `response_time_ms` | INTEGER | Database response time in milliseconds |\n| `error_message` | TEXT | Error details if ping failed (NULL if successful) |\n| `triggered_by` | TEXT | Ping source: 'github_actions' or 'manual' |\n\n## GitHub Actions Weekly Ping\n\nThe project includes a GitHub Actions workflow that automatically pings Supabase every Sunday at 24:00 KST (Monday 00:00 KST).\n\n**Workflow file:** `.github/workflows/weekly-ping.yml`\n\n**Schedule:** Every Sunday at 15:00 UTC (Monday 00:00 KST, as KST = UTC+9)\n\n**What it does:**\n1. Calls the `/api/ping` endpoint\n2. Checks for HTTP 200 response\n3. Records the result in the `ping` table\n4. Sends email notification if ping fails\n\n**Manual testing:**\nYou can manually trigger the workflow from the GitHub Actions tab:\n1. Go to your repository on GitHub\n2. Click \"Actions\" tab\n3. Select \"Weekly Supabase Ping\" workflow\n4. Click \"Run workflow\" button\n\n**API endpoint:**\nYou can also test the ping manually:\n```bash\ncurl https://portfolio-wheat-eight-88.vercel.app/api/ping\n```\n\nExpected response:\n```json\n{\n  \"success\": true,\n  \"message\": \"Ping successful\",\n  \"response_time_ms\": 150\n}\n```\n",
+      "embeddingText": "이 파일은 docs/supabase-setup.md에 위치한 undefined입니다.\n\n기술 스택: .MD\n파일 크기: 8.9 KB\n\n제공하는 기능:\n코드 파일\n\nExport하는 항목: 없음\nImport하는 모듈: 없음\n이 문서는 전체 2개 청크 중 2번째 부분입니다.\n\n이 파일은 코드 파일을(를) 담당합니다.",
+      "metadata": {
+        "path": "docs/supabase-setup.md",
+        "fileType": "text",
+        "size": 9158,
+        "extension": ".md",
+        "sha": "3a0e7a8634d6810fb5203d92fb4c4bfd5892cf29",
+        "chunkIndex": 1,
+        "totalChunks": 2
       }
     },
     {
