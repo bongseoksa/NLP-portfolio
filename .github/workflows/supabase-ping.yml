@@ -1,0 +1,82 @@
+name: Supabase Ping
+
+on:
+  schedule:
+    # 매주 일요일 24:00 (UTC 기준 15:00, 한국시간 24:00)
+    - cron: '0 15 * * 0'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install -g pnpm
+          pnpm install --frozen-lockfile
+
+      - name: Ping Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          node -e "
+          const startTime = Date.now();
+
+          fetch(process.env.SUPABASE_URL + '/rest/v1/', {
+            headers: {
+              'apikey': process.env.SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + process.env.SUPABASE_ANON_KEY
+            }
+          })
+          .then(async (res) => {
+            const responseTime = Date.now() - startTime;
+            const status = res.ok ? 'success' : 'error';
+            const errorMessage = res.ok ? null : await res.text();
+
+            // ping 테이블에 결과 저장
+            return fetch(process.env.SUPABASE_URL + '/rest/v1/ping', {
+              method: 'POST',
+              headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + process.env.SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify({
+                status: status,
+                http_code: res.status,
+                response_time_ms: responseTime,
+                error_message: errorMessage,
+                triggered_by: 'github_actions'
+              })
+            });
+          })
+          .then((res) => {
+            if (res.ok) {
+              console.log('✅ Ping recorded successfully');
+              process.exit(0);
+            } else {
+              console.error('❌ Failed to record ping:', res.status);
+              process.exit(1);
+            }
+          })
+          .catch((err) => {
+            console.error('❌ Ping failed:', err.message);
+            process.exit(1);
+          });
+          "
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::warning::Supabase ping check failed. Please check the logs."
