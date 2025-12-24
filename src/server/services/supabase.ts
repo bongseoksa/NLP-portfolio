@@ -205,7 +205,10 @@ export async function getQAHistoryById(id: string): Promise<QAHistoryRecord | nu
             return null;
         }
 
-        return data;
+        if (!data) return null;
+
+        // 데이터베이스 스키마 그대로 반환 (snake_case)
+        return data as QAHistoryRecord;
     } catch (err) {
         console.error('❌ QA 이력 조회 오류:', err);
         return null;

@@ -105,53 +105,6 @@ export default function DashboardPage() {
   const { data: serverHealth } = useServerHealth();
   const { data: recentHistory = [] } = useQAHistory({ limit: 10 });
 
-  // Mock 데이터 (API 연동 전)
-  const mockSummary = {
-    totalQuestions: 156,
-    successRate: 87.5,
-    failureRate: 12.5,
-    averageResponseTimeMs: 2340,
-    dailyTokenUsage: 12500,
-    totalTokenUsage: 456000,
-    serverStatus: 'online' as const,
-    lastSuccessfulResponse: new Date().toISOString(),
-  };
-
-  const mockDailyStats = [
-    { date: '12/07', questionCount: 12, successCount: 10, failureCount: 2, averageResponseTimeMs: 2100 },
-    { date: '12/08', questionCount: 18, successCount: 16, failureCount: 2, averageResponseTimeMs: 2300 },
-    { date: '12/09', questionCount: 25, successCount: 22, failureCount: 3, averageResponseTimeMs: 2150 },
-    { date: '12/10', questionCount: 31, successCount: 28, failureCount: 3, averageResponseTimeMs: 2400 },
-    { date: '12/11', questionCount: 28, successCount: 25, failureCount: 3, averageResponseTimeMs: 2200 },
-    { date: '12/12', questionCount: 22, successCount: 19, failureCount: 3, averageResponseTimeMs: 2500 },
-    { date: '12/13', questionCount: 20, successCount: 17, failureCount: 3, averageResponseTimeMs: 2340 },
-  ];
-
-  const mockCategoryDist = [
-    { category: 'technical' as QuestionCategory, count: 45, percentage: 28.8 },
-    { category: 'planning' as QuestionCategory, count: 38, percentage: 24.4 },
-    { category: 'history' as QuestionCategory, count: 32, percentage: 20.5 },
-    { category: 'status' as QuestionCategory, count: 25, percentage: 16.0 },
-    { category: 'cs' as QuestionCategory, count: 16, percentage: 10.3 },
-  ];
-
-  const mockSourceDist = [
-    { type: 'code' as const, count: 89, percentage: 45.2 },
-    { type: 'commit' as const, count: 72, percentage: 36.5 },
-    { type: 'history' as const, count: 36, percentage: 18.3 },
-  ];
-
-  const displaySummary = {
-    ...mockSummary,
-    ...summary,
-    // dailyTokenUsage와 totalTokenUsage가 없을 경우 기본값 사용
-    dailyTokenUsage: summary?.dailyTokenUsage ?? mockSummary.dailyTokenUsage,
-    totalTokenUsage: summary?.totalTokenUsage ?? mockSummary.totalTokenUsage,
-  };
-  const displayDailyStats = dailyStats.length > 0 ? dailyStats : mockDailyStats;
-  const displayCategoryDist = categoryDist.length > 0 ? categoryDist : mockCategoryDist;
-  const displaySourceDist = sourceDist.length > 0 ? sourceDist : mockSourceDist;
-
   return (
     <div className={css({
       minHeight: '100vh',
@@ -177,37 +130,26 @@ export default function DashboardPage() {
       })}>
         <SummaryCard
           title="전체 질문 수"
-          value={displaySummary.totalQuestions.toLocaleString()}
+          value={summary?.totalQuestions?.toLocaleString() ?? '0'}
           icon="💬"
         />
         <SummaryCard
           title="성공률"
-          value={`${displaySummary.successRate.toFixed(1)}%`}
+          value={summary?.successRate ? `${summary.successRate.toFixed(1)}%` : '0%'}
           icon="✅"
           color="green"
         />
         <SummaryCard
           title="평균 응답 시간"
-          value={`${displaySummary.averageResponseTimeMs.toLocaleString()}ms`}
+          value={summary?.averageResponseTimeMs ? `${summary.averageResponseTimeMs.toLocaleString()}ms` : '0ms'}
           icon="⚡"
           color="blue"
         />
         <SummaryCard
-          title="일일 토큰 사용량"
-          value={(displaySummary.dailyTokenUsage ?? 0).toLocaleString()}
-          icon="🔤"
-          color="purple"
-        />
-        <SummaryCard
           title="서버 상태"
-          value={serverHealth?.status === 'ok' || displaySummary.serverStatus === 'online' ? '정상' : '오프라인'}
-          icon={displaySummary.serverStatus === 'online' ? '🟢' : '🔴'}
-          color={displaySummary.serverStatus === 'online' ? 'green' : 'red'}
-        />
-        <SummaryCard
-          title="누적 토큰"
-          value={(displaySummary.totalTokenUsage ?? 0).toLocaleString()}
-          icon="📈"
+          value={serverHealth?.status === 'ok' || summary?.serverStatus === 'online' ? '정상' : '오프라인'}
+          icon={summary?.serverStatus === 'online' ? '🟢' : '🔴'}
+          color={summary?.serverStatus === 'online' ? 'green' : 'red'}
         />
       </div>
 
@@ -227,7 +169,7 @@ export default function DashboardPage() {
         })}>
           <h3 className={css({ fontWeight: 'bold', mb: '4' })}>📈 일별 질의 수</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={displayDailyStats}>
+            <LineChart data={dailyStats}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
@@ -263,7 +205,7 @@ export default function DashboardPage() {
             <PieChart>
               <Pie
                 // @ts-expect-error - Recharts type compatibility issue
-                data={displayCategoryDist}
+                data={categoryDist}
                 dataKey="count"
                 nameKey="category"
                 cx="50%"
@@ -276,7 +218,7 @@ export default function DashboardPage() {
                   return `${getCategoryLabel(category)} ${percentage.toFixed(0)}%`;
                 }}
               >
-                {displayCategoryDist.map((entry, index) => (
+                {categoryDist.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={getCategoryColor(entry.category, index)} 
@@ -306,7 +248,7 @@ export default function DashboardPage() {
         })}>
           <h3 className={css({ fontWeight: 'bold', mb: '4' })}>📚 데이터 소스 기여도</h3>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={displaySourceDist} layout="vertical">
+            <BarChart data={sourceDist} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis type="number" />
               <YAxis 
@@ -328,7 +270,7 @@ export default function DashboardPage() {
                 ]}
               />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                {displaySourceDist.map((entry, index) => (
+                {sourceDist.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={SOURCE_COLORS[entry.type as keyof typeof SOURCE_COLORS]} 
@@ -349,71 +291,53 @@ export default function DashboardPage() {
           <h3 className={css({ fontWeight: 'bold', mb: '4' })}>⚡ 최근 응답 속도</h3>
           <div className={css({ maxHeight: '250px', overflow: 'auto' })}>
             {recentHistory.length > 0 ? (
-              recentHistory.map((record, idx) => (
-                <div 
-                  key={record.id || idx}
-                  className={css({
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    py: '2',
-                    borderBottom: '1px solid',
-                    borderColor: 'gray.100',
-                  })}
-                >
-                  <span className={css({ 
-                    fontSize: 'sm', 
-                    color: 'gray.700',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    maxW: '200px',
-                  })}>
-                    {record.questionSummary || record.question?.slice(0, 20) + '...'}
-                  </span>
-                  <span className={css({
-                    fontSize: 'sm',
-                    fontWeight: '500',
-                    color: record.responseTimeMs < 2000 ? 'green.600' : 
-                           record.responseTimeMs < 5000 ? 'yellow.600' : 'red.600',
-                  })}>
-                    {record.responseTimeMs?.toLocaleString() || '-'}ms
-                  </span>
-                </div>
-              ))
+              recentHistory.map((record, idx) => {
+                // 백엔드 변환이 완료되기 전까지 snake_case도 지원
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const recordAny = record as any;
+                const responseTime = recordAny.responseTimeMs ?? recordAny.response_time_ms ?? 0;
+                return (
+                  <div 
+                    key={record.id || idx}
+                    className={css({
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      py: '2',
+                      borderBottom: '1px solid',
+                      borderColor: 'gray.100',
+                    })}
+                  >
+                    <span className={css({ 
+                      fontSize: 'sm', 
+                      color: 'gray.700',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxW: '200px',
+                    })}>
+                      {record.questionSummary || record.question?.slice(0, 20) + '...'}
+                    </span>
+                    <span className={css({
+                      fontSize: 'sm',
+                      fontWeight: '500',
+                      color: responseTime < 2000 ? 'green.600' : 
+                             responseTime < 5000 ? 'yellow.600' : 'red.600',
+                    })}>
+                      {responseTime > 0 ? `${responseTime.toLocaleString()}ms` : '-'}
+                    </span>
+                  </div>
+                );
+              })
             ) : (
-              // Mock 데이터
-              [
-                { question: '기술스택 알려줘', time: 2340 },
-                { question: '최근 변경사항은?', time: 1890 },
-                { question: '프로젝트 구조 설명해줘', time: 3200 },
-                { question: 'API 엔드포인트는?', time: 2100 },
-                { question: '배포 방법은?', time: 2560 },
-              ].map((item, idx) => (
-                <div 
-                  key={idx}
-                  className={css({
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    py: '2',
-                    borderBottom: '1px solid',
-                    borderColor: 'gray.100',
-                  })}
-                >
-                  <span className={css({ fontSize: 'sm', color: 'gray.700' })}>
-                    {item.question}
-                  </span>
-                  <span className={css({
-                    fontSize: 'sm',
-                    fontWeight: '500',
-                    color: item.time < 2000 ? 'green.600' : 
-                           item.time < 3000 ? 'yellow.600' : 'red.600',
-                  })}>
-                    {item.time.toLocaleString()}ms
-                  </span>
-                </div>
-              ))
+              <div className={css({ 
+                textAlign: 'center', 
+                py: '8', 
+                color: 'gray.500',
+                fontSize: 'sm',
+              })}>
+                데이터가 없습니다.
+              </div>
             )}
           </div>
         </div>
