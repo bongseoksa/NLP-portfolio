@@ -34,13 +34,22 @@ router.post('/', async (req: Request, res: Response) => {
         console.log(`📂 질문 분류: ${category} (신뢰도: ${confidence})`);
 
         const repoName = process.env.TARGET_REPO_NAME || 'portfolio';
-        const collectionName = `${repoName}-commits`;
+        // 모든 타입(commit, diff, file)이 저장된 컬렉션
+        // 기존 컬렉션 이름과의 호환성을 위해 두 가지 모두 시도
+        let collectionName = `${repoName}-vectors`;
+        let contexts = await searchVectors(collectionName, question, 5);
+        
+        // 기존 컬렉션 이름으로 fallback
+        if (contexts.length === 0) {
+            console.log(`   → ${collectionName} 컬렉션이 없어 기존 컬렉션 시도 중...`);
+            collectionName = `${repoName}-commits`;
+            contexts = await searchVectors(collectionName, question, 5);
+        }
 
         console.log(`🔍 API 질의: "${question}"`);
 
-        // 2. 벡터 검색
-        const contexts = await searchVectors(collectionName, question, 5);
-        console.log(`   → ${contexts.length}개 문서 검색됨`);
+        // 2. 벡터 검색 (위에서 이미 수행됨)
+        console.log(`   → ${contexts.length}개 문서 검색됨 (컬렉션: ${collectionName})`);
 
         // 답변 생성
         const answer = await generateAnswer(question, contexts);
@@ -65,14 +74,58 @@ router.post('/', async (req: Request, res: Response) => {
             ? question.slice(0, 27) + '...' 
             : question;
 
-        // 소스 정보 구성
-        const sources = contexts.map(ctx => ({
-            type: 'commit' as const,
-            commitHash: ctx.metadata?.sha || '',
-            commitMessage: ctx.metadata?.message || '',
-            filePath: ctx.metadata?.files?.[0] || '',
-            relevanceScore: ctx.score || 0,
-        }));
+        // 소스 정보 구성 (타입별로 분리)
+        const sources = contexts.map(ctx => {
+            // 메타데이터에서 type 추출 (저장 시 type 필드에 저장됨)
+            const itemType = ctx.metadata?.type || 'commit'; // 'commit' | 'diff' | 'file'
+            
+            // 타입에 따라 소스 정보 구성
+            if (itemType === 'file') {
+                // 파일 타입: code (소스 코드)
+                // 파일 메타데이터: path, fileType, size, extension, sha (파일의 최신 커밋 SHA)
+                return {
+                    type: 'code' as const,
+                    filePath: ctx.metadata?.path || ctx.metadata?.filePath || '',
+                    commitHash: ctx.metadata?.sha || ctx.metadata?.commitId || '', // 파일의 경우 sha는 최신 커밋 SHA
+                    commitMessage: '',
+                    relevanceScore: ctx.score || 0,
+                };
+            } else if (itemType === 'diff') {
+                // Diff 타입: history (변경 이력)
+                // Diff는 commitId를 통해 커밋 정보를 참조할 수 있지만, 
+                // 직접적인 commit message는 없으므로 빈 문자열
+                return {
+                    type: 'history' as const,
+                    filePath: ctx.metadata?.filePath || '',
+                    commitHash: ctx.metadata?.commitId || ctx.metadata?.sha || '',
+                    commitMessage: '', // Diff에는 직접적인 commit message가 없음
+                    relevanceScore: ctx.score || 0,
+                };
+            } else {
+                // Commit 타입: commit (히스토리)
+                // affectedFiles는 JSON 문자열로 저장되어 있으므로 파싱 필요
+                let affectedFiles: string[] = [];
+                if (ctx.metadata?.affectedFiles) {
+                    try {
+                        if (typeof ctx.metadata.affectedFiles === 'string') {
+                            affectedFiles = JSON.parse(ctx.metadata.affectedFiles);
+                        } else if (Array.isArray(ctx.metadata.affectedFiles)) {
+                            affectedFiles = ctx.metadata.affectedFiles;
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ affectedFiles 파싱 실패:', e);
+                    }
+                }
+                
+                return {
+                    type: 'commit' as const,
+                    commitHash: ctx.metadata?.sha || '',
+                    commitMessage: ctx.metadata?.message || '',
+                    filePath: affectedFiles[0] || ctx.metadata?.filePath || '',
+                    relevanceScore: ctx.score || 0,
+                };
+            }
+        });
 
         // 3. Supabase에 이력 저장 (부수 효과, 실패해도 응답 흐름 중단 안됨)
         try {

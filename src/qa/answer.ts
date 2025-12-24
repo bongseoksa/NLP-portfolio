@@ -32,7 +32,19 @@ Context에 없는 내용은 "주어진 정보에서는 알 수 없습니다"라�
  * 검색된 문서들을 하나의 Context 문자열로 병합합니다.
  */
 function buildContext(results: SearchResult[]): string {
-    return results.map((r, i) => {
+    if (!results || results.length === 0) {
+        return '';
+    }
+    
+    // content가 있는 결과만 필터링
+    const validResults = results.filter(r => r.content && r.content.trim().length > 0);
+    
+    if (validResults.length === 0) {
+        console.warn('⚠️ 검색 결과는 있지만 content가 비어있습니다.');
+        return '';
+    }
+    
+    return validResults.map((r, i) => {
         return `[Source ${i + 1}]\nMetadata: ${JSON.stringify(r.metadata)}\nContent:\n${r.content}\n`;
     }).join("\n---\n");
 }
@@ -87,10 +99,26 @@ async function generateWithClaude(query: string, contextText: string): Promise<s
  * @returns {Promise<string>} 생성된 답변
  */
 export async function generateAnswer(query: string, context: SearchResult[]): Promise<string> {
+    // 검색 결과 로깅 (디버깅용)
+    console.log(`📊 검색 결과: ${context.length}개 문서`);
+    if (context.length > 0) {
+        context.forEach((ctx, idx) => {
+            const type = ctx.metadata?.type || 'unknown';
+            const path = ctx.metadata?.path || ctx.metadata?.filePath || ctx.metadata?.sha || 'N/A';
+            const contentLength = ctx.content?.length || 0;
+            console.log(`   [${idx + 1}] type: ${type}, path: ${path}, content: ${contentLength}자`);
+        });
+    }
+    
     const contextText = buildContext(context);
 
     if (!contextText) {
-        return "죄송합니다. 관련 정보를 찾을 수 없습니다.";
+        console.warn('⚠️ buildContext가 빈 문자열을 반환했습니다.');
+        if (context.length === 0) {
+            return "죄송합니다. 관련 정보를 찾을 수 없습니다. 벡터 저장소에 데이터가 없거나 검색 쿼리가 적절하지 않을 수 있습니다.";
+        } else {
+            return "죄송합니다. 검색 결과는 있지만 내용이 비어있습니다. 벡터 저장소의 데이터를 확인해주세요.";
+        }
     }
 
     // 1차 시도: OpenAI

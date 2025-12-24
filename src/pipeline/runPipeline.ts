@@ -161,8 +161,9 @@ export async function runPipeline(options: PipelineOptions = {}) {
         console.log(`   → Generated ${embeddings.length} vectors.`);
 
         console.log("\n📌 Saving to ChromaDB...");
-        // Collection name convention: repo-year-month or just repo-commits
-        await saveVectors(`${repo}-commits`, items, embeddings, reset);
+        // Collection name: 모든 타입(commit, diff, file)을 하나의 컬렉션에 저장
+        // 메타데이터의 type 필드로 구분됨
+        await saveVectors(`${repo}-vectors`, items, embeddings, reset);
 
     } catch (err: any) {
         console.error("❌ Embedding/Vector Store Failed:", err.message);

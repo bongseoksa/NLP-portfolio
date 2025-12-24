@@ -69,7 +69,7 @@ async function main() {
         }
 
         const repoName = process.env.TARGET_REPO_NAME || "portfolio";
-        const collectionName = `${repoName}-commits`;
+        const collectionName = `${repoName}-vectors`;
 
         console.log(`🔍 Searching in collection: ${collectionName}`);
         console.log(`❓ Question: ${query}\n`);

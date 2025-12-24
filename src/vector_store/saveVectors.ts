@@ -99,6 +99,7 @@ export async function saveVectors(
                 baseMetadata.fileType = item.metadata.fileType || '';
                 baseMetadata.size = item.metadata.size || 0;
                 baseMetadata.extension = item.metadata.extension || '';
+                baseMetadata.sha = item.metadata.sha || ''; // 파일의 최신 커밋 SHA
                 if (item.metadata.chunkIndex !== undefined) {
                     baseMetadata.chunkIndex = item.metadata.chunkIndex;
                 }
