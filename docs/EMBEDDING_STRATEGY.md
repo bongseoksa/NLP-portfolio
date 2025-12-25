@@ -540,7 +540,7 @@ export async function generateEmbeddings(items: RefinedItem[]): Promise<number[]
 
 **Option 1: 단일 컬렉션 (✅ 권장)**
 ```
-Collection: portfolio-commits
+Collection: portfolio-vectors
   - commit entities (metadata.type = 'commit')
   - diff entities (metadata.type = 'diff')
   - file entities (metadata.type = 'file')
@@ -553,7 +553,7 @@ Collection: portfolio-commits
 
 **Option 2: 분리된 컬렉션 (❌ 비권장)**
 ```
-Collection: portfolio-commits
+Collection: portfolio-vectors
 Collection: portfolio-diffs
 Collection: portfolio-files
 ```

@@ -123,6 +123,7 @@ async function fetchFileContent(owner: string, repo: string, path: string, ref: 
     } catch (error: any) {
         // 404는 파일이 없거나 접근 불가능한 경우
         if (error.status === 404) {
+            console.warn(`⚠️ 파일을 찾을 수 없음 (${path}): 404`);
             return null;
         }
         console.error(`❌ 파일 가져오기 실패 (${path}):`, error.message || error);
@@ -271,7 +272,15 @@ export async function fetchRepositoryFiles(
     // 2. 필터링
     const filteredPaths = allPaths.filter(path => {
         // 제외 경로 패턴 확인
-        if (excludePaths.some(exclude => path.includes(exclude))) {
+        // 주의: '.git'은 '.github'도 매칭하므로 정확한 경로 매칭 필요
+        if (excludePaths.some(exclude => {
+            // 정확한 경로 매칭 (시작 부분 또는 경로 구분자 포함)
+            if (exclude === '.git') {
+                // '.git'은 '.github'를 제외하지 않도록 정확히 매칭
+                return path === '.git' || path.startsWith('.git/') || path.includes('/.git/');
+            }
+            return path.includes(exclude);
+        })) {
             return false;
         }
 
@@ -283,6 +292,17 @@ export async function fetchRepositoryFiles(
 
         return true;
     });
+
+    // 디버깅: .github 파일 확인
+    const githubFiles = allPaths.filter(path => path.includes('.github'));
+    if (githubFiles.length > 0) {
+        console.log(`   📌 .github 디렉토리 파일: ${githubFiles.length}개 발견`);
+        githubFiles.forEach(path => console.log(`      - ${path}`));
+    }
+    const filteredGithubFiles = filteredPaths.filter(path => path.includes('.github'));
+    if (filteredGithubFiles.length !== githubFiles.length) {
+        console.warn(`   ⚠️ .github 파일 필터링: ${githubFiles.length}개 → ${filteredGithubFiles.length}개`);
+    }
 
     console.log(`   → ${filteredPaths.length}개 파일 필터링됨`);
 

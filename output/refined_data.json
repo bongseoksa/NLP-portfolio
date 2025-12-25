@@ -2930,6 +2930,58 @@
       }
     },
     {
+      "id": "file-.github/workflows/cd.yml-0",
+      "type": "file",
+      "content": "File: .github/workflows/cd.yml\nType: text\nSize: 1309 bytes\nExtension: .yml\n\nContent:\nname: Vercel Production Deployment\n\n# 환경변수 세팅\nenv:\n  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}\n  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PRJ_ID }}\n\non:\n  workflow_run:\n    workflows: ['CI Workflow']\n    types:\n      - completed\n\njobs:\n  Deploy-Production:\n    runs-on: ubuntu-latest\n\n    steps:\n      - uses: actions/checkout@v4\n\n      - name: Install pnpm\n        run: npm install -g pnpm\n\n      - name: Install Vercel CLI\n        run: |\n          export PNPM_HOME=\"/home/runner/.local/share/pnpm\"\n          export PATH=\"$PNPM_HOME:$PATH\"\n          pnpm add -g vercel@canary\n\n      - name: Pull Vercel Environment Information\n        run: |\n          export PNPM_HOME=\"/home/runner/.local/share/pnpm\"\n          export PATH=\"$PNPM_HOME:$PATH\"\n          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}\n\n      - name: Build Project Artifacts\n        run: |\n          export PNPM_HOME=\"/home/runner/.local/share/pnpm\"\n          export PATH=\"$PNPM_HOME:$PATH\"\n          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}\n\n      - name: Deploy Project Artifacts to Vercel\n        run: |\n          export PNPM_HOME=\"/home/runner/.local/share/pnpm\"\n          export PATH=\"$PNPM_HOME:$PATH\"\n          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}\n",
+      "embeddingText": "이 파일은 .github/workflows/cd.yml에 위치한 undefined입니다.\n\n기술 스택: .YML\n파일 크기: 1.3 KB\n\n제공하는 기능:\n코드 파일\n\nExport하는 항목: 없음\nImport하는 모듈: 없음\n\n이 파일은 코드 파일을(를) 담당합니다.",
+      "metadata": {
+        "path": ".github/workflows/cd.yml",
+        "fileType": "text",
+        "size": 1309,
+        "extension": ".yml",
+        "sha": "df1311f3c2a3efabe0fe63b616308cd246a093a1"
+      }
+    },
+    {
+      "id": "file-.github/workflows/ci.yml-0",
+      "type": "file",
+      "content": "File: .github/workflows/ci.yml\nType: text\nSize: 2223 bytes\nExtension: .yml\n\nContent:\nname: CI Workflow\n\non:\n  push:\n    branches: ['master']\n  pull_request:\n    branches: ['master']\n\njobs:\n  # 의존성 설치\n  install-dependencies:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout repository\n        uses: actions/checkout@v4\n\n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n\n      - name: Install pnpm\n        run: npm install -g pnpm\n\n      - name: Restore node modules from cache\n        id: restore-node-modules\n        uses: actions/cache@v3\n        with:\n          path: node_modules\n          key: ${{runner.os}}-node-${{hashFiles('pnpm-lock.yaml')}}\n          restore-keys: ${{runner.os}}-node\n\n      - name: Install dependencies\n        if: steps.restore-node-modules.outputs.cache-hit != 'true'\n        run: pnpm install\n        working-directory: ./\n\n  # lint 확인 및 수정\n  lint:\n    runs-on: ubuntu-latest\n    needs: install-dependencies\n    steps:\n      - name: Checkout repository\n        uses: actions/checkout@v4\n\n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n\n      - name: Install pnpm\n        run: npm install -g pnpm\n\n      - name: Restore node modules from cache\n        id: restore-node-modules\n        uses: actions/cache@v3\n        with:\n          path: node_modules\n          key: ${{runner.os}}-node-${{hashFiles('pnpm-lock.yaml')}}\n          restore-keys: ${{runner.os}}-node\n\n      - name: Run Lint\n        run: pnpm run lint\n        working-directory: ./\n\n  # Build\n  build:\n    runs-on: ubuntu-latest\n    needs: [install-dependencies, lint]\n    steps:\n      - name: Checkout repository\n        uses: actions/checkout@v4\n\n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n\n      - name: Install pnpm\n        run: npm install -g pnpm\n\n      - name: Restore node modules from cache\n        id: restore-node-modules\n        uses: actions/cache@v3\n        with:\n          path: node_modules\n          key: ${{runner.os}}-node-${{hashFiles('pnpm-lock.yaml')}}\n          restore-keys: ${{runner.os}}-node\n\n      - name: Run Build\n        run: pnpm run build\n        working-directory: ./\n",
+      "embeddingText": "이 파일은 .github/workflows/ci.yml에 위치한 undefined입니다.\n\n기술 스택: .YML\n파일 크기: 2.2 KB\n\n제공하는 기능:\n코드 파일\n\nExport하는 항목: 없음\nImport하는 모듈: 없음\n\n이 파일은 코드 파일을(를) 담당합니다.",
+      "metadata": {
+        "path": ".github/workflows/ci.yml",
+        "fileType": "text",
+        "size": 2223,
+        "extension": ".yml",
+        "sha": "ad89575fb1f16a2bc13ae4631f8f14684257932b"
+      }
+    },
+    {
+      "id": "file-.github/workflows/weekly-ping.yml-0",
+      "type": "file",
+      "content": "File: .github/workflows/weekly-ping.yml\nType: text\nSize: 1201 bytes\nExtension: .yml\n\nContent:\nname: Weekly Supabase Ping\n\n# 매주 일요일 24:00 KST (월요일 00:00 KST) 실행\n# KST는 UTC+9이므로 일요일 15:00 UTC = 월요일 00:00 KST\non:\n  schedule:\n    - cron: '0 15 * * 0' # 매주 일요일 15:00 UTC\n  workflow_dispatch: # 수동 트리거 허용 (테스트용)\n\njobs:\n  ping-supabase:\n    runs-on: ubuntu-latest\n\n    steps:\n      - name: Ping Supabase via API\n        run: |\n          echo \"Pinging Supabase at $(date)\"\n\n          # API 호출 및 응답 캡처\n          response=$(curl -s -w \"\\n%{http_code}\" https://portfolio-wheat-eight-88.vercel.app/api/ping)\n          http_code=$(echo \"$response\" | tail -n1)\n          body=$(echo \"$response\" | head -n-1)\n\n          echo \"HTTP Status: $http_code\"\n          echo \"Response: $body\"\n\n          # HTTP 200 상태 코드 확인\n          if [ \"$http_code\" != \"200\" ]; then\n            echo \"::error::Ping failed with status $http_code\"\n            echo \"::error::Response body: $body\"\n            exit 1\n          fi\n\n          echo \"::notice::Supabase ping successful\"\n\n      - name: Notify on failure\n        if: failure()\n        run: |\n          echo \"::error::Weekly Supabase ping failed. Check logs above for details.\"\n",
+      "embeddingText": "이 파일은 .github/workflows/weekly-ping.yml에 위치한 undefined입니다.\n\n기술 스택: .YML\n파일 크기: 1.2 KB\n\n제공하는 기능:\n코드 파일\n\nExport하는 항목: 없음\nImport하는 모듈: 없음\n\n이 파일은 코드 파일을(를) 담당합니다.",
+      "metadata": {
+        "path": ".github/workflows/weekly-ping.yml",
+        "fileType": "text",
+        "size": 1201,
+        "extension": ".yml",
+        "sha": "353a8e56cb93473c4ae3544c450a8c74797f13b0"
+      }
+    },
+    {
+      "id": "file-.gitignore-0",
+      "type": "file",
+      "content": "File: .gitignore\nType: text\nSize: 416 bytes\nExtension: .gitignore\n\nContent:\n# Logs\nlogs\n*.log\n\n# dependencies\n/node_modules\n\n# next.js\n/.next/\n/out/\n\n# production\n/build\n\n# debug\nnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\npnpm-debug.log*\nlerna-debug.log*\n\nnode_modules\ndist\ndist-ssr\n*.local\n\n# Editor directories and files\n.vscode/*\n!.vscode/extensions.json\n.idea\n.DS_Store\n*.suo\n*.ntvs*\n*.njsproj\n*.sln\n*.sw?\n\n# env files\n.env*\n\n# vercel\n.vercel\n\n# typescript\n*.tsbuildinfo\nnext-env.d.ts",
+      "embeddingText": "이 파일은 .gitignore에 위치한 undefined입니다.\n\n기술 스택: .GITIGNORE\n파일 크기: 416 bytes\n\n제공하는 기능:\n코드 파일\n\nExport하는 항목: 없음\nImport하는 모듈: 없음\n\n이 파일은 코드 파일을(를) 담당합니다.",
+      "metadata": {
+        "path": ".gitignore",
+        "fileType": "text",
+        "size": 416,
+        "extension": ".gitignore",
+        "sha": "5404b69c6c10f8a4d63396a1a613f8a726bcc6ff"
+      }
+    },
+    {
       "id": "file-.prettierrc-0",
       "type": "file",
       "content": "File: .prettierrc\nType: text\nSize: 107 bytes\nExtension: .prettierrc\n\nContent:\n{\n  \"semi\": true,\n  \"singleQuote\": true,\n  \"printWidth\": 100,\n  \"tabWidth\": 2,\n  \"trailingComma\": \"none\"\n}\n",
