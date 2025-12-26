@@ -11,6 +11,7 @@ import {
   selectedRecordAtom,
   searchQueryAtom,
   currentAnswerAtom,
+  conversationHistoryAtom,
   sessionIdAtom
 } from './stores/uiStore';
 
@@ -21,6 +22,7 @@ export default function App() {
   const setSelectedRecord = useSetAtom(selectedRecordAtom);
   const setSearchQuery = useSetAtom(searchQueryAtom);
   const setCurrentAnswer = useSetAtom(currentAnswerAtom);
+  const setConversationHistory = useSetAtom(conversationHistoryAtom);
   const setSessionId = useSetAtom(sessionIdAtom);
 
   const handleLogoClick = () => {
@@ -30,6 +32,7 @@ export default function App() {
     setSelectedRecord(null);
     setSearchQuery('');
     setCurrentAnswer(null);
+    setConversationHistory([]); // 대화 히스토리 초기화
     setSessionId(null); // 세션 초기화 (새 대화 시작)
 
     // Q&A 페이지로 이동

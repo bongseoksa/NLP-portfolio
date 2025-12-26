@@ -11,7 +11,7 @@ import {
   isLoadingAtom,
   selectedRecordAtom,
   searchQueryAtom,
-  currentAnswerAtom,
+  conversationHistoryAtom,
   sessionIdAtom
 } from '../stores/uiStore';
 import type { QARecord, QuestionCategory } from '../types';
@@ -37,7 +37,7 @@ export default function QAPage() {
   const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
   const [selectedRecord, setSelectedRecord] = useAtom(selectedRecordAtom);
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
-  const [currentAnswer, setCurrentAnswer] = useAtom(currentAnswerAtom);
+  const [conversationHistory, setConversationHistory] = useAtom(conversationHistoryAtom);
   const [sessionId, setSessionId] = useAtom(sessionIdAtom);
 
   // 입력 영역 높이 조절
@@ -84,7 +84,6 @@ export default function QAPage() {
 
     const currentQuestion = questionInput;
     setIsLoading(true);
-    setCurrentAnswer(null);
     setQuestionInput(''); // 입력창 즉시 초기화
 
     try {
@@ -98,25 +97,33 @@ export default function QAPage() {
         setSessionId(response.sessionId);
       }
 
-      setCurrentAnswer({
+      const newQA = {
         question: currentQuestion,
         answer: response.answer,
         sources: response.sources,
         category: response.category,
         categoryConfidence: response.categoryConfidence,
         status: response.status,
-      });
+        timestamp: new Date().toISOString(),
+      };
+
+      // 대화 히스토리에 추가 (누적)
+      setConversationHistory([...conversationHistory, newQA]);
     } catch (error) {
       console.error('[QAPage] 질문 전송 오류:', error);
       const errorMessage = error instanceof Error
         ? error.message
         : '오류가 발생했습니다. 다시 시도해주세요.';
-      setCurrentAnswer({
+
+      const errorQA = {
         question: currentQuestion,
         answer: `오류: ${errorMessage}`,
         sources: [],
-        status: 'failed',
-      });
+        status: 'failed' as const,
+        timestamp: new Date().toISOString(),
+      };
+
+      setConversationHistory([...conversationHistory, errorQA]);
     } finally {
       setIsLoading(false);
     }
@@ -125,14 +132,18 @@ export default function QAPage() {
   const handleHistoryClick = (record: QARecord) => {
     setSelectedRecord(record);
     setQuestionInput(record.question);
-    setCurrentAnswer({
+    // 히스토리 클릭 시 해당 Q&A만 표시하도록 conversationHistory 설정
+    setConversationHistory([{
       question: record.question,
       answer: record.answer,
       sources: record.sources,
       category: record.category,
       categoryConfidence: record.categoryConfidence,
       status: record.status,
-    });
+      timestamp: record.createdAt || new Date().toISOString(),
+    }]);
+    // 세션 초기화 (새로운 대화 시작)
+    setSessionId(null);
   };
 
   return (
@@ -251,100 +262,108 @@ export default function QAPage() {
           overflow: 'auto',
           p: '6',
         })}>
-          {currentAnswer ? (
+          {conversationHistory.length > 0 ? (
             <div className={css({
               maxW: '800px',
               mx: 'auto',
-              bg: 'white',
-              borderRadius: 'lg',
-              boxShadow: 'md',
-              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4',
             })}>
-              {/* 질문 */}
-              <div className={css({ p: '4', bg: 'blue.50', borderBottom: '1px solid', borderColor: 'blue.100' })}>
-                <p className={css({ fontWeight: '500' })}>❓ {currentAnswer.question}</p>
-              </div>
-
-              {/* 메타 정보 */}
-              <div className={css({ 
-                p: '4', 
-                bg: 'gray.50', 
-                borderBottom: '1px solid', 
-                borderColor: 'gray.200',
-                display: 'flex',
-                gap: '3',
-                flexWrap: 'wrap',
-              })}>
-                {currentAnswer.category && (
-                  <span className={css({
-                    px: '2',
-                    py: '1',
-                    bg: 'purple.100',
-                    color: 'purple.800',
-                    borderRadius: 'full',
-                    fontSize: 'xs',
-                    fontWeight: '500',
-                  })}>
-                    📂 {currentAnswer.category && categoryLabels[currentAnswer.category as QuestionCategory]}
-                    {currentAnswer.categoryConfidence &&
-                      ` (${Math.round(currentAnswer.categoryConfidence * 100)}%)`
-                    }
-                  </span>
-                )}
-                {currentAnswer.status && (
-                  <span className={css({
-                    px: '2',
-                    py: '1',
-                    bg: statusStyles[currentAnswer.status as keyof typeof statusStyles]?.bg || 'gray.100',
-                    color: statusStyles[currentAnswer.status as keyof typeof statusStyles]?.color || 'gray.800',
-                    borderRadius: 'full',
-                    fontSize: 'xs',
-                    fontWeight: '500',
-                  })}>
-                    {statusStyles[currentAnswer.status as keyof typeof statusStyles]?.label || currentAnswer.status}
-                  </span>
-                )}
-              </div>
-
-              {/* 답변 */}
-              <div className={css({ p: '4' })}>
-                <h3 className={css({ fontWeight: 'bold', mb: '3' })}>🤖 답변</h3>
-                <div className={css({ 
-                  whiteSpace: 'pre-wrap', 
-                  lineHeight: '1.7',
-                  color: 'gray.700',
+              {conversationHistory.map((qa, index) => (
+                <div key={index} className={css({
+                  bg: 'white',
+                  borderRadius: 'lg',
+                  boxShadow: 'md',
+                  overflow: 'hidden',
                 })}>
-                  {currentAnswer.answer}
-                </div>
-              </div>
+                  {/* 질문 */}
+                  <div className={css({ p: '4', bg: 'blue.50', borderBottom: '1px solid', borderColor: 'blue.100' })}>
+                    <p className={css({ fontWeight: '500' })}>❓ {qa.question}</p>
+                  </div>
 
-              {/* 근거 정보 */}
-              {currentAnswer.sources && currentAnswer.sources.length > 0 && (
-                <div className={css({ 
-                  p: '4', 
-                  bg: 'gray.50', 
-                  borderTop: '1px solid', 
-                  borderColor: 'gray.200' 
-                })}>
-                  <h4 className={css({ fontWeight: '600', fontSize: 'sm', mb: '2' })}>
-                    📚 참고 자료
-                  </h4>
-                  <ul className={css({ fontSize: 'sm', color: 'gray.600' })}>
-                    {currentAnswer.sources.map((source, idx) => (
-                      <li key={idx} className={css({ mb: '1' })}>
-                        {source.type === 'commit' && source.commitHash && (
-                          <span>
-                            🔗 {source.commitHash.slice(0, 7)}: {source.commitMessage}
-                          </span>
-                        )}
-                        {source.type === 'code' && source.filePath && (
-                          <span>📄 {source.filePath}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                  {/* 메타 정보 */}
+                  <div className={css({
+                    p: '4',
+                    bg: 'gray.50',
+                    borderBottom: '1px solid',
+                    borderColor: 'gray.200',
+                    display: 'flex',
+                    gap: '3',
+                    flexWrap: 'wrap',
+                  })}>
+                    {qa.category && (
+                      <span className={css({
+                        px: '2',
+                        py: '1',
+                        bg: 'purple.100',
+                        color: 'purple.800',
+                        borderRadius: 'full',
+                        fontSize: 'xs',
+                        fontWeight: '500',
+                      })}>
+                        📂 {qa.category && categoryLabels[qa.category as QuestionCategory]}
+                        {qa.categoryConfidence &&
+                          ` (${Math.round(qa.categoryConfidence * 100)}%)`
+                        }
+                      </span>
+                    )}
+                    {qa.status && (
+                      <span className={css({
+                        px: '2',
+                        py: '1',
+                        bg: statusStyles[qa.status as keyof typeof statusStyles]?.bg || 'gray.100',
+                        color: statusStyles[qa.status as keyof typeof statusStyles]?.color || 'gray.800',
+                        borderRadius: 'full',
+                        fontSize: 'xs',
+                        fontWeight: '500',
+                      })}>
+                        {statusStyles[qa.status as keyof typeof statusStyles]?.label || qa.status}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 답변 */}
+                  <div className={css({ p: '4' })}>
+                    <h3 className={css({ fontWeight: 'bold', mb: '3' })}>🤖 답변</h3>
+                    <div className={css({
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: '1.7',
+                      color: 'gray.700',
+                    })}>
+                      {qa.answer}
+                    </div>
+                  </div>
+
+                  {/* 근거 정보 */}
+                  {qa.sources && qa.sources.length > 0 && (
+                    <div className={css({
+                      p: '4',
+                      bg: 'gray.50',
+                      borderTop: '1px solid',
+                      borderColor: 'gray.200'
+                    })}>
+                      <h4 className={css({ fontWeight: '600', fontSize: 'sm', mb: '2' })}>
+                        📚 참고 자료
+                      </h4>
+                      <ul className={css({ fontSize: 'sm', color: 'gray.600' })}>
+                        {qa.sources.map((source, idx) => (
+                          <li key={idx} className={css({ mb: '1' })}>
+                            {source.type === 'commit' && source.commitHash && (
+                              <span>
+                                🔗 {source.commitHash.slice(0, 7)}: {source.commitMessage}
+                              </span>
+                            )}
+                            {source.type === 'code' && source.filePath && (
+                              <span>📄 {source.filePath}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
           ) : (
             <div className={css({

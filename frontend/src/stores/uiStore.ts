@@ -52,6 +52,17 @@ export const currentAnswerAtom = atom<{
   status?: string;
 } | null>(null);
 
+// 대화 히스토리 (채팅 스타일로 누적)
+export const conversationHistoryAtom = atom<Array<{
+  question: string;
+  answer: string;
+  sources: any[];
+  category?: string;
+  categoryConfidence?: number;
+  status?: string;
+  timestamp: string;
+}>>([]);
+
 // 현재 대화 세션 ID
 export const sessionIdAtom = atom<string | null>(null);
 
