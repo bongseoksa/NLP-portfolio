@@ -2,6 +2,7 @@
  * Q&A 페이지
  * ChatGPT 스타일의 질의응답 인터페이스
  */
+import { useState, useCallback, useEffect } from 'react';
 import { useAtom } from 'jotai';
 import { css } from '../../styled-system/css';
 import { useAskQuestion, useQAHistory } from '../hooks/useQueries';
@@ -38,6 +39,38 @@ export default function QAPage() {
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
   const [currentAnswer, setCurrentAnswer] = useAtom(currentAnswerAtom);
   const [sessionId, setSessionId] = useAtom(sessionIdAtom);
+
+  // 입력 영역 높이 조절
+  const [inputAreaHeight, setInputAreaHeight] = useState(180);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleMouseDown = useCallback(() => {
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // 화면 하단에서 마우스 위치까지의 거리 계산 (네비게이션 56px 고려)
+      const newHeight = window.innerHeight - e.clientY;
+      // 최소 80px, 최대 화면의 60%
+      const clampedHeight = Math.min(Math.max(newHeight, 80), window.innerHeight * 0.6);
+      setInputAreaHeight(clampedHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const askMutation = useAskQuestion();
   const { data: history = [], isLoading: historyLoading } = useQAHistory({
@@ -105,8 +138,9 @@ export default function QAPage() {
   return (
     <div className={css({
       display: 'flex',
-      height: '100vh',
+      height: '100%',
       bg: 'gray.50',
+      overflow: 'hidden',
     })}>
       {/* 사이드바: 질문 이력 */}
       <aside className={css({
@@ -209,7 +243,8 @@ export default function QAPage() {
 
         {/* 응답 영역 */}
         <div className={css({
-          flex: '6.5',
+          flex: '1',
+          minH: '0',
           overflow: 'auto',
           p: '6',
         })}>
@@ -324,57 +359,110 @@ export default function QAPage() {
         </div>
 
         {/* 질문 입력 영역 */}
-        <form onSubmit={handleSubmit} className={css({
-          p: '4',
-          bg: 'white',
-          borderTop: '1px solid',
-          borderColor: 'gray.200',
-          flex: '1'
-        })}>
-          <div className={css({
-            maxW: '800px',
-            mx: 'auto',
+        <div 
+          className={css({
+            bg: 'white',
+            borderTop: '1px solid',
+            borderColor: 'gray.200',
             display: 'flex',
-            gap: '3',
-          })}>
-            <input
-              type="text"
-              value={questionInput}
-              onChange={(e) => setQuestionInput(e.target.value)}
-              placeholder="프로젝트에 대해 질문하세요... (예: 이 프로젝트의 기술스택은?)"
-              disabled={isLoading}
-              className={css({
-                flex: '1',
-                px: '4',
-                py: '3',
-                border: '1px solid',
-                borderColor: 'gray.300',
-                borderRadius: 'lg',
-                fontSize: 'md',
-                _focus: { outline: 'none', borderColor: 'blue.500', boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)' },
-                _disabled: { bg: 'gray.100', cursor: 'not-allowed' },
-              })}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !questionInput.trim()}
-              className={css({
-                px: '6',
-                py: '3',
-                bg: 'blue.600',
-                color: 'white',
-                borderRadius: 'lg',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                _hover: { bg: 'blue.700' },
-                _disabled: { bg: 'gray.400', cursor: 'not-allowed' },
-              })}
-            >
-              {isLoading ? '⏳ 분석 중...' : '🚀 질문하기'}
-            </button>
+            flexDirection: 'column',
+            position: 'relative',
+            flexShrink: '0',
+            minH: '80px',
+          })}
+          style={{ height: `${inputAreaHeight}px` }}
+        >
+          {/* 리사이즈 핸들 */}
+          <div
+            onMouseDown={handleMouseDown}
+            className={css({
+              position: 'absolute',
+              top: '0',
+              left: '0',
+              right: '0',
+              height: '8px',
+              cursor: 'ns-resize',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: '10',
+              _hover: { bg: 'blue.100' },
+            })}
+            style={{ backgroundColor: isResizing ? 'rgba(59, 130, 246, 0.2)' : 'transparent' }}
+          >
+            <div className={css({
+              width: '40px',
+              height: '4px',
+              bg: 'gray.300',
+              borderRadius: 'full',
+            })} />
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className={css({
+            flex: '1',
+            px: '4',
+            py: '0',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          })}>
+            <div className={css({
+              maxW: '800px',
+              mx: 'auto',
+              w: 'full',
+              h: 'full',
+              display: 'flex',
+              gap: '3',
+              py: '15px',
+            })}>
+              <textarea
+                value={questionInput}
+                onChange={(e) => setQuestionInput(e.target.value)}
+                placeholder="프로젝트에 대해 질문하세요... (여러 줄 입력 가능)&#10;예: 이 프로젝트의 기술스택과 아키텍처에 대해&#10;자세히 설명해주세요."
+                disabled={isLoading}
+                className={css({
+                  flex: '1',
+                  h: 'full',
+                  px: '4',
+                  py: '3',
+                  border: '1px solid',
+                  borderColor: 'gray.300',
+                  borderRadius: 'lg',
+                  fontSize: 'md',
+                  fontFamily: 'inherit',
+                  resize: 'none',
+                  lineHeight: '1.5',
+                  _focus: { outline: 'none', borderColor: 'blue.500', boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)' },
+                  _disabled: { bg: 'gray.100', cursor: 'not-allowed' },
+                })}
+              />
+              <div className={css({
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-start',
+              })}>
+                <button
+                  type="submit"
+                  disabled={isLoading || !questionInput.trim()}
+                  className={css({
+                    px: '6',
+                    py: '3',
+                    bg: 'blue.600',
+                    color: 'white',
+                    borderRadius: 'lg',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    _hover: { bg: 'blue.700' },
+                    _disabled: { bg: 'gray.400', cursor: 'not-allowed' },
+                  })}
+                >
+                  {isLoading ? '⏳ 분석 중...' : '🚀 질문하기'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
       </main>
     </div>
   );
