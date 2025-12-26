@@ -43,18 +43,18 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        // Control 서버 상태 조회 (서버 상태에 control 포함)
+        // 서버 상태 조회
         const status = await getServerStatus();
         setServerStatus(status);
 
-        // Control 서버가 실행 중이면 Supabase 및 마이그레이션 상태 확인
-        const controlStatus = status?.control?.status || 'stopped';
-        const controlServerOnline = controlStatus === 'running';
+        // API 서버가 실행 중이면 Supabase 및 마이그레이션 상태 확인
+        const apiStatus = status?.api?.status || 'stopped';
+        const apiServerOnline = apiStatus === 'running';
 
-        if (controlServerOnline) {
-          // Supabase 연결 확인
-          const supabaseOk = await checkSupabaseConnection();
-          setSupabaseConnected(supabaseOk);
+        if (apiServerOnline) {
+          // Supabase 연결 확인 (상태에 이미 포함되어 있음)
+          const supabaseStatus = status?.supabase?.status || 'disconnected';
+          setSupabaseConnected(supabaseStatus === 'connected');
 
           // 마이그레이션 상태 확인
           const migration = await checkMigrationStatus();
@@ -107,18 +107,6 @@ export default function SettingsPage() {
           ❌ {error}
         </div>
       )}
-
-      {/* Control 서버 상태 */}
-      <div className={css({ mb: '30' })}>
-        <ServerCard
-          name="Control 서버"
-          description="서버 관리 서버 (포트: 3000)"
-          icon="🔧"
-          status={serverStatus?.control?.status || 'stopped'}
-          startedAt={serverStatus?.control?.startedAt ?? null}
-          pid={serverStatus?.control?.pid ?? null}
-        />
-      </div>
 
       {/* 서버 상태 카드 */}
       <div className={css({
@@ -308,10 +296,6 @@ export default function SettingsPage() {
           <div className={css({ mb: '2' })}>
             <span className={css({ color: 'gray.500' })}>API_URL:</span>{' '}
             <span>{import.meta.env.VITE_API_URL || 'http://localhost:3001'}</span>
-          </div>
-          <div className={css({ mb: '2' })}>
-            <span className={css({ color: 'gray.500' })}>CONTROL_URL:</span>{' '}
-            <span>{import.meta.env.VITE_CONTROL_URL || 'http://localhost:3000'}</span>
           </div>
           <div>
             <span className={css({ color: 'gray.500' })}>SUPABASE_URL:</span>{' '}

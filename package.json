@@ -16,8 +16,6 @@
     "chroma:setup": "./scripts/setup_chroma.sh",
     "chroma:start": "./scripts/run_chroma.sh",
     "server": "tsx src/server/index.ts",
-    "control": "tsx src/control/index.ts",
-    "start:local": "concurrently \"pnpm run control\" \"sleep 2 && pnpm run server\"",
     "verify:diff": "tsx scripts/verify-diff-entity.ts"
   },
   "keywords": [],

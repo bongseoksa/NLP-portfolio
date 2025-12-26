@@ -34,9 +34,7 @@ pnpm run reindex               # Re-embed existing data without fetching (use wh
 pnpm run ask "your question"   # Query via command line (requires ChromaDB running)
 
 # Servers
-pnpm run control               # Start Control server (:3000) for server management
 pnpm run server                # Start API server (:3001) for Q&A and dashboard
-pnpm run start:local           # Start both Control + API servers concurrently
 
 # Build
 pnpm run build                 # Compile TypeScript to dist/
@@ -63,19 +61,14 @@ pnpm run panda                 # Generate PandaCSS utility classes
 
 ### Multi-Server Architecture
 
-The system requires **3 servers** to operate fully:
+The system requires **2 servers** to operate:
 
 1. **ChromaDB Server** (port 8000)
    - Python-based vector database
    - Stores embeddings and performs similarity search
    - Must start first (run `pnpm run chroma:start`)
 
-2. **Control Server** (port 3000) - Local development only
-   - Manages ChromaDB and API server processes
-   - Provides start/stop/status endpoints
-   - Used by Settings page for server control
-
-3. **API Server** (port 3001)
+2. **API Server** (port 3001)
    - Main application backend
    - Handles Q&A, history, dashboard stats
    - Connects to ChromaDB for vector search
@@ -166,17 +159,14 @@ src/
 │   └── searchVectors.ts      # Query ChromaDB
 ├── qa/
 │   └── answer.ts             # LLM answer generation (OpenAI → Claude fallback)
-├── server/                   # API Server (:3001)
-│   ├── index.ts              # Express server setup
-│   ├── routes/               # API endpoints
-│   │   ├── ask.ts            # POST /api/ask - Q&A endpoint
-│   │   ├── health.ts         # GET /api/health - Health checks
-│   │   └── history.ts        # GET /api/history - Q&A history
-│   └── services/
-│       └── supabase.ts       # Supabase client
-└── control/                  # Control Server (:3000)
-    ├── index.ts              # Control server setup
-    └── processManager.ts     # Start/stop ChromaDB and API server
+└── server/                   # API Server (:3001)
+    ├── index.ts              # Express server setup
+    ├── routes/               # API endpoints
+    │   ├── ask.ts            # POST /api/ask - Q&A endpoint
+    │   ├── health.ts         # GET /api/health - Health checks & status
+    │   └── history.ts        # GET /api/history - Q&A history
+    └── services/
+        └── supabase.ts       # Supabase client
 ```
 
 **Key Pipeline Steps:**
@@ -326,10 +316,10 @@ This avoids re-fetching data from GitHub/Git.
 ### Verify Server Status
 ```bash
 # Check all services
-curl http://localhost:8000/api/v1/heartbeat  # ChromaDB
-curl http://localhost:3000/control/status    # Control server
-curl http://localhost:3001/api/health        # API server
+curl http://localhost:8000/api/v1/heartbeat     # ChromaDB
+curl http://localhost:3001/api/health           # API server
 curl http://localhost:3001/api/health/chromadb  # API → ChromaDB check
+curl http://localhost:3001/api/health/status    # All servers status
 ```
 
 ### Test Q&A Flow
@@ -356,8 +346,8 @@ curl http://localhost:8000/api/v1/collections
 - Fix: `pnpm run reindex`
 
 **"API 서버에 연결할 수 없습니다"**
-- Check if all 3 servers are running (ChromaDB, Control, API)
-- Verify ports 8000, 3000, 3001 are available
+- Check if both servers are running (ChromaDB, API)
+- Verify ports 8000, 3001 are available
 - Check `.env` configuration
 
 **"답변을 생성할 수 없습니다"**
@@ -368,18 +358,16 @@ curl http://localhost:8000/api/v1/collections
 ## Deployment Notes
 
 **Local Development:**
-- All 3 servers (ChromaDB, Control, API) fully functional
-- Settings page allows start/stop of servers
+- ChromaDB and API servers running locally
+- Settings page shows read-only server status
 
 **Production (Vercel):**
 - Only API server deployed
 - ChromaDB must be hosted separately (e.g., via Docker on cloud VM)
-- Control server disabled (no server management UI)
 - Settings page shows read-only status
 
 **Environment Variables:**
 - Set `VITE_API_URL` to point to deployed API server
-- Set `VITE_CONTROL_URL` to empty string to disable Control features
 - ChromaDB URL must be updated in API server config if not localhost
 
 ## Frontend Pages
@@ -399,8 +387,7 @@ Analytics showing:
 - Data source contributions
 
 ### `/settings` - Settings Page
-Server management (local only):
-- Real-time status cards for ChromaDB, API Server, Supabase
-- Start/Stop buttons (disabled in production)
+Server status monitoring:
+- Read-only status cards for ChromaDB, API Server, Supabase
 - Environment information
 - Connection diagnostics

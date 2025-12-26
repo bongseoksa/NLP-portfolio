@@ -129,7 +129,7 @@ router.get('/chromadb', async (_req: Request, res: Response) => {
     // 캐시 확인
     const now = Date.now();
     let chromadbConnected: boolean;
-    
+
     if (chromadbCache && (now - chromadbCache.timestamp) < CACHE_TTL) {
         chromadbConnected = chromadbCache.connected;
     } else {
@@ -144,6 +144,48 @@ router.get('/chromadb', async (_req: Request, res: Response) => {
         timestamp: new Date().toISOString(),
         service: 'chromadb',
         port: 8000,
+    });
+});
+
+/**
+ * GET /api/health/status
+ * 모든 서버 상태 통합 조회 (캐싱 적용)
+ */
+router.get('/status', async (_req: Request, res: Response) => {
+    const now = Date.now();
+
+    // Supabase 상태
+    let supabaseConnected: boolean;
+    if (supabaseCache && (now - supabaseCache.timestamp) < CACHE_TTL) {
+        supabaseConnected = supabaseCache.connected;
+    } else {
+        supabaseConnected = await checkSupabaseConnection();
+        supabaseCache = { connected: supabaseConnected, timestamp: now };
+    }
+
+    // ChromaDB 상태
+    let chromadbConnected: boolean;
+    if (chromadbCache && (now - chromadbCache.timestamp) < CACHE_TTL) {
+        chromadbConnected = chromadbCache.connected;
+    } else {
+        chromadbConnected = await checkChromaDBHealth();
+        chromadbCache = { connected: chromadbConnected, timestamp: now };
+    }
+
+    res.json({
+        chromadb: {
+            status: chromadbConnected ? 'running' : 'stopped',
+            startedAt: null,
+            pid: null,
+        },
+        api: {
+            status: 'running',
+            startedAt: null,
+            pid: null,
+        },
+        supabase: {
+            status: supabaseConnected ? 'connected' : 'disconnected',
+        },
     });
 });
 

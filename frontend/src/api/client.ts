@@ -255,7 +255,7 @@ export async function checkChromaDBHealth(): Promise<{ status: string; timestamp
 }
 
 // ============================================
-// Control Server 엔드포인트 (로컬 개발용)
+// 서버 상태 조회
 // ============================================
 
 export interface ServerStatus {
@@ -269,19 +269,12 @@ export interface ServerStatus {
     startedAt: string | null;
     pid: number | null;
   };
-  control: {
-    status: 'stopped' | 'starting' | 'running' | 'error';
-    startedAt: string | null;
-    pid: number | null;
+  supabase?: {
+    status: 'connected' | 'disconnected';
   };
 }
 
-export interface ControlResponse {
-  success: boolean;
-  message: string;
-}
-
-// 서버 상태 캐시 (프론트엔드 레벨)
+// 서버 상태 캐시
 let serverStatusCache: {
   data: ServerStatus | null;
   timestamp: number;
@@ -298,7 +291,7 @@ const STATUS_CACHE_TTL = 1000 * 60; // 1분 캐시
  */
 export async function getServerStatus(): Promise<ServerStatus | null> {
   const now = Date.now();
-  
+
   // 캐시가 유효하면 반환
   if (serverStatusCache.data && (now - serverStatusCache.timestamp) < STATUS_CACHE_TTL) {
     return serverStatusCache.data;
@@ -312,7 +305,7 @@ export async function getServerStatus(): Promise<ServerStatus | null> {
   // 새로운 요청 생성
   serverStatusCache.pending = (async () => {
     try {
-      const result = await apiRequest<ServerStatus>('/control/status', undefined, CONTROL_BASE_URL, true);
+      const result = await apiRequest<ServerStatus>('/api/health/status', undefined, API_BASE_URL, true);
       if (result) {
         serverStatusCache.data = result;
         serverStatusCache.timestamp = now;
@@ -329,7 +322,7 @@ export async function getServerStatus(): Promise<ServerStatus | null> {
 }
 
 /**
- * 서버 상태 캐시 무효화 (서버 시작/종료 후 호출)
+ * 서버 상태 캐시 무효화
  */
 export function invalidateServerStatusCache(): void {
   serverStatusCache = {
@@ -337,57 +330,6 @@ export function invalidateServerStatusCache(): void {
     timestamp: 0,
     pending: null,
   };
-}
-
-/**
- * ChromaDB 서버 시작
- */
-export async function startChromaDB(): Promise<ControlResponse> {
-  return apiRequest<ControlResponse>('/control/chromadb/start', { method: 'POST' }, CONTROL_BASE_URL, false);
-}
-
-/**
- * ChromaDB 서버 종료
- */
-export async function stopChromaDB(): Promise<ControlResponse> {
-  return apiRequest<ControlResponse>('/control/chromadb/stop', { method: 'POST' }, CONTROL_BASE_URL, false);
-}
-
-/**
- * API 서버 시작
- */
-export async function startAPIServer(): Promise<ControlResponse> {
-  return apiRequest<ControlResponse>('/control/api/start', { method: 'POST' }, CONTROL_BASE_URL, false);
-}
-
-/**
- * API 서버 종료
- */
-export async function stopAPIServer(): Promise<ControlResponse> {
-  return apiRequest<ControlResponse>('/control/api/stop', { method: 'POST' }, CONTROL_BASE_URL, false);
-}
-
-/**
- * 서버 로그 조회
- */
-export async function getServerLogs(server: 'chromadb' | 'api'): Promise<{ logs: string[] } | null> {
-  try {
-    return await apiRequest<{ logs: string[] }>(`/control/logs/${server}`, undefined, CONTROL_BASE_URL, true);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Control 서버 연결 상태 확인
- */
-export async function checkControlServerHealth(): Promise<boolean> {
-  try {
-    await getServerStatus();
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**

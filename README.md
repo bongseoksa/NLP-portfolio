@@ -16,9 +16,6 @@ NLP-portfolio/
 │   │   │   └── history.ts            # GET /api/history - 이력 조회
 │   │   └── services/
 │   │       └── supabase.ts           # Supabase 클라이언트
-│   ├── control/                      # Control 서버 (로컬 개발용)
-│   │   ├── index.ts                  # 서버 진입점 (:3000)
-│   │   └── processManager.ts         # 프로세스 시작/종료 관리
 │   ├── data_sources/                 # 데이터 수집 계층
 │   │   ├── github/                   # GitHub API 연동
 │   │   │   ├── fetchCommit.ts        # 커밋 목록 수집
