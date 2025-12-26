@@ -107,6 +107,7 @@ ${beforeAfter}
  * - 파일이 "무엇을" 하는가
  * - 어떤 기능을 제공하는가
  * - Export/Import 관계
+ * - 실제 코드 내용 (중요!)
  */
 export function generateFileEmbeddingText(item: RefinedItem): string {
     const {
@@ -130,12 +131,30 @@ export function generateFileEmbeddingText(item: RefinedItem): string {
     // 확장자로 기술 스택 추론
     const techStack = inferTechStack(extension || '');
 
-    // content에서 export/import 추출
-    const { exports, imports, functionality } = analyzeFileContent(item.content);
+    // content에서 export/import/함수/클래스 추출
+    const { exports, imports, functionality, functions, classes } = analyzeFileContent(item.content);
 
     // 청크 정보 (파일이 분할된 경우)
     const chunkInfo = chunkIndex !== undefined && totalChunks !== undefined
         ? `\n이 문서는 전체 ${totalChunks}개 청크 중 ${chunkIndex + 1}번째 부분입니다.`
+        : '';
+
+    // 실제 코드 내용 추출 (content에서 "Content:" 이후 부분)
+    const contentParts = item.content.split('Content:');
+    const actualCode = contentParts.length > 1 && contentParts[1] ? contentParts[1].trim() : '';
+
+    // 코드 스니펫 (너무 길면 앞부분만)
+    const maxCodeLength = 3000;
+    const codeSnippet = actualCode.length > maxCodeLength
+        ? actualCode.substring(0, maxCodeLength) + '\n...(생략)...'
+        : actualCode;
+
+    // 함수/클래스 정보
+    const functionsInfo = functions.length > 0
+        ? `\n정의된 함수: ${functions.join(', ')}`
+        : '';
+    const classesInfo = classes.length > 0
+        ? `\n정의된 클래스: ${classes.join(', ')}`
         : '';
 
     // 자연어 문장 생성
@@ -148,9 +167,12 @@ export function generateFileEmbeddingText(item: RefinedItem): string {
 ${functionality}
 
 Export하는 항목: ${exports.length > 0 ? exports.join(', ') : '없음'}
-Import하는 모듈: ${imports.length > 0 ? imports.slice(0, 5).join(', ') : '없음'}${imports.length > 5 ? ` 외 ${imports.length - 5}개` : ''}${chunkInfo}
+Import하는 모듈: ${imports.length > 0 ? imports.slice(0, 5).join(', ') : '없음'}${imports.length > 5 ? ` 외 ${imports.length - 5}개` : ''}${functionsInfo}${classesInfo}${chunkInfo}
 
-이 파일은 ${functionality}을(를) 담당합니다.`;
+이 파일은 ${functionality}을(를) 담당합니다.
+
+=== 실제 코드 내용 ===
+${codeSnippet}`;
 }
 
 /**
@@ -262,10 +284,14 @@ function analyzeFileContent(content: string): {
     exports: string[];
     imports: string[];
     functionality: string;
+    functions: string[];
+    classes: string[];
 } {
     const lines = content.split('\n');
     const exports: string[] = [];
     const imports: string[] = [];
+    const functions: string[] = [];
+    const classes: string[] = [];
     let functionality = '코드 파일';
 
     // Export 추출
@@ -295,6 +321,29 @@ function analyzeFileContent(content: string): {
         }
     }
 
+    // 함수 정의 추출 (function, const/let arrow functions, async functions)
+    for (const line of lines) {
+        // function functionName
+        const funcMatch = line.match(/(?:export\s+)?(?:async\s+)?function\s+(\w+)/);
+        if (funcMatch && funcMatch[1]) {
+            functions.push(funcMatch[1]);
+        }
+
+        // const/let functionName =
+        const arrowMatch = line.match(/(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s*)?\(/);
+        if (arrowMatch && arrowMatch[1]) {
+            functions.push(arrowMatch[1]);
+        }
+    }
+
+    // 클래스 정의 추출
+    for (const line of lines) {
+        const classMatch = line.match(/(?:export\s+)?class\s+(\w+)/);
+        if (classMatch && classMatch[1]) {
+            classes.push(classMatch[1]);
+        }
+    }
+
     // Functionality 추론 (파일 내용 기반)
     const contentLower = content.toLowerCase();
 
@@ -314,7 +363,7 @@ function analyzeFileContent(content: string): {
         functionality = `${exports.slice(0, 3).join(', ')} 등을 제공하는 모듈`;
     }
 
-    return { exports, imports, functionality };
+    return { exports, imports, functionality, functions, classes };
 }
 
 /**

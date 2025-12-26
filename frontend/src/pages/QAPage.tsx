@@ -36,6 +36,7 @@ export default function QAPage() {
   const [selectedRecord, setSelectedRecord] = useAtom(selectedRecordAtom);
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
   const [currentAnswer, setCurrentAnswer] = useState<{
+    question: string;
     answer: string;
     sources: any[];
     category?: QuestionCategory;
@@ -53,15 +54,18 @@ export default function QAPage() {
     e.preventDefault();
     if (!questionInput.trim() || isLoading) return;
 
+    const currentQuestion = questionInput;
     setIsLoading(true);
     setCurrentAnswer(null);
+    setQuestionInput(''); // 입력창 즉시 초기화
 
     try {
-      const response = await askMutation.mutateAsync({ 
-        question: questionInput 
+      const response = await askMutation.mutateAsync({
+        question: currentQuestion
       });
-      
+
       setCurrentAnswer({
+        question: currentQuestion,
         answer: response.answer,
         sources: response.sources,
         category: response.category,
@@ -70,10 +74,11 @@ export default function QAPage() {
       });
     } catch (error) {
       console.error('[QAPage] 질문 전송 오류:', error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : '오류가 발생했습니다. 다시 시도해주세요.';
       setCurrentAnswer({
+        question: currentQuestion,
         answer: `오류: ${errorMessage}`,
         sources: [],
         status: 'failed',
@@ -87,6 +92,7 @@ export default function QAPage() {
     setSelectedRecord(record);
     setQuestionInput(record.question);
     setCurrentAnswer({
+      question: record.question,
       answer: record.answer,
       sources: record.sources,
       category: record.category,
@@ -217,7 +223,7 @@ export default function QAPage() {
             })}>
               {/* 질문 */}
               <div className={css({ p: '4', bg: 'blue.50', borderBottom: '1px solid', borderColor: 'blue.100' })}>
-                <p className={css({ fontWeight: '500' })}>❓ {questionInput}</p>
+                <p className={css({ fontWeight: '500' })}>❓ {currentAnswer.question}</p>
               </div>
 
               {/* 메타 정보 */}
