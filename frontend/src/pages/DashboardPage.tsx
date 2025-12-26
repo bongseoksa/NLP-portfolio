@@ -112,7 +112,7 @@ export default function DashboardPage() {
       p: '6',
     })}>
       {/* 헤더 */}
-      <header className={css({ mb: '6' })}>
+      <header className={css({ mb: '2' })}>
         <h1 className={css({ fontSize: '2xl', fontWeight: 'bold' })}>
           📊 시스템 대시보드
         </h1>
@@ -124,7 +124,7 @@ export default function DashboardPage() {
       {/* 요약 카드 */}
       <div className={css({
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
         gap: '4',
         mb: '6',
       })}>
@@ -165,10 +165,10 @@ export default function DashboardPage() {
           bg: 'white',
           borderRadius: 'lg',
           boxShadow: 'sm',
-          p: '4',
+          p: '3',
         })}>
           <h3 className={css({ fontWeight: 'bold', mb: '4' })}>📈 일별 질의 수</h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={230}>
             <LineChart data={dailyStats}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
@@ -198,10 +198,11 @@ export default function DashboardPage() {
           bg: 'white',
           borderRadius: 'lg',
           boxShadow: 'sm',
-          p: '4',
+          p: '3',
+          position: 'relative',
         })}>
           <h3 className={css({ fontWeight: 'bold', mb: '4' })}>🎯 질문 유형 분포</h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={230}>
             <PieChart>
               <Pie
                 // @ts-expect-error - Recharts type compatibility issue
@@ -210,8 +211,8 @@ export default function DashboardPage() {
                 nameKey="category"
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
-                innerRadius={60}
+                outerRadius={80}
+                innerRadius={50}
                 label={({ name, percent, payload }) => {
                   const category = name || payload?.category || '';
                   const percentage = payload?.percentage ?? (percent ? percent * 100 : 0);
@@ -219,17 +220,34 @@ export default function DashboardPage() {
                 }}
               >
                 {categoryDist.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={getCategoryColor(entry.category, index)} 
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={getCategoryColor(entry.category, index)}
                   />
                 ))}
               </Pie>
-              <Tooltip 
+              <Tooltip
                 formatter={(value, name) => [value, getCategoryLabel(name as string)]}
               />
             </PieChart>
           </ResponsiveContainer>
+          {/* 중앙 텍스트 */}
+          <div className={css({
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            pointerEvents: 'none',
+            mt: '5',
+          })}>
+            <div className={css({ fontSize: '2xl', fontWeight: 'bold', color: 'gray.800' })}>
+              {categoryDist.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
+            </div>
+            <div className={css({ fontSize: 'xs', color: 'gray.500', mt: '1' })}>
+              질문
+            </div>
+          </div>
         </div>
       </div>
 
@@ -244,7 +262,7 @@ export default function DashboardPage() {
           bg: 'white',
           borderRadius: 'lg',
           boxShadow: 'sm',
-          p: '4',
+          p: '3',
         })}>
           <h3 className={css({ fontWeight: 'bold', mb: '4' })}>📚 데이터 소스 기여도</h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -286,7 +304,7 @@ export default function DashboardPage() {
           bg: 'white',
           borderRadius: 'lg',
           boxShadow: 'sm',
-          p: '4',
+          p: '3',
         })}>
           <h3 className={css({ fontWeight: 'bold', mb: '4' })}>⚡ 최근 응답 속도</h3>
           <div className={css({ maxHeight: '250px', overflow: 'auto' })}>
@@ -363,11 +381,11 @@ function SummaryCard({
       bg: 'white',
       borderRadius: 'lg',
       boxShadow: 'sm',
-      p: '4',
+      p: '3',
       borderLeft: '4px solid',
       borderColor: `${color}.500`,
     })}>
-      <div className={css({ display: 'flex', alignItems: 'center', gap: '2', mb: '2' })}>
+      <div className={css({ display: 'flex', alignItems: 'center', gap: '2' })}>
         <span>{icon}</span>
         <span className={css({ fontSize: 'sm', color: 'gray.600' })}>{title}</span>
       </div>

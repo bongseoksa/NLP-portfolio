@@ -1,23 +1,15 @@
 /**
  * 설정 페이지
- * 서버 상태 확인 및 제어 (로컬 개발 환경)
+ * 서버 상태 확인
  */
 import { useState, useEffect } from 'react';
 import { css } from '../../styled-system/css';
 import {
   getServerStatus,
-  startChromaDB,
-  stopChromaDB,
-  startAPIServer,
-  stopAPIServer,
-  invalidateServerStatusCache,
   type ServerStatus,
 } from '../api/client';
 import { checkSupabaseConnection } from '../api/supabase';
 import { checkMigrationStatus, getMigrationSchema } from '../api/client';
-
-// 환경 감지
-const isLocalDev = import.meta.env.DEV;
 
 type ProcessStatus = 'stopped' | 'starting' | 'running' | 'error';
 
@@ -43,10 +35,6 @@ export default function SettingsPage() {
     server_status_log: boolean;
     allTablesExist: boolean;
   } | null>(null);
-  const [loading, setLoading] = useState<{ chromadb: boolean; api: boolean }>({
-    chromadb: false,
-    api: false,
-  });
   const [error, setError] = useState<string | null>(null);
   const [showMigrationSchema, setShowMigrationSchema] = useState(false);
   const [migrationSchema, setMigrationSchema] = useState<string>('');
@@ -88,57 +76,6 @@ export default function SettingsPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // ChromaDB 시작/종료
-  const handleChromaDB = async (action: 'start' | 'stop') => {
-    setLoading(prev => ({ ...prev, chromadb: true }));
-    setError(null);
-
-    try {
-      const result = action === 'start' ? await startChromaDB() : await stopChromaDB();
-      if (!result.success) {
-        setError(result.message);
-      } else {
-        setError(null);
-      }
-      // 상태 갱신 (캐시 무효화 후 조회)
-      invalidateServerStatusCache();
-      const status = await getServerStatus();
-      if (status) {
-        setServerStatus(status);
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
-      setError(errorMessage);
-    } finally {
-      setLoading(prev => ({ ...prev, chromadb: false }));
-    }
-  };
-
-  // API 서버 시작/종료
-  const handleAPIServer = async (action: 'start' | 'stop') => {
-    setLoading(prev => ({ ...prev, api: true }));
-    setError(null);
-
-    try {
-      const result = action === 'start' ? await startAPIServer() : await stopAPIServer();
-      if (!result.success) {
-        setError(result.message);
-      } else {
-        setError(null);
-      }
-      // 상태 갱신 (캐시 무효화 후 조회)
-      invalidateServerStatusCache();
-      const status = await getServerStatus();
-      if (status) {
-        setServerStatus(status);
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
-      setError(errorMessage);
-    } finally {
-      setLoading(prev => ({ ...prev, api: false }));
-    }
-  };
 
   return (
     <div className={css({
@@ -147,39 +84,14 @@ export default function SettingsPage() {
       p: '6',
     })}>
       {/* 헤더 */}
-      <header className={css({ mb: '6' })}>
+      <header className={css({ mb: '10' })}>
         <h1 className={css({ fontSize: '2xl', fontWeight: 'bold' })}>
           ⚙️ 설정
         </h1>
         <p className={css({ color: 'gray.600', mt: '1' })}>
-          서버 상태 확인 및 제어
+          서버 상태 확인
         </p>
       </header>
-
-      {/* 환경 정보 */}
-      <div className={css({
-        bg: isLocalDev ? 'blue.50' : 'orange.50',
-        border: '1px solid',
-        borderColor: isLocalDev ? 'blue.200' : 'orange.200',
-        borderRadius: 'lg',
-        p: '4',
-        mb: '6',
-      })}>
-        <div className={css({ display: 'flex', alignItems: 'center', gap: '2' })}>
-          <span className={css({ fontSize: 'lg' })}>
-            {isLocalDev ? '🔧' : '🌐'}
-          </span>
-          <span className={css({ fontWeight: '600' })}>
-            {isLocalDev ? '로컬 개발 환경' : '프로덕션 환경'}
-          </span>
-        </div>
-        <p className={css({ fontSize: 'sm', color: 'gray.600', mt: '1' })}>
-          {isLocalDev 
-            ? '서버 시작/종료 제어가 가능합니다.' 
-            : '프로덕션 환경에서는 서버 상태 확인만 가능합니다.'
-          }
-        </p>
-      </div>
 
       {/* 에러 메시지 */}
       {error && (
@@ -189,7 +101,7 @@ export default function SettingsPage() {
           borderColor: 'red.200',
           borderRadius: 'lg',
           p: '4',
-          mb: '6',
+          mb: '10',
           color: 'red.700',
         })}>
           ❌ {error}
@@ -197,7 +109,7 @@ export default function SettingsPage() {
       )}
 
       {/* Control 서버 상태 */}
-      {isLocalDev && (
+      <div className={css({ mb: '30' })}>
         <ServerCard
           name="Control 서버"
           description="서버 관리 서버 (포트: 3000)"
@@ -205,19 +117,15 @@ export default function SettingsPage() {
           status={serverStatus?.control?.status || 'stopped'}
           startedAt={serverStatus?.control?.startedAt ?? null}
           pid={serverStatus?.control?.pid ?? null}
-          loading={false}
-          disabled={true}
-          onStart={() => {}}
-          onStop={() => {}}
         />
-      )}
+      </div>
 
       {/* 서버 상태 카드 */}
       <div className={css({
         display: 'grid',
         gridTemplateColumns: { base: '1fr', md: '1fr 1fr' },
         gap: '6',
-        mb: '6',
+        mb: '30',
       })}>
         {/* ChromaDB */}
         <ServerCard
@@ -227,10 +135,6 @@ export default function SettingsPage() {
           status={serverStatus?.chromadb.status || 'stopped'}
           startedAt={serverStatus?.chromadb.startedAt ?? null}
           pid={serverStatus?.chromadb.pid ?? null}
-          loading={loading.chromadb}
-          disabled={!isLocalDev || (serverStatus?.control?.status !== 'running')}
-          onStart={() => handleChromaDB('start')}
-          onStop={() => handleChromaDB('stop')}
         />
 
         {/* API Server */}
@@ -241,10 +145,6 @@ export default function SettingsPage() {
           status={serverStatus?.api.status || 'stopped'}
           startedAt={serverStatus?.api.startedAt ?? null}
           pid={serverStatus?.api.pid ?? null}
-          loading={loading.api}
-          disabled={!isLocalDev || (serverStatus?.control?.status !== 'running')}
-          onStart={() => handleAPIServer('start')}
-          onStop={() => handleAPIServer('stop')}
         />
       </div>
 
@@ -254,6 +154,7 @@ export default function SettingsPage() {
         borderRadius: 'lg',
         boxShadow: 'sm',
         p: '4',
+        mb: '30',
       })}>
         <h2 className={css({ fontWeight: 'bold', mb: '4' })}>
           외부 서비스
@@ -399,7 +300,6 @@ export default function SettingsPage() {
         borderRadius: 'lg',
         boxShadow: 'sm',
         p: '4',
-        mt: '6',
       })}>
         <h2 className={css({ fontWeight: 'bold', mb: '4' })}>
           환경 설정
@@ -431,10 +331,6 @@ function ServerCard({
   status,
   startedAt,
   pid,
-  loading,
-  disabled,
-  onStart,
-  onStop,
 }: {
   name: string;
   description: string;
@@ -442,10 +338,6 @@ function ServerCard({
   status: ProcessStatus;
   startedAt: string | null;
   pid: number | null;
-  loading: boolean;
-  disabled: boolean;
-  onStart: () => void;
-  onStop: () => void;
 }) {
   const colors = statusColors[status];
   const isRunning = status === 'running';
@@ -484,10 +376,9 @@ function ServerCard({
 
       {/* 상세 정보 */}
       {(startedAt || pid) && (
-        <div className={css({ 
-          fontSize: 'xs', 
-          color: 'gray.500', 
-          mb: '3',
+        <div className={css({
+          fontSize: 'xs',
+          color: 'gray.500',
           fontFamily: 'mono',
         })}>
           {pid && <span>PID: {pid}</span>}
@@ -497,65 +388,6 @@ function ServerCard({
             </span>
           )}
         </div>
-      )}
-
-      {/* 제어 버튼 */}
-      <div className={css({ display: 'flex', gap: '2' })}>
-        {!isRunning ? (
-          <button
-            onClick={onStart}
-            disabled={disabled || loading}
-            className={css({
-              flex: '1',
-              px: '4',
-              py: '2',
-              bg: disabled ? 'gray.200' : 'green.600',
-              color: 'white',
-              borderRadius: 'md',
-              fontWeight: '500',
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              _hover: { bg: disabled ? 'gray.200' : 'green.700' },
-              _disabled: { opacity: 0.7 },
-            })}
-          >
-            {loading ? '처리 중...' : '▶ 시작'}
-          </button>
-        ) : (
-          <button
-            onClick={onStop}
-            disabled={disabled || loading}
-            className={css({
-              flex: '1',
-              px: '4',
-              py: '2',
-              bg: disabled ? 'gray.200' : 'red.600',
-              color: 'white',
-              borderRadius: 'md',
-              fontWeight: '500',
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              _hover: { bg: disabled ? 'gray.200' : 'red.700' },
-              _disabled: { opacity: 0.7 },
-            })}
-          >
-            {loading ? '처리 중...' : '■ 종료'}
-          </button>
-        )}
-      </div>
-
-      {disabled && (
-        <p className={css({ 
-          fontSize: 'xs', 
-          color: 'gray.500', 
-          mt: '2',
-          textAlign: 'center',
-        })}>
-          {!import.meta.env.DEV 
-            ? '프로덕션에서는 제어 불가' 
-            : 'Control 서버 연결 필요'
-          }
-        </p>
       )}
     </div>
   );

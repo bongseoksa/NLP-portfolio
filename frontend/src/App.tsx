@@ -10,6 +10,10 @@ export default function App() {
     <div className={css({ minHeight: '100vh', display: 'flex', flexDirection: 'column' })}>
       {/* 네비게이션 */}
       <nav className={css({
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        right: '0',
         bg: 'gray.900',
         color: 'white',
         px: '6',
@@ -17,6 +21,7 @@ export default function App() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        zIndex: 1000,
       })}>
         <div className={css({ display: 'flex', alignItems: 'center', gap: '6' })}>
           <h1 className={css({ fontWeight: 'bold', fontSize: 'lg' })}>
@@ -82,7 +87,7 @@ export default function App() {
       </nav>
 
       {/* 메인 콘텐츠 */}
-      <main className={css({ flex: '1' })}>
+      <main className={css({ flex: '1', mt: '56px', maxH: 'calc(100vh - 56px)', overflow: 'hidden' })}>
         <Routes>
           <Route path="/" element={<QAPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />

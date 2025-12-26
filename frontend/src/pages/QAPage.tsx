@@ -202,7 +202,7 @@ export default function QAPage() {
 
         {/* 응답 영역 */}
         <div className={css({
-          flex: '1',
+          flex: '6.5',
           overflow: 'auto',
           p: '6',
         })}>
@@ -322,6 +322,7 @@ export default function QAPage() {
           bg: 'white',
           borderTop: '1px solid',
           borderColor: 'gray.200',
+          flex: '1'
         })}>
           <div className={css({
             maxW: '800px',
