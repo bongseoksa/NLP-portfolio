@@ -129,7 +129,7 @@ export default function App() {
       </nav>
 
       {/* 메인 콘텐츠 */}
-      <main className={css({ flex: '1', mt: '56px', maxH: 'calc(100vh - 56px)', overflow: 'hidden' })}>
+      <main className={css({ h: 'calc(100vh - 56px)', mt: '56px', overflow: 'hidden' })}>
         <Routes>
           <Route path="/" element={<QAPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />

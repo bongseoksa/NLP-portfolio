@@ -145,11 +145,13 @@ export default function QAPage() {
       {/* 사이드바: 질문 이력 */}
       <aside className={css({
         width: '280px',
+        h: '100%',
         bg: 'white',
         borderRight: '1px solid',
         borderColor: 'gray.200',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
       })}>
         <div className={css({ p: '4', borderBottom: '1px solid', borderColor: 'gray.200' })}>
           <h2 className={css({ fontSize: 'lg', fontWeight: 'bold', mb: '3' })}>
@@ -222,6 +224,7 @@ export default function QAPage() {
       {/* 메인 콘텐츠 */}
       <main className={css({
         flex: '1',
+        h: '100%',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
