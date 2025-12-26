@@ -60,6 +60,7 @@ export async function checkSupabaseConnection(): Promise<boolean> {
 // 타입 정의
 export interface QAHistoryRecord {
     id?: string;
+    session_id?: string;
     question: string;
     question_summary: string;
     answer: string;
@@ -212,6 +213,32 @@ export async function getQAHistoryById(id: string): Promise<QAHistoryRecord | nu
     } catch (err) {
         console.error('❌ QA 이력 조회 오류:', err);
         return null;
+    }
+}
+
+/**
+ * 세션별 대화 이력 조회 (시간순 정렬)
+ */
+export async function getQAHistoryBySession(sessionId: string): Promise<QAHistoryRecord[]> {
+    const client = getSupabaseClient();
+    if (!client) return [];
+
+    try {
+        const { data, error } = await client
+            .from('qa_history')
+            .select('*')
+            .eq('session_id', sessionId)
+            .order('created_at', { ascending: true }); // 시간순으로 정렬
+
+        if (error) {
+            console.error('❌ 세션별 Q&A 이력 조회 실패:', error.message);
+            return [];
+        }
+
+        return data || [];
+    } catch (err) {
+        console.error('❌ 세션별 Q&A 이력 조회 오류:', err);
+        return [];
     }
 }
 

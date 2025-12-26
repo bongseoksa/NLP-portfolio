@@ -2,7 +2,7 @@
  * 이력 조회 라우터
  */
 import { Router, type Request, type Response, type IRouter } from 'express';
-import { getQAHistory, getQAHistoryById, getDashboardStats } from '../services/supabase.js';
+import { getQAHistory, getQAHistoryById, getQAHistoryBySession, getDashboardStats } from '../services/supabase.js';
 
 const router: IRouter = Router();
 
@@ -97,13 +97,51 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/history/session/:sessionId
+ * 세션별 대화 이력 조회
+ */
+router.get('/session/:sessionId', async (req: Request, res: Response) => {
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+        res.status(400).json({ error: 'Session ID가 필요합니다.' });
+        return;
+    }
+
+    try {
+        const records = await getQAHistoryBySession(sessionId);
+
+        // snake_case를 camelCase로 변환
+        const transformedRecords = records.map((record: any) => ({
+            id: record.id,
+            sessionId: record.session_id,
+            question: record.question,
+            questionSummary: record.question_summary,
+            answer: record.answer,
+            category: record.category,
+            categoryConfidence: record.category_confidence ?? 0,
+            sources: record.sources || [],
+            status: record.status,
+            responseTimeMs: record.response_time_ms || 0,
+            tokenUsage: record.token_usage || 0,
+            createdAt: record.created_at,
+        }));
+
+        res.json(transformedRecords);
+    } catch (error: any) {
+        console.error('❌ 세션별 이력 조회 오류:', error.message);
+        res.status(500).json({ error: '세션별 이력 조회 중 오류가 발생했습니다.' });
+    }
+});
+
+/**
  * GET /api/dashboard/summary
  * 대시보드 요약 통계
  */
 router.get('/dashboard/summary', async (_req: Request, res: Response) => {
     try {
         const stats = await getDashboardStats();
-        
+
         res.json({
             ...stats,
             serverStatus: 'online',

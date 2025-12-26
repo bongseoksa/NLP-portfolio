@@ -135,6 +135,7 @@ router.post('/', async (req: Request, res: Response) => {
         // 3. Supabase에 이력 저장 (부수 효과, 실패해도 응답 흐름 중단 안됨)
         try {
             await saveQAHistory({
+                session_id: sessionId,
                 question,
                 question_summary: questionSummary,
                 answer,

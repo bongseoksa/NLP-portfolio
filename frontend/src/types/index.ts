@@ -28,6 +28,7 @@ export interface Source {
 // 질문-응답 기록
 export interface QARecord {
   id: string;
+  sessionId?: string;             // 대화 세션 ID
   question: string;
   questionSummary: string;        // 20자 이내 요약
   answer: string;

@@ -126,6 +126,19 @@ export async function getQAHistory(params?: {
 }
 
 /**
+ * 세션별 대화 이력 조회
+ */
+export async function getSessionHistory(sessionId: string): Promise<QARecord[]> {
+  try {
+    const result = await apiRequest<QARecord[]>(`/api/history/session/${sessionId}`, undefined, API_BASE_URL, false);
+    return result || [];
+  } catch (error) {
+    console.error('Failed to load session history:', error);
+    throw error;
+  }
+}
+
+/**
  * 특정 질문 기록 조회
  */
 export async function getQARecord(id: string): Promise<QARecord | null> {

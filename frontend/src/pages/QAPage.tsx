@@ -129,21 +129,59 @@ export default function QAPage() {
     }
   };
 
-  const handleHistoryClick = (record: QARecord) => {
+  const handleHistoryClick = async (record: QARecord) => {
     setSelectedRecord(record);
-    setQuestionInput(record.question);
-    // 히스토리 클릭 시 해당 Q&A만 표시하도록 conversationHistory 설정
-    setConversationHistory([{
-      question: record.question,
-      answer: record.answer,
-      sources: record.sources,
-      category: record.category,
-      categoryConfidence: record.categoryConfidence,
-      status: record.status,
-      timestamp: record.createdAt || new Date().toISOString(),
-    }]);
-    // 세션 초기화 (새로운 대화 시작)
-    setSessionId(null);
+    setQuestionInput('');
+
+    // sessionId가 있으면 전체 대화 불러오기
+    if (record.sessionId) {
+      try {
+        setIsLoading(true);
+        const { getSessionHistory } = await import('../api/client');
+        const sessionRecords = await getSessionHistory(record.sessionId);
+
+        // 세션 전체 대화를 conversationHistory에 설정
+        const conversations = sessionRecords.map(r => ({
+          question: r.question,
+          answer: r.answer,
+          sources: r.sources,
+          category: r.category,
+          categoryConfidence: r.categoryConfidence,
+          status: r.status,
+          timestamp: r.createdAt || new Date().toISOString(),
+        }));
+
+        setConversationHistory(conversations);
+        setSessionId(record.sessionId); // 기존 세션 ID 설정 (이어서 대화 가능)
+      } catch (error) {
+        console.error('Failed to load session history:', error);
+        // 오류 시 해당 Q&A만 표시
+        setConversationHistory([{
+          question: record.question,
+          answer: record.answer,
+          sources: record.sources,
+          category: record.category,
+          categoryConfidence: record.categoryConfidence,
+          status: record.status,
+          timestamp: record.createdAt || new Date().toISOString(),
+        }]);
+        setSessionId(null);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // sessionId가 없으면 단일 Q&A만 표시
+      setConversationHistory([{
+        question: record.question,
+        answer: record.answer,
+        sources: record.sources,
+        category: record.category,
+        categoryConfidence: record.categoryConfidence,
+        status: record.status,
+        timestamp: record.createdAt || new Date().toISOString(),
+      }]);
+      setSessionId(null);
+    }
   };
 
   return (
