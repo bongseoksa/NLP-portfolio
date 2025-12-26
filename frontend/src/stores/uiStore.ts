@@ -42,3 +42,13 @@ export const latestResponseAtom = atom<{
   status: string;
 } | null>(null);
 
+// 현재 답변 (QA 페이지)
+export const currentAnswerAtom = atom<{
+  question: string;
+  answer: string;
+  sources: any[];
+  category?: string;
+  categoryConfidence?: number;
+  status?: string;
+} | null>(null);
+

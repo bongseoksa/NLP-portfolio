@@ -1,11 +1,38 @@
-import { Routes, Route, NavLink } from 'react-router-dom';
+import { Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { css } from '../styled-system/css';
 import QAPage from './pages/QAPage';
 import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 import ServerStatus from './components/common/ServerStatus';
+import { useSetAtom } from 'jotai';
+import {
+  questionInputAtom,
+  isLoadingAtom,
+  selectedRecordAtom,
+  searchQueryAtom,
+  currentAnswerAtom
+} from './stores/uiStore';
 
 export default function App() {
+  const navigate = useNavigate();
+  const setQuestionInput = useSetAtom(questionInputAtom);
+  const setIsLoading = useSetAtom(isLoadingAtom);
+  const setSelectedRecord = useSetAtom(selectedRecordAtom);
+  const setSearchQuery = useSetAtom(searchQueryAtom);
+  const setCurrentAnswer = useSetAtom(currentAnswerAtom);
+
+  const handleLogoClick = () => {
+    // Q&A 페이지 상태 초기화
+    setQuestionInput('');
+    setIsLoading(false);
+    setSelectedRecord(null);
+    setSearchQuery('');
+    setCurrentAnswer(null);
+
+    // Q&A 페이지로 이동
+    navigate('/');
+  };
+
   return (
     <div className={css({ minHeight: '100vh', display: 'flex', flexDirection: 'column' })}>
       {/* 네비게이션 */}
@@ -24,9 +51,21 @@ export default function App() {
         zIndex: 1000,
       })}>
         <div className={css({ display: 'flex', alignItems: 'center', gap: '6' })}>
-          <h1 className={css({ fontWeight: 'bold', fontSize: 'lg' })}>
+          <button
+            onClick={handleLogoClick}
+            className={css({
+              fontWeight: 'bold',
+              fontSize: 'lg',
+              cursor: 'pointer',
+              bg: 'transparent',
+              border: 'none',
+              color: 'white',
+              transition: 'opacity 0.2s',
+              _hover: { opacity: 0.8 }
+            })}
+          >
             🔍 GitHub Analyzer
-          </h1>
+          </button>
           <div className={css({ display: 'flex', gap: '2' })}>
             <NavLink
               to="/"

@@ -2,15 +2,15 @@
  * Q&A 페이지
  * ChatGPT 스타일의 질의응답 인터페이스
  */
-import { useState } from 'react';
 import { useAtom } from 'jotai';
 import { css } from '../../styled-system/css';
 import { useAskQuestion, useQAHistory } from '../hooks/useQueries';
-import { 
-  questionInputAtom, 
-  isLoadingAtom, 
+import {
+  questionInputAtom,
+  isLoadingAtom,
   selectedRecordAtom,
-  searchQueryAtom 
+  searchQueryAtom,
+  currentAnswerAtom
 } from '../stores/uiStore';
 import type { QARecord, QuestionCategory } from '../types';
 
@@ -35,14 +35,7 @@ export default function QAPage() {
   const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
   const [selectedRecord, setSelectedRecord] = useAtom(selectedRecordAtom);
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
-  const [currentAnswer, setCurrentAnswer] = useState<{
-    question: string;
-    answer: string;
-    sources: any[];
-    category?: QuestionCategory;
-    categoryConfidence?: number;
-    status?: string;
-  } | null>(null);
+  const [currentAnswer, setCurrentAnswer] = useAtom(currentAnswerAtom);
 
   const askMutation = useAskQuestion();
   const { data: history = [], isLoading: historyLoading } = useQAHistory({
@@ -246,8 +239,8 @@ export default function QAPage() {
                     fontSize: 'xs',
                     fontWeight: '500',
                   })}>
-                    📂 {categoryLabels[currentAnswer.category]}
-                    {currentAnswer.categoryConfidence && 
+                    📂 {currentAnswer.category && categoryLabels[currentAnswer.category as QuestionCategory]}
+                    {currentAnswer.categoryConfidence &&
                       ` (${Math.round(currentAnswer.categoryConfidence * 100)}%)`
                     }
                   </span>
