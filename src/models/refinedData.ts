@@ -5,7 +5,7 @@ export interface RefinedItem {
     /** 고유 식별자 (예: Commit SHA 또는 파일 경로) */
     id: string;
     /** 데이터 타입 */
-    type: "commit" | "diff" | "file";
+    type: "commit" | "diff" | "file" | "qa";
     /** 임베딩 생성을 위한 전체 텍스트 청크 */
     content: string;
     /** 임베딩 최적화를 위한 자연어 변환 텍스트 */
@@ -57,6 +57,17 @@ export interface RefinedItem {
         chunkIndex?: number;
         /** 전체 청크 수 (파일이 분할된 경우) */
         totalChunks?: number;
+        // Q&A 관련 메타데이터
+        /** 질문 내용 */
+        question?: string;
+        /** 답변 내용 */
+        answer?: string;
+        /** 세션 ID */
+        sessionId?: string;
+        /** 생성 시각 */
+        timestamp?: string;
+        /** 질문 카테고리 */
+        questionCategory?: string;
     };
 }
 

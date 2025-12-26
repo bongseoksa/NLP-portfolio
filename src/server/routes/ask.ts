@@ -6,6 +6,8 @@ import { searchVectors } from '../../vector_store/searchVectors.js';
 import { generateAnswer } from '../../qa/answer.js';
 import { saveQAHistory } from '../services/supabase.js';
 import { classifyQuestionWithConfidence } from '../../qa/classifier.js';
+import { saveQAToVector } from '../../vector_store/saveQAToVector.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const router: IRouter = Router();
 
@@ -19,8 +21,11 @@ router.post('/', async (req: Request, res: Response) => {
     // 요청 본문 로깅 (디버깅용)
     console.log('📥 요청 본문:', JSON.stringify(req.body));
     console.log('📥 Content-Type:', req.headers['content-type']);
-    
-    const { question } = req.body;
+
+    const { question, sessionId: clientSessionId } = req.body;
+
+    // 세션 ID 생성 또는 사용
+    const sessionId = clientSessionId || uuidv4();
 
     if (!question || typeof question !== 'string') {
         console.error('❌ 잘못된 요청: question이 없거나 문자열이 아님');
@@ -147,7 +152,19 @@ router.post('/', async (req: Request, res: Response) => {
 
         console.log(`✅ 답변 생성 완료 (${responseTimeMs}ms)`);
 
-        // 4. 클라이언트 응답
+        // 4. Q&A를 벡터 DB에 저장 (백그라운드, 실패해도 응답 흐름 중단 안됨)
+        // 성공한 답변만 저장 (failed 상태는 제외)
+        if (status !== 'failed') {
+            saveQAToVector(collectionName, question, answer, sessionId, {
+                category,
+                categoryConfidence: confidence,
+                status,
+            }).catch(err => {
+                console.warn('⚠️ Q&A 벡터 저장 실패 (무시됨):', err.message);
+            });
+        }
+
+        // 5. 클라이언트 응답
         res.json({
             answer,
             sources,
@@ -156,6 +173,7 @@ router.post('/', async (req: Request, res: Response) => {
             status,
             responseTimeMs,
             tokenUsage: 0,
+            sessionId, // 세션 ID 반환 (프론트엔드에서 다음 질문에 사용)
         });
 
     } catch (error: any) {

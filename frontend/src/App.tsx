@@ -10,7 +10,8 @@ import {
   isLoadingAtom,
   selectedRecordAtom,
   searchQueryAtom,
-  currentAnswerAtom
+  currentAnswerAtom,
+  sessionIdAtom
 } from './stores/uiStore';
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
   const setSelectedRecord = useSetAtom(selectedRecordAtom);
   const setSearchQuery = useSetAtom(searchQueryAtom);
   const setCurrentAnswer = useSetAtom(currentAnswerAtom);
+  const setSessionId = useSetAtom(sessionIdAtom);
 
   const handleLogoClick = () => {
     // Q&A 페이지 상태 초기화
@@ -28,6 +30,7 @@ export default function App() {
     setSelectedRecord(null);
     setSearchQuery('');
     setCurrentAnswer(null);
+    setSessionId(null); // 세션 초기화 (새 대화 시작)
 
     // Q&A 페이지로 이동
     navigate('/');

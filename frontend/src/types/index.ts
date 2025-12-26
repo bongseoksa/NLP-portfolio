@@ -78,6 +78,7 @@ export interface SourceContribution {
 // API 요청 타입
 export interface AskRequest {
   question: string;
+  sessionId?: string; // 대화 세션 ID (연속 대화용)
 }
 
 // API 응답 타입
@@ -89,5 +90,6 @@ export interface AskResponse {
   status: ResponseStatus;
   responseTimeMs: number;
   tokenUsage: number;
+  sessionId: string; // 세션 ID 반환
 }
 

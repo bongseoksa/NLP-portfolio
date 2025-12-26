@@ -10,7 +10,8 @@ import {
   isLoadingAtom,
   selectedRecordAtom,
   searchQueryAtom,
-  currentAnswerAtom
+  currentAnswerAtom,
+  sessionIdAtom
 } from '../stores/uiStore';
 import type { QARecord, QuestionCategory } from '../types';
 
@@ -36,6 +37,7 @@ export default function QAPage() {
   const [selectedRecord, setSelectedRecord] = useAtom(selectedRecordAtom);
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
   const [currentAnswer, setCurrentAnswer] = useAtom(currentAnswerAtom);
+  const [sessionId, setSessionId] = useAtom(sessionIdAtom);
 
   const askMutation = useAskQuestion();
   const { data: history = [], isLoading: historyLoading } = useQAHistory({
@@ -54,8 +56,14 @@ export default function QAPage() {
 
     try {
       const response = await askMutation.mutateAsync({
-        question: currentQuestion
+        question: currentQuestion,
+        sessionId: sessionId || undefined, // 기존 세션 ID 전달 (연속 대화)
       });
+
+      // 서버에서 받은 세션 ID 저장 (첫 질문이거나 새로운 세션)
+      if (response.sessionId) {
+        setSessionId(response.sessionId);
+      }
 
       setCurrentAnswer({
         question: currentQuestion,

@@ -52,3 +52,6 @@ export const currentAnswerAtom = atom<{
   status?: string;
 } | null>(null);
 
+// 현재 대화 세션 ID
+export const sessionIdAtom = atom<string | null>(null);
+
