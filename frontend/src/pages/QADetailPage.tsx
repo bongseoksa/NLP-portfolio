@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getQARecord } from '../api/client';
 import { css } from '../../styled-system/css';
+import ProgressBar from '../components/common/ProgressBar';
 
 export default function QADetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -132,6 +133,7 @@ export default function QADetailPage() {
 
                 {/* 타임라인 시각화 */}
                 <div className={css({ mb: 6 })}>
+                    {/* 각 단계별 진행률 바 */}
                     {[
                         { label: '질문 분류', time: timings.classification, color: 'blue.500' },
                         { label: '벡터 검색', time: timings.vectorSearch, color: 'green.500' },
@@ -140,35 +142,13 @@ export default function QADetailPage() {
                     ].map((step, idx) => {
                         const percentage = timings.total > 0 ? (step.time / timings.total) * 100 : 0;
                         return (
-                            <div key={idx} className={css({ mb: 3 })}>
-                                <div className={css({
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    mb: 1,
-                                    fontSize: 'sm'
-                                })}>
-                                    <span>{step.label}</span>
-                                    <span className={css({ fontWeight: 'bold' })}>
-                                        {step.time}ms ({percentage.toFixed(1)}%)
-                                    </span>
-                                </div>
-                                <div className={css({
-                                    w: '100%',
-                                    h: '20px',
-                                    bg: 'gray.200',
-                                    borderRadius: 'md',
-                                    overflow: 'hidden'
-                                })}>
-                                    <div
-                                        className={css({
-                                            h: '100%',
-                                            bg: step.color,
-                                            transition: 'width 0.5s'
-                                        })}
-                                        style={{ width: `${percentage}%` }}
-                                    />
-                                </div>
-                            </div>
+                            <ProgressBar
+                                key={idx}
+                                label={step.label}
+                                time={step.time}
+                                percentage={percentage}
+                                color={step.color}
+                            />
                         );
                     })}
                 </div>
@@ -196,29 +176,53 @@ export default function QADetailPage() {
                     토큰 사용량
                 </h2>
 
-                <div className={css({ display: 'grid', gridTemplateColumns: '2', gap: 4 })}>
+                {/* 첫 번째 row: 총 토큰 */}
+                <div className={css({ mb: 4 })}>
+                    <div className={css({
+                        bg: 'orange.50',
+                        p: 5,
+                        borderRadius: 'md',
+                        borderLeft: '4px solid',
+                        borderColor: 'orange.600',
+                        textAlign: 'center'
+                    })}>
+                        <div className={css({ fontSize: 'sm', color: 'gray.600', mb: 2 })}>
+                            총 토큰
+                        </div>
+                        <div className={css({
+                            fontSize: '2xl',
+                            fontWeight: 'bold',
+                            color: 'orange.600'
+                        })}>
+                            {tokens.total.toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 두 번째 row: 입력/출력/임베딩 토큰 (동일한 비율) */}
+                <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 })}>
                     {[
-                        { label: '입력 토큰 (Prompt)', value: tokens.prompt, color: 'blue.600' },
-                        { label: '출력 토큰 (Completion)', value: tokens.completion, color: 'green.600' },
-                        { label: '임베딩 토큰', value: tokens.embedding, color: 'purple.600' },
-                        { label: '총 토큰', value: tokens.total, color: 'orange.600', bold: true },
+                        { label: '입력 토큰', value: tokens.prompt, color: 'blue.600', bgColor: 'blue.50' },
+                        { label: '출력 토큰', value: tokens.completion, color: 'green.600', bgColor: 'green.50' },
+                        { label: '임베딩 토큰', value: tokens.embedding, color: 'purple.600', bgColor: 'purple.50' },
                     ].map((item, idx) => (
                         <div
                             key={idx}
                             className={css({
-                                bg: 'gray.50',
+                                bg: item.bgColor,
                                 p: 4,
                                 borderRadius: 'md',
                                 borderLeft: '4px solid',
-                                borderColor: item.color
+                                borderColor: item.color,
+                                textAlign: 'center'
                             })}
                         >
-                            <div className={css({ fontSize: 'sm', color: 'gray.600', mb: 1 })}>
+                            <div className={css({ fontSize: 'xs', color: 'gray.600', mb: 1 })}>
                                 {item.label}
                             </div>
                             <div className={css({
-                                fontSize: item.bold ? 'xl' : 'lg',
-                                fontWeight: item.bold ? 'bold' : '600',
+                                fontSize: 'lg',
+                                fontWeight: '600',
                                 color: item.color
                             })}>
                                 {item.value.toLocaleString()}
