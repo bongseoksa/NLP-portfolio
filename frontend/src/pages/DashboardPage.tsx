@@ -113,6 +113,7 @@ export default function DashboardPage() {
       height: '100vh',
       bg: 'gray.50',
       p: '6',
+      pb: '12',
       overflowY: 'auto',
     })}>
       {/* 헤더 */}

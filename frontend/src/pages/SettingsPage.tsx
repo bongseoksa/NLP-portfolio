@@ -83,6 +83,7 @@ export default function SettingsPage() {
       height: '100vh',
       bg: 'gray.50',
       p: '6',
+      pb: '12',
       overflowY: 'auto',
     })}>
       {/* 헤더 */}
