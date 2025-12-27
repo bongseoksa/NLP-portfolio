@@ -65,7 +65,7 @@ export default function QADetailPage() {
     };
 
     return (
-        <div className={css({ p: 6, pb: 12, maxW: '1200px', mx: 'auto', overflowY: 'auto', h: '100%' })}>
+        <div className={css({ p: 6, pb: 12, maxW: '1200px', mx: 'auto' })}>
             {/* 헤더 */}
             <div className={css({
                 display: 'flex',

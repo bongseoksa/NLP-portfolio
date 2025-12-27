@@ -109,12 +109,10 @@ export default function DashboardPage() {
 
   return (
     <div className={css({
-      minHeight: '100vh',
-      height: '100vh',
+      minHeight: '100%',
       bg: 'gray.50',
       p: '6',
       pb: '12',
-      overflowY: 'auto',
     })}>
       {/* 헤더 */}
       <header className={css({ mb: '2' })}>
