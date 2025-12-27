@@ -3,7 +3,7 @@
  */
 import { Router, type Request, type Response, type IRouter } from 'express';
 import { searchVectors } from '../../vector_store/searchVectors.js';
-import { generateAnswer } from '../../qa/answer.js';
+import { generateAnswer, generateAnswerWithUsage } from '../../qa/answer.js';
 import { saveQAHistory } from '../services/supabase.js';
 import { classifyQuestionWithConfidence } from '../../qa/classifier.js';
 import { saveQAToVector } from '../../vector_store/saveQAToVector.js';
@@ -34,8 +34,14 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     try {
+        // 단계별 시간 측정을 위한 변수
+        let classificationEndTime = 0;
+        let vectorSearchEndTime = 0;
+        let llmGenerationEndTime = 0;
+
         // 1. 질문 분류 (LLM 호출 이전, rule-based)
         const { category, confidence } = classifyQuestionWithConfidence(question);
+        classificationEndTime = Date.now();
         console.log(`📂 질문 분류: ${category} (신뢰도: ${confidence})`);
 
         const repoName = process.env.TARGET_REPO_NAME || 'portfolio';
@@ -43,7 +49,7 @@ router.post('/', async (req: Request, res: Response) => {
         // 기존 컬렉션 이름과의 호환성을 위해 두 가지 모두 시도
         let collectionName = `${repoName}-vectors`;
         let contexts = await searchVectors(collectionName, question, 5);
-        
+
         // 기존 컬렉션 이름으로 fallback
         if (contexts.length === 0) {
             console.log(`   → ${collectionName} 컬렉션이 없어 기존 컬렉션 시도 중...`);
@@ -51,13 +57,20 @@ router.post('/', async (req: Request, res: Response) => {
             contexts = await searchVectors(collectionName, question, 5);
         }
 
+        vectorSearchEndTime = Date.now();
         console.log(`🔍 API 질의: "${question}"`);
 
         // 2. 벡터 검색 (위에서 이미 수행됨)
         console.log(`   → ${contexts.length}개 문서 검색됨 (컬렉션: ${collectionName})`);
 
-        // 답변 생성
-        const answer = await generateAnswer(question, contexts);
+        // 3. 답변 생성 (토큰 사용량 포함)
+        const { answer, usage } = await generateAnswerWithUsage(question, contexts);
+        llmGenerationEndTime = Date.now();
+
+        // 단계별 시간 계산
+        const classificationTimeMs = classificationEndTime - startTime;
+        const vectorSearchTimeMs = vectorSearchEndTime - classificationEndTime;
+        const llmGenerationTimeMs = llmGenerationEndTime - vectorSearchEndTime;
         const responseTimeMs = Date.now() - startTime;
 
         // 응답 상태 결정
@@ -132,7 +145,8 @@ router.post('/', async (req: Request, res: Response) => {
             }
         });
 
-        // 3. Supabase에 이력 저장 (부수 효과, 실패해도 응답 흐름 중단 안됨)
+        // 4. Supabase에 이력 저장 (부수 효과, 실패해도 응답 흐름 중단 안됨)
+        const dbSaveStartTime = Date.now();
         try {
             await saveQAHistory({
                 session_id: sessionId,
@@ -144,16 +158,25 @@ router.post('/', async (req: Request, res: Response) => {
                 sources,
                 status,
                 response_time_ms: responseTimeMs,
-                token_usage: 0, // TODO: 토큰 사용량 추적
+                classification_time_ms: classificationTimeMs,
+                vector_search_time_ms: vectorSearchTimeMs,
+                llm_generation_time_ms: llmGenerationTimeMs,
+                db_save_time_ms: 0, // 저장 완료 후 업데이트는 생략 (응답 속도 우선)
+                token_usage: usage.totalTokens,
+                prompt_tokens: usage.promptTokens,
+                completion_tokens: usage.completionTokens,
+                embedding_tokens: 0, // 임베딩 토큰은 별도 추적 필요 (현재는 0)
             });
         } catch (dbError: any) {
             // Supabase 저장 실패는 로그만 남기고 계속 진행
             console.warn('⚠️ Supabase 이력 저장 실패:', dbError.message);
         }
+        const dbSaveTimeMs = Date.now() - dbSaveStartTime;
 
         console.log(`✅ 답변 생성 완료 (${responseTimeMs}ms)`);
+        console.log(`   📊 단계별 시간: 분류=${classificationTimeMs}ms, 검색=${vectorSearchTimeMs}ms, LLM=${llmGenerationTimeMs}ms, DB=${dbSaveTimeMs}ms`);
 
-        // 4. Q&A를 벡터 DB에 저장 (백그라운드, 실패해도 응답 흐름 중단 안됨)
+        // 5. Q&A를 벡터 DB에 저장 (백그라운드, 실패해도 응답 흐름 중단 안됨)
         // 성공한 답변만 저장 (failed 상태는 제외)
         if (status !== 'failed') {
             saveQAToVector(collectionName, question, answer, sessionId, {
@@ -165,7 +188,7 @@ router.post('/', async (req: Request, res: Response) => {
             });
         }
 
-        // 5. 클라이언트 응답
+        // 6. 클라이언트 응답
         res.json({
             answer,
             sources,
@@ -173,8 +196,25 @@ router.post('/', async (req: Request, res: Response) => {
             categoryConfidence: confidence,
             status,
             responseTimeMs,
-            tokenUsage: 0,
+            tokenUsage: usage.totalTokens,
             sessionId, // 세션 ID 반환 (프론트엔드에서 다음 질문에 사용)
+
+            // 상세 시간 정보 (선택적)
+            timings: {
+                classification: classificationTimeMs,
+                vectorSearch: vectorSearchTimeMs,
+                llmGeneration: llmGenerationTimeMs,
+                dbSave: dbSaveTimeMs,
+                total: responseTimeMs,
+            },
+
+            // 토큰 상세 정보 (선택적)
+            tokens: {
+                prompt: usage.promptTokens,
+                completion: usage.completionTokens,
+                embedding: 0, // 임베딩 토큰은 벡터 검색에서 별도 추적 필요
+                total: usage.totalTokens,
+            },
         });
 
     } catch (error: any) {

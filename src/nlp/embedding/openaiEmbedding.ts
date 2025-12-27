@@ -32,7 +32,7 @@ async function generateOpenAIEmbeddings(texts: string[]): Promise<number[][]> {
     if (!openai) {
         throw new Error("OpenAI API key not configured");
     }
-    
+
     const response = await openai.embeddings.create({
         model: "text-embedding-3-small",
         input: texts,
@@ -40,6 +40,29 @@ async function generateOpenAIEmbeddings(texts: string[]): Promise<number[][]> {
     });
 
     return response.data.map(item => item.embedding);
+}
+
+/**
+ * OpenAI를 사용하여 임베딩과 토큰 사용량을 반환합니다.
+ */
+async function generateOpenAIEmbeddingsWithUsage(texts: string[]): Promise<{
+    embeddings: number[][];
+    totalTokens: number;
+}> {
+    if (!openai) {
+        throw new Error("OpenAI API key not configured");
+    }
+
+    const response = await openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: texts,
+        encoding_format: "float",
+    });
+
+    const embeddings = response.data.map(item => item.embedding);
+    const totalTokens = response.usage?.total_tokens || 0;
+
+    return { embeddings, totalTokens };
 }
 
 /**
@@ -121,6 +144,40 @@ async function processTextWithChunking(
 }
 
 /**
+ * 단일 텍스트를 처리하여 임베딩과 토큰 사용량을 반환합니다.
+ * 8K 토큰 초과 시 자동으로 청킹하여 평균화합니다.
+ *
+ * @param text - 처리할 텍스트
+ * @param generateFn - 사용할 임베딩 생성 함수 (토큰 추적 지원)
+ * @returns 단일 임베딩 벡터와 총 토큰 사용량
+ */
+async function processTextWithChunkingAndUsage(
+    text: string,
+    generateFn: (texts: string[]) => Promise<{ embeddings: number[][]; totalTokens: number }>
+): Promise<{ embedding: number[]; tokens: number }> {
+    const tokenCount = countTokens(text);
+
+    // 8K 토큰 이하면 그대로 처리
+    if (tokenCount <= 8000) {
+        const result = await generateFn([text]);
+        return { embedding: result.embeddings[0]!, tokens: result.totalTokens };
+    }
+
+    // 8K 토큰 초과: 청킹 필요
+    console.log(`⚠️ Text exceeds 8K tokens (${tokenCount}), chunking...`);
+    const chunks = chunkTextByTokens(text, 8000);
+
+    // 각 청크에 대해 임베딩 생성
+    const result = await generateFn(chunks);
+
+    // 임베딩 평균화
+    console.log(`📊 Averaging ${result.embeddings.length} chunk embeddings...`);
+    const averaged = averageEmbeddings(result.embeddings);
+
+    return { embedding: averaged, tokens: result.totalTokens };
+}
+
+/**
  * 텍스트 목록에 대한 임베딩 벡터를 생성합니다.
  * OpenAI 실패 시 Chroma 기본 임베딩으로 자동 fallback합니다.
  * 8K 토큰 초과 텍스트는 자동으로 청킹하여 평균화합니다.
@@ -174,4 +231,56 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
         console.error("❌ All embedding methods failed:", error.message || error);
         throw new Error("All embedding methods failed");
     }
+}
+
+/**
+ * 텍스트 목록에 대한 임베딩 벡터와 토큰 사용량을 생성합니다.
+ * OpenAI 실패 시 Chroma 기본 임베딩으로 자동 fallback합니다.
+ * 8K 토큰 초과 텍스트는 자동으로 청킹하여 평균화합니다.
+ *
+ * @param {string[]} texts - 임베딩을 생성할 텍스트 목록
+ * @returns {Promise<{embeddings: number[][], totalTokens: number}>} 생성된 임베딩 벡터 목록과 총 토큰 사용량
+ */
+export async function generateEmbeddingsWithUsage(texts: string[]): Promise<{
+    embeddings: number[][];
+    totalTokens: number;
+}> {
+    let totalTokens = 0;
+
+    // 사용할 임베딩 함수 결정
+    if (openai) {
+        console.log("🔄 Generating embeddings with OpenAI...");
+
+        try {
+            // 각 텍스트를 청킹 처리하여 임베딩 생성
+            const results: number[][] = [];
+
+            for (const text of texts) {
+                const result = await processTextWithChunkingAndUsage(text, generateOpenAIEmbeddingsWithUsage);
+                results.push(result.embedding);
+                totalTokens += result.tokens;
+            }
+
+            console.log("✅ Embedding generation successful");
+            console.log(`📊 총 임베딩 토큰 사용량: ${totalTokens}`);
+            return { embeddings: results, totalTokens };
+
+        } catch (error: any) {
+            // OpenAI 실패 시 Chroma로 fallback
+            console.warn("⚠️ OpenAI Embedding failed:", error.message || error);
+            console.log("🔄 Falling back to Chroma default embedding...");
+        }
+    } else {
+        console.log("ℹ️ OpenAI API key not set, using Chroma default embedding...");
+    }
+
+    // Chroma fallback (토큰 카운팅 없음)
+    const results: number[][] = [];
+    for (const text of texts) {
+        const embedding = await processTextWithChunking(text, generateChromaEmbeddings);
+        results.push(embedding);
+    }
+
+    console.log("✅ Chroma default embedding successful");
+    return { embeddings: results, totalTokens: 0 }; // Chroma는 토큰 카운팅 없음
 }

@@ -36,8 +36,20 @@ export interface QARecord {
   categoryConfidence: number;     // 0-1 신뢰도
   sources: Source[];
   status: ResponseStatus;
+
+  // 시간 정보
   responseTimeMs: number;
+  classificationTimeMs?: number;
+  vectorSearchTimeMs?: number;
+  llmGenerationTimeMs?: number;
+  dbSaveTimeMs?: number;
+
+  // 토큰 정보
   tokenUsage: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  embeddingTokens?: number;
+
   createdAt: string;
 }
 
@@ -92,5 +104,22 @@ export interface AskResponse {
   responseTimeMs: number;
   tokenUsage: number;
   sessionId: string; // 세션 ID 반환
+
+  // 상세 시간 정보 (선택적)
+  timings?: {
+    classification: number;
+    vectorSearch: number;
+    llmGeneration: number;
+    dbSave: number;
+    total: number;
+  };
+
+  // 토큰 상세 정보 (선택적)
+  tokens?: {
+    prompt: number;
+    completion: number;
+    embedding: number;
+    total: number;
+  };
 }
 

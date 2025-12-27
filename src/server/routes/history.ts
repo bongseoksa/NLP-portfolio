@@ -24,10 +24,10 @@ router.get('/', async (req: Request, res: Response) => {
         // snake_case를 camelCase로 변환하여 프론트엔드에 전달
         const transformedHistory = history.map((record: any) => {
             // 명시적으로 snake_case 필드를 우선 사용
-            const responseTime = typeof record.response_time_ms === 'number' 
-                ? record.response_time_ms 
+            const responseTime = typeof record.response_time_ms === 'number'
+                ? record.response_time_ms
                 : (typeof record.responseTimeMs === 'number' ? record.responseTimeMs : 0);
-            
+
             const transformed = {
                 id: record.id,
                 question: record.question,
@@ -37,13 +37,25 @@ router.get('/', async (req: Request, res: Response) => {
                 categoryConfidence: record.category_confidence ?? record.categoryConfidence ?? 0,
                 sources: record.sources || [],
                 status: record.status,
+
+                // 시간 정보
                 responseTimeMs: responseTime,
-                tokenUsage: typeof record.token_usage === 'number' 
-                    ? record.token_usage 
+                classificationTimeMs: record.classification_time_ms,
+                vectorSearchTimeMs: record.vector_search_time_ms,
+                llmGenerationTimeMs: record.llm_generation_time_ms,
+                dbSaveTimeMs: record.db_save_time_ms,
+
+                // 토큰 정보
+                tokenUsage: typeof record.token_usage === 'number'
+                    ? record.token_usage
                     : (typeof record.tokenUsage === 'number' ? record.tokenUsage : 0),
+                promptTokens: record.prompt_tokens,
+                completionTokens: record.completion_tokens,
+                embeddingTokens: record.embedding_tokens,
+
                 createdAt: record.created_at || record.createdAt || '',
             };
-            
+
             return transformed;
         });
 
@@ -84,8 +96,20 @@ router.get('/:id', async (req: Request, res: Response) => {
             categoryConfidence: record.category_confidence,
             sources: record.sources || [],
             status: record.status,
+
+            // 시간 정보
             responseTimeMs: record.response_time_ms || 0,
+            classificationTimeMs: record.classification_time_ms,
+            vectorSearchTimeMs: record.vector_search_time_ms,
+            llmGenerationTimeMs: record.llm_generation_time_ms,
+            dbSaveTimeMs: record.db_save_time_ms,
+
+            // 토큰 정보
             tokenUsage: record.token_usage || 0,
+            promptTokens: record.prompt_tokens,
+            completionTokens: record.completion_tokens,
+            embeddingTokens: record.embedding_tokens,
+
             createdAt: record.created_at,
         };
 
@@ -122,8 +146,20 @@ router.get('/session/:sessionId', async (req: Request, res: Response) => {
             categoryConfidence: record.category_confidence ?? 0,
             sources: record.sources || [],
             status: record.status,
+
+            // 시간 정보
             responseTimeMs: record.response_time_ms || 0,
+            classificationTimeMs: record.classification_time_ms,
+            vectorSearchTimeMs: record.vector_search_time_ms,
+            llmGenerationTimeMs: record.llm_generation_time_ms,
+            dbSaveTimeMs: record.db_save_time_ms,
+
+            // 토큰 정보
             tokenUsage: record.token_usage || 0,
+            promptTokens: record.prompt_tokens,
+            completionTokens: record.completion_tokens,
+            embeddingTokens: record.embedding_tokens,
+
             createdAt: record.created_at,
         }));
 

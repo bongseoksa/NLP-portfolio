@@ -3,6 +3,7 @@ import { css } from '../styled-system/css';
 import QAPage from './pages/QAPage';
 import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
+import QADetailPage from './pages/QADetailPage';
 import ServerStatus from './components/common/ServerStatus';
 import { useSetAtom } from 'jotai';
 import {
@@ -136,6 +137,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<QAPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/qa/:id" element={<QADetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>

@@ -72,6 +72,36 @@ async function generateWithOpenAI(query: string, contextText: string): Promise<s
 }
 
 /**
+ * OpenAI를 사용하여 답변과 토큰 사용량을 반환합니다.
+ */
+async function generateWithOpenAIAndUsage(query: string, contextText: string): Promise<{
+    answer: string;
+    usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+}> {
+    if (!openai) {
+        throw new Error("OpenAI API key not configured");
+    }
+
+    const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: `[Context]\n${contextText}\n\n[Question]\n${query}` }
+        ],
+        temperature: 0.1,
+    });
+
+    const answer = response.choices[0]?.message?.content || "답변을 생성할 수 없습니다.";
+    const usage = {
+        promptTokens: response.usage?.prompt_tokens || 0,
+        completionTokens: response.usage?.completion_tokens || 0,
+        totalTokens: response.usage?.total_tokens || 0,
+    };
+
+    return { answer, usage };
+}
+
+/**
  * Claude를 사용하여 답변을 생성합니다.
  */
 async function generateWithClaude(query: string, contextText: string): Promise<string> {
@@ -90,6 +120,38 @@ async function generateWithClaude(query: string, contextText: string): Promise<s
 
     const textBlock = response.content.find(block => block.type === "text");
     return textBlock?.text || "답변을 생성할 수 없습니다.";
+}
+
+/**
+ * Claude를 사용하여 답변과 토큰 사용량을 반환합니다.
+ */
+async function generateWithClaudeAndUsage(query: string, contextText: string): Promise<{
+    answer: string;
+    usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+}> {
+    if (!anthropic) {
+        throw new Error("Anthropic API key not configured");
+    }
+
+    const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        system: SYSTEM_PROMPT,
+        messages: [
+            { role: "user", content: `[Context]\n${contextText}\n\n[Question]\n${query}` }
+        ],
+    });
+
+    const textBlock = response.content.find(block => block.type === "text");
+    const answer = textBlock?.text || "답변을 생성할 수 없습니다.";
+
+    const usage = {
+        promptTokens: response.usage?.input_tokens || 0,
+        completionTokens: response.usage?.output_tokens || 0,
+        totalTokens: (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0),
+    };
+
+    return { answer, usage };
 }
 
 /**
@@ -153,4 +215,87 @@ export async function generateAnswer(query: string, context: SearchResult[]): Pr
     }
 
     return "오류가 발생하여 답변을 생성할 수 없습니다. OpenAI 또는 Anthropic API 키를 확인해주세요.";
+}
+
+/**
+ * LLM을 사용하여 질문에 대한 답변과 토큰 사용량을 생성합니다.
+ * OpenAI 실패 시 Claude로 자동 fallback합니다.
+ *
+ * @param {string} query - 사용자 질문
+ * @param {SearchResult[]} context - 검색된 관련 문서 리스트
+ * @returns {Promise<{answer: string, usage: {promptTokens: number, completionTokens: number, totalTokens: number}}>} 생성된 답변과 토큰 사용량
+ */
+export async function generateAnswerWithUsage(
+    query: string,
+    context: SearchResult[]
+): Promise<{
+    answer: string;
+    usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+}> {
+    // 검색 결과 로깅 (디버깅용)
+    console.log(`📊 검색 결과: ${context.length}개 문서`);
+    if (context.length > 0) {
+        context.forEach((ctx, idx) => {
+            const type = ctx.metadata?.type || 'unknown';
+            const path = ctx.metadata?.path || ctx.metadata?.filePath || ctx.metadata?.sha || 'N/A';
+            const contentLength = ctx.content?.length || 0;
+            console.log(`   [${idx + 1}] type: ${type}, path: ${path}, content: ${contentLength}자`);
+        });
+    }
+
+    const contextText = buildContext(context);
+
+    // 기본 사용량 (fallback용)
+    const defaultUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+
+    if (!contextText) {
+        console.warn('⚠️ buildContext가 빈 문자열을 반환했습니다.');
+        if (context.length === 0) {
+            return {
+                answer: "죄송합니다. 관련 정보를 찾을 수 없습니다. 벡터 저장소에 데이터가 없거나 검색 쿼리가 적절하지 않을 수 있습니다.",
+                usage: defaultUsage,
+            };
+        } else {
+            return {
+                answer: "죄송합니다. 검색 결과는 있지만 내용이 비어있습니다. 벡터 저장소의 데이터를 확인해주세요.",
+                usage: defaultUsage,
+            };
+        }
+    }
+
+    // 1차 시도: OpenAI
+    if (openai) {
+        try {
+            console.log("🔄 Generating answer with OpenAI (GPT-4o)...");
+            const result = await generateWithOpenAIAndUsage(query, contextText);
+            console.log("✅ OpenAI answer generation successful");
+            console.log(`📊 토큰 사용량: prompt=${result.usage.promptTokens}, completion=${result.usage.completionTokens}, total=${result.usage.totalTokens}`);
+            return result;
+        } catch (error: any) {
+            console.warn("⚠️ OpenAI failed:", error.message || error);
+            console.log("🔄 Falling back to Claude...");
+        }
+    } else {
+        console.log("ℹ️ OpenAI API key not set, trying Claude...");
+    }
+
+    // 2차 시도: Claude
+    if (anthropic) {
+        try {
+            console.log("🔄 Generating answer with Claude...");
+            const result = await generateWithClaudeAndUsage(query, contextText);
+            console.log("✅ Claude answer generation successful");
+            console.log(`📊 토큰 사용량: prompt=${result.usage.promptTokens}, completion=${result.usage.completionTokens}, total=${result.usage.totalTokens}`);
+            return result;
+        } catch (error: any) {
+            console.error("❌ Claude failed:", error.message || error);
+        }
+    } else {
+        console.warn("⚠️ CLAUDE_API_KEY not set, Claude unavailable");
+    }
+
+    return {
+        answer: "오류가 발생하여 답변을 생성할 수 없습니다. OpenAI 또는 Anthropic API 키를 확인해주세요.",
+        usage: defaultUsage,
+    };
 }

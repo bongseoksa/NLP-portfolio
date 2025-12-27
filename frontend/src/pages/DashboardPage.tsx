@@ -2,6 +2,7 @@
  * 대시보드 페이지
  * 시스템 모니터링 및 분석
  */
+import { useNavigate } from 'react-router-dom';
 import { css } from '../../styled-system/css';
 import {
   LineChart,
@@ -98,6 +99,7 @@ const SOURCE_COLORS = {
 };
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { data: summary } = useDashboardSummary();
   const { data: dailyStats = [] } = useDailyStats();
   const { data: categoryDist = [] } = useCategoryDistribution();
@@ -315,8 +317,9 @@ export default function DashboardPage() {
                 const recordAny = record as any;
                 const responseTime = recordAny.responseTimeMs ?? recordAny.response_time_ms ?? 0;
                 return (
-                  <div 
+                  <div
                     key={record.id || idx}
+                    onClick={() => navigate(`/qa/${record.id}`)}
                     className={css({
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -324,6 +327,11 @@ export default function DashboardPage() {
                       py: '2',
                       borderBottom: '1px solid',
                       borderColor: 'gray.100',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                      _hover: {
+                        bg: 'gray.50',
+                      },
                     })}
                   >
                     <span className={css({ 

@@ -68,8 +68,20 @@ export interface QAHistoryRecord {
     category_confidence: number;
     sources: any[];
     status: 'success' | 'partial' | 'failed';
+
+    // 시간 정보
     response_time_ms: number;
+    classification_time_ms?: number;
+    vector_search_time_ms?: number;
+    llm_generation_time_ms?: number;
+    db_save_time_ms?: number;
+
+    // 토큰 정보
     token_usage: number;
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    embedding_tokens?: number;
+
     created_at?: string;
 }
 
