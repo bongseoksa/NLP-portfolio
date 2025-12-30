@@ -211,36 +211,185 @@ export function refineData(data: PipelineOutput): RefinedData {
 
 /**
  * 파일 내용을 지정된 크기로 청크로 분할합니다.
- * 줄 단위로 분할하여 문맥을 유지합니다.
+ * 의미 기반 오버랩(Semantic Overlap)을 적용하여 함수/클래스 경계를 인식합니다.
+ *
+ * @param content - 분할할 파일 내용
+ * @param maxChunkSize - 청크 최대 크기 (바이트)
+ * @param overlapRatio - 오버랩 비율 (기본값: 0.15 = 15%)
+ * @returns 분할된 청크 배열
  */
-function splitFileIntoChunks(content: string, maxChunkSize: number): string[] {
+function splitFileIntoChunks(content: string, maxChunkSize: number, overlapRatio: number = 0.15): string[] {
     if (content.length <= maxChunkSize) {
         return [content];
     }
 
     const chunks: string[] = [];
     const lines = content.split('\n');
-    let currentChunk: string[] = [];
-    let currentSize = 0;
+    const overlapSize = Math.floor(maxChunkSize * overlapRatio);
 
-    for (const line of lines) {
-        const lineSize = line.length + 1; // +1 for newline
+    let startIndex = 0;
 
-        if (currentSize + lineSize > maxChunkSize && currentChunk.length > 0) {
-            // 현재 청크 저장
-            chunks.push(currentChunk.join('\n'));
-            currentChunk = [line];
-            currentSize = lineSize;
-        } else {
+    while (startIndex < lines.length) {
+        let currentChunk: string[] = [];
+        let currentSize = 0;
+        let endIndex = startIndex;
+
+        // 최대 크기까지 라인 추가
+        while (endIndex < lines.length && currentSize < maxChunkSize) {
+            const line = lines[endIndex];
+            if (line === undefined) {
+                endIndex++;
+                continue;
+            }
+
+            const lineSize = line.length + 1; // +1 for newline
+
+            // 크기 초과 시 현재 라인 제외하고 종료
+            if (currentSize + lineSize > maxChunkSize && currentChunk.length > 0) {
+                break;
+            }
+
             currentChunk.push(line);
             currentSize += lineSize;
+            endIndex++;
+        }
+
+        // 청크가 비어있으면 무한 루프 방지를 위해 강제로 진행
+        if (currentChunk.length === 0) {
+            startIndex = endIndex;
+            if (startIndex >= lines.length) {
+                break;
+            }
+            continue;
+        }
+
+        // 청크 저장
+        chunks.push(currentChunk.join('\n'));
+
+        // 다음 청크 시작 위치 계산 (의미 기반 오버랩)
+        if (endIndex >= lines.length) {
+            break; // 마지막 청크
+        }
+
+        // 1단계: 의미 경계 찾기 (함수/클래스 선언)
+        const semanticBoundary = findSemanticBoundary(lines, endIndex, startIndex, overlapSize);
+
+        if (semanticBoundary !== null && semanticBoundary > startIndex) {
+            // 의미 경계를 찾았으면 그 지점부터 시작 (단, 진행 보장)
+            startIndex = semanticBoundary;
+        } else {
+            // 의미 경계를 못 찾았으면 기본 오버랩 적용
+            let overlapLines = 0;
+            let overlapBytes = 0;
+            for (let i = endIndex - 1; i >= startIndex && overlapBytes < overlapSize; i--) {
+                const overlapLine = lines[i];
+                if (overlapLine === undefined) continue;
+
+                overlapBytes += overlapLine.length + 1;
+                overlapLines++;
+            }
+
+            // 최소 1줄 이상, 최대 절반까지만 오버랩
+            overlapLines = Math.max(1, Math.min(overlapLines, Math.floor(currentChunk.length / 2)));
+            startIndex = endIndex - overlapLines;
+        }
+
+        // 무한 루프 방지: startIndex가 진행되지 않으면 강제로 1칸 이동
+        if (startIndex <= endIndex - currentChunk.length) {
+            startIndex = endIndex;
         }
     }
 
-    // 마지막 청크 추가
-    if (currentChunk.length > 0) {
-        chunks.push(currentChunk.join('\n'));
+    return chunks;
+}
+
+/**
+ * 의미 있는 코드 경계를 찾습니다 (함수/클래스/주석 블록 시작점).
+ *
+ * @param lines - 전체 라인 배열
+ * @param endIndex - 현재 청크 끝 인덱스
+ * @param startIndex - 현재 청크 시작 인덱스
+ * @param maxOverlapSize - 최대 오버랩 크기 (바이트)
+ * @returns 의미 경계 인덱스 (찾지 못하면 null)
+ */
+function findSemanticBoundary(
+    lines: string[],
+    endIndex: number,
+    startIndex: number,
+    maxOverlapSize: number
+): number | null {
+    // 함수/클래스/주석 선언 패턴 (다양한 언어 지원)
+    const semanticPatterns = [
+        // JavaScript/TypeScript
+        /^\s*(export\s+)?(async\s+)?function\s+\w+/,           // function foo()
+        /^\s*(export\s+)?(const|let|var)\s+\w+\s*=\s*(async\s+)?\(/,  // const foo = () =>
+        /^\s*(export\s+)?(default\s+)?class\s+\w+/,            // class Foo
+        /^\s*(export\s+)?interface\s+\w+/,                      // interface Foo
+        /^\s*(export\s+)?type\s+\w+/,                           // type Foo
+        /^\s*(export\s+)?enum\s+\w+/,                           // enum Foo
+
+        // Python
+        /^\s*def\s+\w+/,                                        // def foo():
+        /^\s*class\s+\w+/,                                      // class Foo:
+        /^\s*async\s+def\s+\w+/,                                // async def foo():
+
+        // Java/C#/C++
+        /^\s*(public|private|protected|static)\s+.*\s+\w+\s*\(/,  // public void foo()
+
+        // 주석 블록
+        /^\s*\/\*\*/,                                           // JSDoc 시작
+        /^\s*\/\*/,                                             // 블록 주석 시작
+        /^\s*"""/,                                              // Python docstring
+        /^\s*'''/,                                              // Python docstring
+        /^\s*#\s*===+/,                                         // 구분선 주석
+    ];
+
+    let overlapBytes = 0;
+
+    // 현재 청크 끝에서 역방향으로 탐색
+    for (let i = endIndex - 1; i >= startIndex && overlapBytes < maxOverlapSize; i--) {
+        const line = lines[i];
+        if (!line) continue;
+
+        overlapBytes += line.length + 1;
+
+        // 의미 있는 경계인지 확인
+        const trimmedLine = line.trim();
+
+        // 빈 줄이나 닫는 괄호는 건너뛰기
+        if (!trimmedLine || trimmedLine === '}' || trimmedLine === '};') {
+            continue;
+        }
+
+        // 패턴 매칭
+        for (const pattern of semanticPatterns) {
+            if (pattern.test(trimmedLine)) {
+                // 의미 경계를 찾았음 - 이 라인부터 다음 청크 시작
+                return i;
+            }
+        }
+
+        // 주석 블록 시작도 의미 경계로 간주
+        if (trimmedLine.startsWith('//') || trimmedLine.startsWith('#')) {
+            // 연속된 주석 블록의 시작점 찾기
+            let commentStart = i;
+            while (commentStart > startIndex) {
+                const prevLine = lines[commentStart - 1];
+                if (!prevLine) break;
+                const prevTrimmed = prevLine.trim();
+                if (!prevTrimmed.startsWith('//') && !prevTrimmed.startsWith('#')) {
+                    break;
+                }
+                commentStart--;
+            }
+
+            // 주석 블록이 3줄 이상이면 의미 있는 경계로 간주
+            if (i - commentStart >= 2) {
+                return commentStart;
+            }
+        }
     }
 
-    return chunks;
+    // 의미 경계를 찾지 못함
+    return null;
 }
