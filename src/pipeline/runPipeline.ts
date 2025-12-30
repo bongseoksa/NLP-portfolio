@@ -3,8 +3,6 @@ import path from "path";
 import { fetchAllCommits } from "../data_sources/github/fetchCommit.js";
 import { fetchFiles } from "../data_sources/github/fetchFiles.js";
 import { fetchRepositoryFiles } from "../data_sources/github/fetchRepositoryFiles.js";
-import { parseLog } from "../data_sources/git/parseLog.js";
-import { extractDiff } from "../data_sources/git/extractDiff.js";
 import type { PipelineOutput } from "../models/PipelineOutput.js";
 import { refineData } from "./steps/preprocessText.js";
 import { generateEmbeddings } from "../nlp/embedding/openaiEmbedding.js";
@@ -20,8 +18,8 @@ export interface PipelineOptions {
 /**
  * 전체 데이터 수집 및 전처리 파이프라인을 실행합니다.
  * 1. GitHub API 커밋 수집
- * 2. 변경 파일 정보 수집
- * 3. 로컬 Git 로그 및 Diff 추출
+ * 2. 변경 파일 정보 수집 (GitHub API - patch 포함)
+ * 3. 레포지토리 소스 코드 수집
  * 4. 데이터 정제 (NLP 입력 형태)
  * 5. 임베딩 생성 (OpenAI → Chroma 기본 임베딩 fallback)
  * 6. 벡터 저장 (Chroma)
@@ -36,15 +34,9 @@ export async function runPipeline(options: PipelineOptions = {}) {
 
     const owner = process.env.TARGET_REPO_OWNER!;
     const repo = process.env.TARGET_REPO_NAME!;
-    const localRepo = process.env.LOCAL_REPO_PATH!;
 
     if (!owner || !repo) {
         console.error("❌ TARGET_REPO_OWNER / TARGET_REPO_NAME 환경 변수가 필요합니다.");
-        return;
-    }
-
-    if (!localRepo) {
-        console.error("❌ LOCAL_REPO_PATH 환경 변수가 필요합니다.");
         return;
     }
 
@@ -72,8 +64,6 @@ export async function runPipeline(options: PipelineOptions = {}) {
         result = {
             commits: [],
             commitFiles: {},
-            commitDiffs: [],
-            localLogs: [],
             repositoryFiles: []
         };
 
@@ -83,8 +73,8 @@ export async function runPipeline(options: PipelineOptions = {}) {
         result.commits = commits;
         console.log(`   → ${commits.length} commits fetched.`);
 
-        // 2️⃣ 각 커밋 SHA에 대한 변경 파일 가져오기
-        console.log("\n📌 Fetching changed files for each commit...");
+        // 2️⃣ 각 커밋 SHA에 대한 변경 파일 가져오기 (GitHub API - patch 포함)
+        console.log("\n📌 Fetching changed files for each commit (with patch)...");
         for (const commit of commits) {
             const sha = commit.sha;
             const files = await fetchFiles({ owner, repo, sha });
@@ -92,19 +82,7 @@ export async function runPipeline(options: PipelineOptions = {}) {
         }
         console.log("   → commitFiles completed.");
 
-        // 3️⃣ 로컬 repo에서 커밋 diff 가져오기
-        console.log("\n📌 Extracting local diffs...");
-        const localCommits = await parseLog(commits.length);
-        const diffs = await extractDiff(localCommits);
-        result.commitDiffs = diffs;
-        console.log("   → commitDiffs completed.");
-
-        // 4️⃣ 로컬 git 로그 저장
-        console.log("\n📌 Saving local git logs...");
-        result.localLogs = localCommits;
-        console.log(`   → ${localCommits.length} logs saved.`);
-
-        // 5️⃣ 레포지토리 모든 파일 내용 가져오기 (소스 코드 레벨 질문용)
+        // 3️⃣ 레포지토리 모든 파일 내용 가져오기 (소스 코드 레벨 질문용)
         console.log("\n📌 Fetching repository files (source code)...");
         try {
             // 기본 브랜치 자동 감지 (null 전달 시 자동으로 기본 브랜치 사용)
@@ -122,14 +100,14 @@ export async function runPipeline(options: PipelineOptions = {}) {
             result.repositoryFiles = [];
         }
 
-        // 5️⃣ JSON 파일로 저장 (Raw)
+        // 4️⃣ JSON 파일로 저장 (Raw)
         fs.writeFileSync(
             path.join(outputDir, "pipeline_output.json"),
             JSON.stringify(result, null, 2),
             "utf-8"
         );
 
-        // 6️⃣ 데이터 정제
+        // 5️⃣ 데이터 정제
         console.log("\n📌 Data Refinement (NLP Preparation)...");
         refinedData = refineData(result);
         fs.writeFileSync(
@@ -140,7 +118,7 @@ export async function runPipeline(options: PipelineOptions = {}) {
         console.log(`   → ${refinedData.items.length} items refined.`);
     }
 
-    // 7️⃣ 임베딩 생성 및 저장 (OpenAI 또는 Chroma 기본 임베딩 fallback)
+    // 6️⃣ 임베딩 생성 및 저장 (OpenAI 또는 Chroma 기본 임베딩 fallback)
     console.log("\n📌 Generating Embeddings...");
     try {
         const batchSize = 10;

@@ -13,17 +13,3 @@ export interface CommitItem {
     /** 커밋의 GitHub 웹 URL */
     url: string;
 }
-
-/**
- * 로컬 Git 저장소(`git log`)에서 파싱된 커밋 정보를 나타내는 인터페이스입니다.
- */
-export interface LocalCommitLog {
-    /** 커밋의 SHA 식별자 */
-    sha: string;
-    /** 커밋 작성자 이름 */
-    author: string;
-    /** 커밋 날짜 (ISO 8601 형식) */
-    date: string;
-    /** 커밋 메시지 */
-    message: string;
-}

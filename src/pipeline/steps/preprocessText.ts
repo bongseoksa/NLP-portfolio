@@ -1,6 +1,5 @@
-import type { CommitItem, LocalCommitLog } from "../../models/Commit.js";
+import type { CommitItem } from "../../models/Commit.js";
 import type { FileModel } from "../../models/File.js";
-import type { CommitDiff } from "../../models/Diff.js";
 import type { RefinedData, RefinedItem } from "../../models/refinedData.js";
 import type { PipelineOutput } from "../../models/PipelineOutput.js";
 import {
@@ -19,15 +18,10 @@ import {
 export function refineData(data: PipelineOutput): RefinedData {
     const items: RefinedItem[] = [];
 
-    // diff lookup map for efficiency
-    const diffMap = new Map<string, CommitDiff>();
-    data.commitDiffs.forEach(d => diffMap.set(d.sha, d));
-
     // 1. 커밋 데이터 정제 (Diff 제외, 메타데이터만)
     for (const commit of data.commits) {
         const sha = commit.sha;
         const fileModels = data.commitFiles[sha] || [];
-        const commitDiff = diffMap.get(sha);
 
         // Commit Entity: 히스토리 정보만 포함 (Diff 제외)
         const lines: string[] = [];
@@ -79,18 +73,18 @@ export function refineData(data: PipelineOutput): RefinedData {
 
         items.push(commitItem);
 
-        // 2. Diff Entity 생성 (각 파일별로 독립적으로)
-        if (commitDiff && commitDiff.files.length > 0) {
-            for (const fileDiff of commitDiff.files) {
+        // 2. Diff Entity 생성 (각 파일별로 독립적으로) - GitHub API 데이터 사용
+        if (fileModels && fileModels.length > 0) {
+            for (const file of fileModels) {
                 const diffLines: string[] = [];
 
-                diffLines.push(`Diff for File: ${fileDiff.filePath}`);
+                diffLines.push(`Diff for File: ${file.filename}`);
                 diffLines.push(`Commit: ${sha}`);
-                diffLines.push(`Changes: +${fileDiff.additions} -${fileDiff.deletions}`);
+                diffLines.push(`Changes: +${file.additions} -${file.deletions}`);
                 diffLines.push("");
 
                 // Limit patch size to avoid extremely large chunks
-                let patch = fileDiff.patch || "";
+                let patch = file.patch || "";
                 if (patch.length > 2000) {
                     patch = patch.slice(0, 2000) + "\n...(Truncated)...";
                 }
@@ -101,10 +95,9 @@ export function refineData(data: PipelineOutput): RefinedData {
                 const diffContent = diffLines.join("\n");
 
                 // Diff 타입 결정
-                const fileModel = fileModels.find(f => f.filename === fileDiff.filePath);
-                const diffType = fileModel?.status === "added" ? "add" :
-                                fileModel?.status === "removed" ? "delete" :
-                                fileModel?.status === "renamed" ? "rename" : "modify";
+                const diffType = file.status === "added" ? "add" :
+                                file.status === "removed" ? "delete" :
+                                file.status === "renamed" ? "rename" : "modify";
 
                 // 변경 카테고리 추론 (커밋 메시지 기반)
                 const message = commit.message.toLowerCase();
@@ -124,16 +117,16 @@ export function refineData(data: PipelineOutput): RefinedData {
                 if (patch.includes("//") || patch.includes("/*")) semanticHint.push("주석 변경");
 
                 const diffItem: RefinedItem = {
-                    id: `diff-${sha}-${fileDiff.filePath.replace(/\//g, '-')}`,
+                    id: `diff-${sha}-${file.filename.replace(/\//g, '-')}`,
                     type: "diff",
                     content: diffContent,
                     embeddingText: "", // 임시로 빈 문자열, 아래에서 생성
                     metadata: {
                         commitId: sha,
-                        filePath: fileDiff.filePath,
+                        filePath: file.filename,
                         diffType: diffType,
-                        fileAdditions: fileDiff.additions,
-                        fileDeletions: fileDiff.deletions,
+                        fileAdditions: file.additions || 0,
+                        fileDeletions: file.deletions || 0,
                         changeCategory: changeCategory,
                         ...(semanticHint.length > 0 && { semanticHint })
                     }

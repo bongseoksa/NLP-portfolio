@@ -78,11 +78,9 @@ The system requires **2 servers** to operate:
 
 ```
 Pipeline Mode:
-GitHub API → Fetch commits + files + repository source code
+GitHub API → Fetch commits + files (with patch) + repository source code
          ↓
-Local Git → Parse git log + extract diffs
-         ↓
-Data Refinement → Convert to NLP-friendly format (commit + file types)
+Data Refinement → Convert to NLP-friendly format (commit + diff + file types)
          ↓
 Embedding Generation → OpenAI (primary) / Chroma (fallback)
          ↓
@@ -122,7 +120,6 @@ Required `.env` variables:
 GITHUB_TOKEN=ghp_xxx
 TARGET_REPO_OWNER=username
 TARGET_REPO_NAME=repo-name
-LOCAL_REPO_PATH=/path/to/local/clone
 
 # AI APIs (at least one required for Q&A)
 OPENAI_API_KEY=sk-proj-xxx    # Primary for embeddings + answers
@@ -148,10 +145,7 @@ src/
 │   ├── github/               # GitHub API integrations
 │   │   ├── fetchCommit.ts    # Fetch all commits
 │   │   ├── fetchFiles.ts     # Fetch changed files per commit
-│   │   └── fetchRepositoryFiles.ts  # ⭐ NEW: Fetch all source code files
-│   └── git/                  # Local Git operations
-│       ├── parseLog.ts       # Parse git log output
-│       └── extractDiff.ts    # Extract commit diffs
+│   │   └── fetchRepositoryFiles.ts  # Fetch all source code files
 ├── nlp/embedding/
 │   └── openaiEmbedding.ts    # Embedding generation (OpenAI → Chroma fallback)
 ├── vector_store/
@@ -171,12 +165,11 @@ src/
 
 **Key Pipeline Steps:**
 1. `fetchAllCommits()` - Get commit list from GitHub
-2. `fetchFiles()` - Get changed files per commit
-3. `fetchRepositoryFiles()` - ⭐ NEW: Get all source code (for implementation questions)
-4. `parseLog()` + `extractDiff()` - Get local git diffs
-5. `refineData()` - Convert to NLP format (separate commit/file items)
-6. `generateEmbeddings()` - Create vectors (OpenAI → Chroma fallback)
-7. `saveVectors()` - Store in ChromaDB with metadata
+2. `fetchFiles()` - Get changed files per commit (includes patch/diff from GitHub API)
+3. `fetchRepositoryFiles()` - Get all source code (for implementation questions)
+4. `refineData()` - Convert to NLP format (separate commit/diff/file items)
+5. `generateEmbeddings()` - Create vectors (OpenAI → Chroma fallback)
+6. `saveVectors()` - Store in ChromaDB with metadata
 
 **Repository File Collection:**
 - Automatically fetches all source files from default branch (main/master auto-detected)

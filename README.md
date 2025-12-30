@@ -144,7 +144,6 @@ cd frontend && pnpm install && cd ..
 GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxx        # GitHub Personal Access Token
 TARGET_REPO_OWNER=your-github-username   # 레포지토리 소유자
 TARGET_REPO_NAME=your-repo-name          # 레포지토리 이름
-LOCAL_REPO_PATH=/path/to/local/clone     # 로컬에 클론된 레포지토리 경로
 
 # ========================================
 # 필수 설정: AI API 키 (질의응답 기능 사용 시 필수)
