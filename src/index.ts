@@ -5,6 +5,8 @@ import { runPipeline } from "./embedding-pipeline/pipelines/runPipeline.js";
 import { runPollingPipeline } from "./embedding-pipeline/pipelines/runPollingPipeline.js";
 import { searchVectors } from "./service/vector-store/searchVectors.js";
 import { searchVectorsSupabase } from "./service/vector-store/searchVectorsSupabase.js";
+import { searchVectorsFromFile } from "./service/vector-store/fileVectorStore.js";
+import { generateQueryEmbedding } from "./service/vector-store/embeddingService.js";
 import { generateAnswer } from "./service/qa/answer.js";
 import fs from "fs";
 
@@ -85,16 +87,32 @@ async function main() {
             return;
         }
 
-        // Supabase 사용 여부 결정
-        const useSupabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) ? true : false;
+        // Vector Store 모드 결정
+        const useFile = !!process.env.VECTOR_FILE_URL;
+        const useSupabase = !useFile && (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-        console.log(`📊 Vector Store: ${useSupabase ? "Supabase (Cloud)" : "ChromaDB (Local)"}`);
+        const storeType = useFile ? "File (Serverless)" :
+                         useSupabase ? "Supabase (Cloud)" :
+                         "ChromaDB (Local)";
+
+        console.log(`📊 Vector Store: ${storeType}`);
         console.log(`❓ Question: ${query}\n`);
 
         console.log("... 검색 중 (Retrieving contexts) ...");
 
         let context;
-        if (useSupabase) {
+        if (useFile) {
+            // 파일 기반 검색 (Serverless - 서버 비용 0원)
+            const owner = process.env.TARGET_REPO_OWNER || '';
+            const repo = process.env.TARGET_REPO_NAME || 'portfolio';
+
+            const queryEmbedding = await generateQueryEmbedding(query);
+            context = await searchVectorsFromFile(queryEmbedding, 5, {
+                threshold: 0.0,
+                filterMetadata: { owner, repo }
+            });
+        } else if (useSupabase) {
+            // Supabase 검색
             const owner = process.env.TARGET_REPO_OWNER || '';
             const repo = process.env.TARGET_REPO_NAME || 'portfolio';
 
@@ -103,6 +121,7 @@ async function main() {
                 filterMetadata: { owner, repo }
             });
         } else {
+            // ChromaDB 검색 (로컬)
             const repoName = process.env.TARGET_REPO_NAME || "portfolio";
             const collectionName = `${repoName}-vectors`;
 

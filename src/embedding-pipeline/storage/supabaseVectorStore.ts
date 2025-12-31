@@ -152,6 +152,40 @@ export class SupabaseVectorStore {
     }
 
     /**
+     * 모든 임베딩 조회 (파일 내보내기용)
+     */
+    async getAllEmbeddings(filter?: { owner?: string; repo?: string }): Promise<Array<{
+        id: string;
+        content: string;
+        embedding: number[];
+        metadata: Record<string, any>;
+    }>> {
+        console.log("📥 Fetching all embeddings from Supabase...");
+
+        let query = this.supabase
+            .from('embeddings')
+            .select('id, content, embedding, metadata');
+
+        // 필터 적용
+        if (filter?.owner) {
+            query = query.eq('metadata->>owner', filter.owner);
+        }
+        if (filter?.repo) {
+            query = query.eq('metadata->>repo', filter.repo);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            throw new Error(`Failed to fetch embeddings: ${error.message}`);
+        }
+
+        console.log(`   → Fetched ${data?.length || 0} embeddings`);
+
+        return data || [];
+    }
+
+    /**
      * Health check
      */
     async healthCheck(): Promise<boolean> {

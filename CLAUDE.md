@@ -4,16 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a GitHub repository analyzer that uses NLP/RAG to answer questions about code structure, commit history, and implementation details. The system collects repository data, generates embeddings, stores vectors in ChromaDB, and provides a Q&A interface powered by OpenAI or Claude.
+This is a GitHub repository analyzer that uses NLP/RAG to answer questions about code structure, commit history, and implementation details. The system collects repository data, generates embeddings, stores vectors, and provides a Q&A interface powered by OpenAI or Claude.
 
 **Tech Stack:**
 - Backend: Node.js + TypeScript + Express (ESM modules)
 - Frontend: React 19 + TypeScript + Vite + PandaCSS
 - State: Jotai (atoms) + TanStack Query (server state)
-- Vector DB: ChromaDB (Python server on port 8000)
+- Vector Storage: **File-based (Serverless)** / Supabase pgvector (Cloud) / ChromaDB (Local)
 - LLM: OpenAI GPT-4o (primary) / Claude Sonnet 4 (fallback)
 - Embeddings: OpenAI text-embedding-3-small (primary) / Chroma default (fallback)
-- Storage: Supabase (Q&A history)
+- Storage: Supabase (Q&A history, embedding storage)
 
 ## Development Commands
 
@@ -22,16 +22,19 @@ This is a GitHub repository analyzer that uses NLP/RAG to answer questions about
 ```bash
 # Setup & Infrastructure
 pnpm install                    # Install dependencies
-pnpm run chroma:setup          # One-time ChromaDB installation (creates .chroma_venv)
-pnpm run chroma:start          # Start ChromaDB server (required for all operations)
+pnpm run chroma:setup          # One-time ChromaDB installation (creates .chroma_venv) - OPTIONAL for local dev
+pnpm run chroma:start          # Start ChromaDB server (required for local ChromaDB mode) - OPTIONAL
 
 # Data Pipeline
-pnpm run dev                   # Full pipeline: fetch data → embed → store in ChromaDB
+pnpm run dev                   # Full pipeline: fetch data → embed → store in Supabase/ChromaDB
 pnpm run dev --reset           # Reset vector collection, then run full pipeline
 pnpm run reindex               # Re-embed existing data without fetching (use when switching embedding providers)
 
+# Export Embeddings to File (for serverless deployment)
+pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel
+
 # Q&A (CLI)
-pnpm run ask "your question"   # Query via command line (requires ChromaDB running)
+pnpm run ask "your question"   # Query via command line (auto-detects: File > Supabase > ChromaDB)
 
 # Servers
 pnpm run server                # Start API server (:3001) for Q&A and dashboard
@@ -59,41 +62,70 @@ pnpm run panda                 # Generate PandaCSS utility classes
 
 ## System Architecture
 
-### Multi-Server Architecture
+### Vector Storage Modes (Priority: File > Supabase > ChromaDB)
 
-The system requires **2 servers** to operate:
+The system supports **three vector storage modes** with automatic detection:
 
-1. **ChromaDB Server** (port 8000)
-   - Python-based vector database
-   - Stores embeddings and performs similarity search
-   - Must start first (run `pnpm run chroma:start`)
+**1. File-Based (Serverless - Recommended for Production)** 🌟
+   - Zero server cost ($0.11/month vs $20-50/month for ChromaDB)
+   - Serverless compatible (Vercel, Lambda)
+   - Static file delivery via CDN (Vercel Blob, S3 + CloudFront)
+   - Memory cached with 5-minute TTL
+   - Cold start: 150-380ms, Warm start: 51-151ms
+   - Enabled by: `VECTOR_FILE_URL` environment variable
+   - See [docs/architecture/FILE-BASED-VECTOR-STORE.md](docs/architecture/FILE-BASED-VECTOR-STORE.md) for details
 
-2. **API Server** (port 3001)
-   - Main application backend
-   - Handles Q&A, history, dashboard stats
-   - Connects to ChromaDB for vector search
-   - Connects to Supabase for persistent storage
+**2. Supabase pgvector (Cloud)**
+   - Managed PostgreSQL with pgvector extension
+   - Read/write operations supported
+   - $25-30/month for Pro plan
+   - Good for write-heavy workloads
+   - Enabled by: `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
+
+**3. ChromaDB (Local Development)**
+   - Python-based vector database on port 8000
+   - Requires persistent server process
+   - Free for local development
+   - Must run `pnpm run chroma:start` before use
+   - Fallback when no file URL or Supabase credentials
+
+### Required Services
+
+**Minimal Setup (Serverless)**:
+- Only API Server (port 3001)
+- Static file hosting (Vercel Blob / S3)
+- No persistent database servers required
+
+**Local Development**:
+- API Server (port 3001)
+- ChromaDB Server (port 8000) - optional if using Supabase/File mode
 
 ### Data Flow
 
+**Pipeline Mode (Offline - runs in GitHub Actions or locally):**
 ```
-Pipeline Mode:
 GitHub API → Fetch commits + files (with patch) + repository source code
          ↓
 Data Refinement → Convert to NLP-friendly format (commit + diff + file types)
          ↓
 Embedding Generation → OpenAI (primary) / Chroma (fallback)
          ↓
-ChromaDB → Store vectors with metadata
+Vector Storage → Supabase pgvector (Cloud) or ChromaDB (Local)
+         ↓
+Export to File (optional) → embeddings.json.gz → Vercel Blob / S3
+```
 
-Q&A Mode:
-User Question → Generate embedding for query
+**Q&A Mode (Online - serverless API):**
+```
+User Question → Generate query embedding (OpenAI)
             ↓
-ChromaDB → Vector similarity search (returns commits + files)
+Vector Search → File-based (primary) / Supabase (fallback) / ChromaDB (local dev)
+            ↓
+Retrieve Top-K similar documents (commits + files)
             ↓
 LLM (OpenAI/Claude) → Generate answer with context
             ↓
-Supabase → Store Q&A history
+Supabase → Store Q&A history (optional)
             ↓
 Frontend → Display answer + sources
 ```
@@ -116,7 +148,7 @@ The system implements graceful fallbacks for external APIs:
 
 Required `.env` variables:
 ```bash
-# GitHub data source (required)
+# GitHub data source (required for embedding pipeline)
 GITHUB_TOKEN=ghp_xxx
 TARGET_REPO_OWNER=username
 TARGET_REPO_NAME=repo-name
@@ -125,10 +157,23 @@ TARGET_REPO_NAME=repo-name
 OPENAI_API_KEY=sk-proj-xxx    # Primary for embeddings + answers
 CLAUDE_API_KEY=sk-ant-xxx     # Fallback for answers only
 
-# Supabase (optional for history storage)
+# Vector Storage Mode (choose one):
+
+# Option 1: File-based (Serverless - Recommended for production)
+VECTOR_FILE_URL=https://xxx.vercel-storage.com/embeddings.json.gz
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxx  # For export script
+
+# Option 2: Supabase (Cloud - write-heavy workloads)
 SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_ANON_KEY=xxx
+SUPABASE_SERVICE_ROLE_KEY=xxx    # For vector operations
+SUPABASE_ANON_KEY=xxx            # For Q&A history only
+
+# Option 3: ChromaDB (Local development - fallback)
+CHROMA_HOST=localhost
+CHROMA_PORT=8000
 ```
+
+**Priority**: If `VECTOR_FILE_URL` is set, it takes precedence over Supabase and ChromaDB.
 
 ## Code Architecture
 

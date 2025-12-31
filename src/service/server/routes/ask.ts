@@ -4,6 +4,8 @@
 import { Router, type Request, type Response, type IRouter } from 'express';
 import { searchVectors } from '../../vector-store/searchVectors.js';
 import { searchVectorsSupabase } from '../../vector-store/searchVectorsSupabase.js';
+import { searchVectorsFromFile } from '../../vector-store/fileVectorStore.js';
+import { generateQueryEmbedding } from '../../vector-store/embeddingService.js';
 import { generateAnswer, generateAnswerWithUsage } from '../../qa/answer.js';
 import { saveQAHistory } from '../services/supabase.js';
 import { classifyQuestionWithConfidence } from '../../qa/classifier.js';
@@ -34,8 +36,13 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     try {
-        // Supabase 사용 여부 결정
-        const useSupabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) ? true : false;
+        // Vector Store 모드 결정 (우선순위: File > Supabase > ChromaDB)
+        const useFile = !!process.env.VECTOR_FILE_URL;
+        const useSupabase = !useFile && (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+        const storeType = useFile ? "File (Serverless)" :
+                         useSupabase ? "Supabase (Cloud)" :
+                         "ChromaDB (Local)";
 
         // 단계별 시간 측정을 위한 변수
         let classificationEndTime = 0;
@@ -50,12 +57,24 @@ router.post('/', async (req: Request, res: Response) => {
         let contexts;
         let collectionName = '';
 
-        if (useSupabase) {
-            // Supabase Vector Store 검색
-            console.log(`🔍 API 질의: "${question}" (Supabase Vector Store)`);
+        const owner = process.env.TARGET_REPO_OWNER || '';
+        const repo = process.env.TARGET_REPO_NAME || 'portfolio';
 
-            const owner = process.env.TARGET_REPO_OWNER || '';
-            const repo = process.env.TARGET_REPO_NAME || 'portfolio';
+        if (useFile) {
+            // 파일 기반 벡터 검색 (Serverless - 서버 비용 0원)
+            console.log(`🔍 API 질의: "${question}" (${storeType})`);
+
+            const queryEmbedding = await generateQueryEmbedding(question);
+            contexts = await searchVectorsFromFile(queryEmbedding, 5, {
+                threshold: 0.0,
+                filterMetadata: { owner, repo }
+            });
+
+            collectionName = `${owner}/${repo} (File)`;
+
+        } else if (useSupabase) {
+            // Supabase Vector Store 검색
+            console.log(`🔍 API 질의: "${question}" (${storeType})`);
 
             contexts = await searchVectorsSupabase(question, 5, {
                 threshold: 0.0,
@@ -63,12 +82,13 @@ router.post('/', async (req: Request, res: Response) => {
             });
 
             collectionName = `${owner}/${repo}`;
+
         } else {
             // ChromaDB 검색 (기존 로직)
             const repoName = process.env.TARGET_REPO_NAME || 'portfolio';
             collectionName = `${repoName}-vectors`;
 
-            console.log(`🔍 API 질의: "${question}" (ChromaDB)`);
+            console.log(`🔍 API 질의: "${question}" (${storeType})`);
             contexts = await searchVectors(collectionName, question, 5);
 
             // 기존 컬렉션 이름으로 fallback

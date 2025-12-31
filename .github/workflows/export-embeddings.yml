@@ -1,0 +1,58 @@
+name: Export Embeddings to File
+
+on:
+  # 임베딩 파이프라인 완료 후 자동 실행
+  workflow_run:
+    workflows: ["Polling-based Embedding Pipeline"]
+    types:
+      - completed
+  # 수동 실행
+  workflow_dispatch:
+  # 매일 자동 실행 (선택)
+  schedule:
+    - cron: '30 0 * * *'  # 매일 0:30 (파이프라인 완료 30분 후)
+
+jobs:
+  export-to-file:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Export embeddings from Supabase
+        run: pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          TARGET_REPO_OWNER: ${{ github.repository_owner }}
+          TARGET_REPO_NAME: ${{ github.event.repository.name }}
+
+      - name: Upload to GitHub Artifacts (백업)
+        uses: actions/upload-artifact@v4
+        with:
+          name: embeddings-${{ github.run_number }}
+          path: output/embeddings.json.gz
+          retention-days: 30
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Embeddings exported successfully!"
+          echo "📁 Uploaded to Vercel Blob Storage"
+          echo "🔗 Update VECTOR_FILE_URL in your deployment settings"
