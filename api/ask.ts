@@ -22,7 +22,35 @@ import { v4 as uuidv4 } from 'uuid';
  * - 메모리: 최대 1024MB
  * - 상태 저장 불가 (stateless)
  * - Cold Start: 첫 요청 시 100-500ms 지연
+ * 
+ * 처리 흐름:
+ * 1. 요청 파싱 및 검증
+ * 2. 질문 분류
+ * 3. 쿼리 임베딩 생성
+ * 4. 벡터 검색 (코드 + 히스토리)
+ * 5. Context 구성
+ * 6. LLM 답변 생성
+ * 7. 응답 반환
+ * 8. 히스토리 저장 (비동기)
  */
+
+// 타임아웃 설정 (안전 마진 포함)
+const TIMEOUT_MS = 50000; // 50초 (Hobby plan 기준 60초에서 10초 여유)
+
+/**
+ * 남은 시간 체크
+ */
+function checkTimeRemaining(startTime: number, maxTime: number = TIMEOUT_MS): number {
+  const elapsed = Date.now() - startTime;
+  const remaining = maxTime - elapsed;
+  
+  if (remaining < 5000) {
+    console.warn(`⚠️ 시간 부족: ${remaining}ms 남음`);
+  }
+  
+  return remaining;
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
@@ -75,39 +103,70 @@ export default async function handler(
 
     // 단계별 시간 측정
     let classificationEndTime = 0;
+    let embeddingEndTime = 0;
     let vectorSearchEndTime = 0;
     let llmGenerationEndTime = 0;
 
-    // 1. 질문 분류 (rule-based, 빠름)
+    // 시간 체크 (타임아웃 방지)
+    checkTimeRemaining(startTime);
+
+    // [1] 질문 분류 (rule-based, 빠름)
+    const classificationStart = Date.now();
     const { category, confidence } = classifyQuestionWithConfidence(question);
     classificationEndTime = Date.now();
+    const classificationTimeMs = classificationEndTime - classificationStart;
+    console.log(`   [1] 질문 분류 완료: ${classificationTimeMs}ms (카테고리: ${category})`);
 
-    // 2. 쿼리 임베딩 생성 (OpenAI API 호출)
+    // 시간 체크
+    const remainingAfterClassification = checkTimeRemaining(startTime);
+    if (remainingAfterClassification < 10000) {
+      console.warn(`⚠️ 시간 부족으로 인해 간소화된 처리로 전환`);
+    }
+
+    // [2] 쿼리 임베딩 생성 (OpenAI API 호출)
+    const embeddingStart = Date.now();
     const queryEmbedding = await generateQueryEmbedding(question);
+    embeddingEndTime = Date.now();
+    const embeddingTimeMs = embeddingEndTime - embeddingStart;
+    console.log(`   [2] 임베딩 생성 완료: ${embeddingTimeMs}ms`);
 
-    // 3. 벡터 검색 (파일 기반, 메모리 캐싱)
+    // 시간 체크
+    checkTimeRemaining(startTime);
+
+    // [3] 벡터 검색 (파일 기반, 메모리 캐싱)
     const owner = process.env.TARGET_REPO_OWNER || '';
     const repo = process.env.TARGET_REPO_NAME || 'portfolio';
 
+    const searchStart = Date.now();
     const contexts = await searchVectorsFromFile(queryEmbedding, 5, {
       threshold: 0.0,
       filterMetadata: { owner, repo },
       includeHistory: true,
-      historyWeight: 0.3
+      historyWeight: 0.3,
+      category  // 카테고리 기반 검색 모드
     });
-
     vectorSearchEndTime = Date.now();
-    console.log(`   → ${contexts.length}개 문서 검색됨`);
+    const vectorSearchTimeMs = vectorSearchEndTime - searchStart;
+    console.log(`   [3] 벡터 검색 완료: ${vectorSearchTimeMs}ms (${contexts.length}개 문서)`);
 
-    // 4. LLM 답변 생성 (OpenAI/Claude)
+    // 시간 체크
+    checkTimeRemaining(startTime);
+
+    // [4] LLM 답변 생성 (OpenAI/Claude)
+    const llmStart = Date.now();
     const { answer, usage } = await generateAnswerWithUsage(question, contexts);
     llmGenerationEndTime = Date.now();
+    const llmGenerationTimeMs = llmGenerationEndTime - llmStart;
+    console.log(`   [4] LLM 답변 생성 완료: ${llmGenerationTimeMs}ms`);
 
     // 단계별 시간 계산
-    const classificationTimeMs = classificationEndTime - startTime;
-    const vectorSearchTimeMs = vectorSearchEndTime - classificationEndTime;
-    const llmGenerationTimeMs = llmGenerationEndTime - vectorSearchEndTime;
     const responseTimeMs = Date.now() - startTime;
+    
+    // 최종 시간 체크
+    const finalRemaining = checkTimeRemaining(startTime);
+    if (finalRemaining < 0) {
+      console.error(`❌ 타임아웃 위험: ${Math.abs(finalRemaining)}ms 초과`);
+    }
 
     // 응답 상태 결정
     let status: 'success' | 'partial' | 'failed' = 'success';
@@ -171,10 +230,14 @@ export default async function handler(
       }
     });
 
-    // 5. Supabase에 이력 저장 (비동기, non-blocking)
-    const dbSaveStartTime = Date.now();
-    try {
-      await saveQAHistory({
+    // [5] 비동기 작업 시작 (Non-blocking - 응답 후 처리)
+    // 히스토리 저장은 Promise.all로 묶어서 병렬 처리
+    // 실패해도 API 응답은 정상적으로 반환
+    const asyncStartTime = Date.now();
+    
+    Promise.all([
+      // Supabase에 이력 저장
+      saveQAHistory({
         session_id: sessionId,
         question,
         question_summary: questionSummary,
@@ -192,15 +255,12 @@ export default async function handler(
         prompt_tokens: usage.promptTokens,
         completion_tokens: usage.completionTokens,
         embedding_tokens: 0,
-      });
-    } catch (dbError: any) {
-      console.warn('⚠️ Supabase 저장 실패:', dbError.message);
-    }
-    const dbSaveTimeMs = Date.now() - dbSaveStartTime;
-
-    // 6. 히스토리 벡터 추가 (비동기, non-blocking)
-    try {
-      await addQAHistoryToVectors({
+      }).catch((dbError: any) => {
+        console.warn('⚠️ Supabase 저장 실패:', dbError.message);
+      }),
+      
+      // 히스토리 벡터 추가
+      addQAHistoryToVectors({
         sessionId,
         question,
         answer,
@@ -212,14 +272,24 @@ export default async function handler(
         tokenUsage: usage.totalTokens,
         owner,
         repo
-      });
-    } catch (historyError: any) {
-      console.warn('⚠️ History vector 추가 실패:', historyError.message);
-      // 실패해도 API 응답은 정상적으로 반환
-    }
+      }).catch((historyError: any) => {
+        console.warn('⚠️ History vector 추가 실패:', historyError.message);
+      })
+    ]).catch((error: any) => {
+      console.warn('⚠️ 비동기 작업 실패:', error.message);
+      // 전체 실패해도 무시 (응답은 이미 반환됨)
+    });
+    
+    const asyncTimeMs = Date.now() - asyncStartTime;
 
     console.log(`✅ Serverless 응답 생성 완료 (${responseTimeMs}ms)`);
-    console.log(`   📊 단계별: 분류=${classificationTimeMs}ms, 검색=${vectorSearchTimeMs}ms, LLM=${llmGenerationTimeMs}ms, DB=${dbSaveTimeMs}ms`);
+    console.log(`   📊 단계별 시간:`);
+    console.log(`      - 분류: ${classificationTimeMs}ms`);
+    console.log(`      - 임베딩: ${embeddingTimeMs}ms`);
+    console.log(`      - 검색: ${vectorSearchTimeMs}ms`);
+    console.log(`      - LLM: ${llmGenerationTimeMs}ms`);
+    console.log(`      - 비동기 작업 시작: ${asyncTimeMs}ms`);
+    console.log(`      - 총 시간: ${responseTimeMs}ms`);
 
     // 6. 클라이언트 응답
     res.status(200).json({
@@ -234,9 +304,10 @@ export default async function handler(
 
       timings: {
         classification: classificationTimeMs,
+        embedding: embeddingTimeMs,
         vectorSearch: vectorSearchTimeMs,
         llmGeneration: llmGenerationTimeMs,
-        dbSave: dbSaveTimeMs,
+        asyncStart: asyncTimeMs,
         total: responseTimeMs,
       },
 
@@ -249,15 +320,33 @@ export default async function handler(
     });
 
   } catch (error: any) {
-    console.error('❌ Serverless 오류:', error.message);
+    const errorTime = Date.now() - startTime;
+    console.error(`❌ Serverless 오류 (${errorTime}ms):`, error.message);
+    
+    if (error.stack) {
+      console.error('스택 트레이스:', error.stack);
+    }
 
     // 타임아웃 에러 감지
     const isTimeout = error.message?.includes('timeout') ||
-                     error.code === 'FUNCTION_INVOCATION_TIMEOUT';
+                     error.message?.includes('Timeout') ||
+                     error.code === 'FUNCTION_INVOCATION_TIMEOUT' ||
+                     error.code === 'ETIMEDOUT';
 
-    res.status(isTimeout ? 504 : 500).json({
-      error: isTimeout ? 'Request timeout' : '답변 생성 중 오류가 발생했습니다.',
+    // 타임아웃이거나 시간 초과 시
+    if (isTimeout || errorTime >= TIMEOUT_MS) {
+      return res.status(504).json({
+        error: 'Request timeout',
+        message: '요청 처리 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.',
+        elapsedTime: errorTime
+      });
+    }
+
+    // 기타 에러
+    return res.status(500).json({
+      error: '답변 생성 중 오류가 발생했습니다.',
       message: error.message,
+      elapsedTime: errorTime
     });
   }
 }
