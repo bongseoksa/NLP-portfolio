@@ -128,6 +128,7 @@ export type SearchMode = "all" | "code" | "qa" | "mixed";
 // 메모리 캐시 (Lambda/Vercel 재사용)
 let cachedVectorFile: VectorFile | null = null;
 let cacheTimestamp: number = 0;
+let cachedETag: string | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
 
 /**
@@ -202,14 +203,32 @@ async function loadVectorFile(): Promise<VectorFile> {
                           "https://your-cdn.com/embeddings.json.gz";
 
     try {
-        const response = await fetch(vectorFileUrl, {
-            headers: {
-                'Accept-Encoding': 'gzip'
-            }
-        });
+        // HTTP 캐싱 헤더 활용 (조건부 요청)
+        const headers: HeadersInit = {
+            'Accept-Encoding': 'gzip'
+        };
+        
+        if (cachedETag) {
+            headers['If-None-Match'] = cachedETag;
+        }
+
+        const response = await fetch(vectorFileUrl, { headers });
+
+        // 304 Not Modified: 캐시된 파일 사용
+        if (response.status === 304 && cachedVectorFile) {
+            console.log("✅ Using cached file (304 Not Modified)");
+            cacheTimestamp = Date.now();
+            return cachedVectorFile;
+        }
 
         if (!response.ok) {
             throw new Error(`Failed to fetch vector file: ${response.statusText}`);
+        }
+
+        // ETag 저장 (다음 요청 시 사용)
+        const etag = response.headers.get('ETag');
+        if (etag) {
+            cachedETag = etag;
         }
 
         const buffer = Buffer.from(await response.arrayBuffer());
@@ -255,15 +274,32 @@ async function loadVectorFile(): Promise<VectorFile> {
 
 /**
  * 코사인 유사도 계산
+ * 
+ * 공식: cos(θ) = (A · B) / (||A|| × ||B||)
+ * 
+ * @param vecA 첫 번째 벡터 (쿼리 임베딩)
+ * @param vecB 두 번째 벡터 (저장된 임베딩)
+ * @returns 유사도 점수 (0 ~ 1, 1에 가까울수록 유사)
  */
 function cosineSimilarity(vecA: number[], vecB: number[]): number {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
+    // 벡터 차원 검증
+    if (vecA.length !== vecB.length) {
+        throw new Error(`Vector dimension mismatch: ${vecA.length} vs ${vecB.length}`);
+    }
 
+    if (vecA.length === 0) {
+        return 0;
+    }
+
+    let dotProduct = 0;  // 내적 (A · B)
+    let normA = 0;       // ||A||²
+    let normB = 0;       // ||B||²
+
+    // 벡터 연산 (단일 루프로 최적화)
     for (let i = 0; i < vecA.length; i++) {
         const a = vecA[i];
         const b = vecB[i];
+        
         if (a !== undefined && b !== undefined) {
             dotProduct += a * b;
             normA += a * a;
@@ -271,13 +307,17 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
         }
     }
 
+    // 분모 계산 (||A|| × ||B||)
     const denominator = Math.sqrt(normA) * Math.sqrt(normB);
 
-    if (denominator === 0) {
+    // 0으로 나누기 방지 및 안전성 체크
+    if (!isFinite(denominator) || denominator === 0) {
         return 0;
     }
 
-    return dotProduct / denominator;
+    // 코사인 유사도 반환 (결과 범위 검증)
+    const similarity = dotProduct / denominator;
+    return Math.max(-1, Math.min(1, similarity));
 }
 
 /**
@@ -300,6 +340,14 @@ function determineSearchMode(category?: string): SearchMode {
 
 /**
  * 파일 기반 벡터 검색 (브루트포스)
+ *
+ * 검색 처리 흐름:
+ * 1. 벡터 파일 로딩 (캐시 우선)
+ * 2. 검색 모드 결정 (code/qa/mixed/all)
+ * 3. 후보 벡터 선택 (인덱스 활용)
+ * 4. 메타데이터 필터링
+ * 5. 코사인 유사도 계산
+ * 6. Top-K 추출 및 정렬
  *
  * @param queryEmbedding 쿼리 임베딩 벡터 (이미 생성된 상태)
  * @param topK 상위 K개 결과 반환
@@ -328,41 +376,60 @@ export async function searchVectorsFromFile(
 
     console.log(`🔍 Searching vectors (mode: ${mode})...`);
     const searchStart = Date.now();
+    const loadStart = Date.now();
 
-    // 1. 벡터 파일 로딩
+    // 1. 벡터 파일 로딩 (캐시 우선)
     const vectorFile = await loadVectorFile();
+    const loadTime = Date.now() - loadStart;
 
     // 2. 검색 모드에 따라 후보 벡터 선택
     let candidates: Vector[];
+    let candidatesCount = 0;
 
     switch (mode) {
         case "code":
-            // 코드만 검색 (index 활용)
-            candidates = vectorFile.index.byType.code.map(i => vectorFile.vectors[i]);
+            // 코드만 검색 (index 활용 - O(k) vs O(n))
+            candidates = vectorFile.index.byType.code
+                .map(i => vectorFile.vectors[i])
+                .filter((v): v is Vector => v !== undefined);
+            candidatesCount = candidates.length;
+            console.log(`   → Using ${candidatesCount} code vectors (indexed)`);
             break;
 
         case "qa":
             // Q&A만 검색 (index 활용)
-            candidates = vectorFile.index.byType.qa.map(i => vectorFile.vectors[i]);
+            candidates = vectorFile.index.byType.qa
+                .map(i => vectorFile.vectors[i])
+                .filter((v): v is Vector => v !== undefined);
+            candidatesCount = candidates.length;
+            console.log(`   → Using ${candidatesCount} Q&A vectors (indexed)`);
             break;
 
         case "mixed":
-            // 코드 50% + Q&A 50% 혼합
-            const codeVectors = vectorFile.index.byType.code.map(i => vectorFile.vectors[i]);
-            const qaVectors = vectorFile.index.byType.qa.map(i => vectorFile.vectors[i]);
+            // 코드 50% + Q&A 50% 동시 검색
+            const codeVectors = vectorFile.index.byType.code
+                .map(i => vectorFile.vectors[i])
+                .filter((v): v is Vector => v !== undefined);
+            const qaVectors = vectorFile.index.byType.qa
+                .map(i => vectorFile.vectors[i])
+                .filter((v): v is Vector => v !== undefined);
 
             const codeK = Math.ceil(topK / 2);
             const qaK = Math.floor(topK / 2);
 
+            console.log(`   → Searching ${codeVectors.length} code + ${qaVectors.length} Q&A vectors`);
+
             const codeResults = searchInVectors(codeVectors, queryEmbedding, codeK, threshold, filterMetadata);
             const qaResults = searchInVectors(qaVectors, queryEmbedding, qaK, threshold, filterMetadata);
 
+            // 결과 병합 및 재정렬
             const mixedResults = [...codeResults, ...qaResults]
                 .sort((a, b) => b.score - a.score)
                 .slice(0, topK);
 
             const mixedTime = Date.now() - searchStart;
             console.log(`   → Found ${mixedResults.length} results (${codeResults.length} code + ${qaResults.length} qa) in ${mixedTime}ms`);
+            console.log(`   → Load: ${loadTime}ms, Search: ${mixedTime - loadTime}ms`);
 
             return mixedResults;
 
@@ -370,6 +437,8 @@ export async function searchVectorsFromFile(
         default:
             // 전체 검색 (스코어 기준 Top-K)
             candidates = vectorFile.vectors;
+            candidatesCount = candidates.length;
+            console.log(`   → Using all ${candidatesCount} vectors`);
             break;
     }
 
@@ -377,13 +446,20 @@ export async function searchVectorsFromFile(
     const results = searchInVectors(candidates, queryEmbedding, topK, threshold, filterMetadata);
 
     const searchTime = Date.now() - searchStart;
+    const actualSearchTime = searchTime - loadTime;
     console.log(`   → Found ${results.length} results in ${searchTime}ms`);
+    console.log(`   → Load: ${loadTime}ms, Search: ${actualSearchTime}ms, Candidates: ${candidatesCount}`);
 
     return results;
 }
 
 /**
  * 벡터 배열에서 검색 수행 (내부 헬퍼)
+ * 
+ * 최적화:
+ * - 메타데이터 필터링으로 후보 벡터 수 축소
+ * - 임계값 필터링으로 불필요한 계산 제거
+ * - 부분 정렬로 Top-K 추출 최적화 (대용량 벡터 세트)
  */
 function searchInVectors(
     vectors: Vector[],
@@ -392,6 +468,14 @@ function searchInVectors(
     threshold: number = 0.0,
     filterMetadata?: Record<string, any>
 ): SearchResult[] {
+    // 대용량 벡터 세트에서는 부분 정렬 최적화
+    const usePartialSort = vectors.length > 10000 && topK < vectors.length / 10;
+    
+    if (usePartialSort) {
+        return searchWithPartialSort(vectors, queryEmbedding, topK, threshold, filterMetadata);
+    }
+
+    // 작은 벡터 세트는 전체 정렬이 더 빠름
     const similarities: Array<{ id: string; score: number; data: Vector }> = [];
 
     for (const vec of vectors) {
@@ -406,6 +490,7 @@ function searchInVectors(
         // 코사인 유사도 계산
         const score = cosineSimilarity(queryEmbedding, vec.embedding);
 
+        // 임계값 이상인 경우만 추가
         if (score >= threshold) {
             similarities.push({ id: vec.id, score, data: vec });
         }
@@ -425,11 +510,92 @@ function searchInVectors(
 }
 
 /**
+ * 부분 정렬을 사용한 검색 (대용량 벡터 세트 최적화)
+ * 
+ * Top-K만 유지하면서 O(n log k) 시간 복잡도 달성
+ * 전체 정렬 O(n log n)보다 빠름
+ */
+function searchWithPartialSort(
+    vectors: Vector[],
+    queryEmbedding: number[],
+    topK: number,
+    threshold: number = 0.0,
+    filterMetadata?: Record<string, any>
+): SearchResult[] {
+    // Top-K 유지용 배열 (최소 힙처럼 동작)
+    const topKResults: Array<{ id: string; score: number; data: Vector }> = [];
+
+    for (const vec of vectors) {
+        // 메타데이터 필터 적용
+        if (filterMetadata) {
+            const matches = Object.entries(filterMetadata).every(
+                ([key, value]) => (vec.metadata as any)[key] === value
+            );
+            if (!matches) continue;
+        }
+
+        // 코사인 유사도 계산
+        const score = cosineSimilarity(queryEmbedding, vec.embedding);
+
+        // 임계값 체크
+        if (score < threshold) continue;
+
+        // Top-K 유지 로직
+        if (topKResults.length < topK) {
+            // 아직 K개 미만이면 추가
+            topKResults.push({ id: vec.id, score, data: vec });
+            
+            // 마지막에 추가된 경우만 정렬 (부분 정렬)
+            if (topKResults.length === topK) {
+                topKResults.sort((a, b) => a.score - b.score); // 최소 힙처럼 (오름차순)
+            }
+        } else {
+            // topKResults.length >= topK이므로 첫 번째 요소는 항상 존재
+            const firstResult = topKResults[0];
+            if (firstResult && score > firstResult.score) {
+                // 현재 최소값보다 크면 교체
+                topKResults[0] = { id: vec.id, score, data: vec };
+                
+                // 첫 번째 요소만 재정렬 (부분 정렬 최적화)
+                // 전체 정렬 대신 삽입 정렬 방식으로 최소값 찾기
+                let minIdx = 0;
+                for (let i = 1; i < topKResults.length; i++) {
+                    const current = topKResults[i];
+                    const min = topKResults[minIdx];
+                    if (current && min && current.score < min.score) {
+                        minIdx = i;
+                    }
+                }
+                if (minIdx !== 0) {
+                    const temp = topKResults[0];
+                    const minResult = topKResults[minIdx];
+                    if (temp && minResult) {
+                        topKResults[0] = minResult;
+                        topKResults[minIdx] = temp;
+                    }
+                }
+            }
+        }
+    }
+
+    // 내림차순으로 정렬하여 반환
+    topKResults.sort((a, b) => b.score - a.score);
+
+    return topKResults.map(result => ({
+        id: result.data.id,
+        content: result.data.content,
+        metadata: result.data.metadata,
+        score: result.score
+    }));
+}
+
+/**
  * 캐시 강제 초기화 (테스트/디버깅용)
  */
 export function clearVectorCache(): void {
     cachedVectorFile = null;
     cacheTimestamp = 0;
+    cachedETag = null;
     console.log("🗑️  Vector cache cleared");
 }
 
@@ -442,6 +608,7 @@ export function getCacheStatus(): {
     totalVectors: number;
     codeVectors: number;
     qaVectors: number;
+    etag: string | null;
 } {
     const age = cachedVectorFile ? Date.now() - cacheTimestamp : 0;
     return {
@@ -449,6 +616,76 @@ export function getCacheStatus(): {
         age,
         totalVectors: cachedVectorFile?.statistics.totalVectors || 0,
         codeVectors: cachedVectorFile?.statistics.codeVectors || 0,
-        qaVectors: cachedVectorFile?.statistics.qaVectors || 0
+        qaVectors: cachedVectorFile?.statistics.qaVectors || 0,
+        etag: cachedETag
     };
+}
+
+/**
+ * 검색 성능 메트릭 인터페이스
+ */
+export interface SearchMetrics {
+    fileLoadTime: number;      // 파일 로딩 시간 (ms)
+    searchTime: number;        // 검색 시간 (ms)
+    candidatesCount: number;    // 후보 벡터 수
+    resultsCount: number;       // 결과 수
+    cacheHit: boolean;          // 캐시 히트 여부
+    mode: SearchMode;           // 검색 모드
+}
+
+/**
+ * 검색 성능 메트릭 수집 (디버깅/모니터링용)
+ */
+export function collectSearchMetrics(
+    loadTime: number,
+    searchTime: number,
+    candidatesCount: number,
+    resultsCount: number,
+    cacheHit: boolean,
+    mode: SearchMode
+): SearchMetrics {
+    return {
+        fileLoadTime: loadTime,
+        searchTime,
+        candidatesCount,
+        resultsCount,
+        cacheHit,
+        mode
+    };
+}
+
+/**
+ * 배치 코사인 유사도 계산 (여러 벡터 동시 처리)
+ * 
+ * 최적화: 쿼리 벡터의 norm을 한 번만 계산하여 재사용
+ * 
+ * @param queryEmbedding 쿼리 임베딩 벡터
+ * @param candidateVectors 후보 벡터 배열
+ * @returns 유사도 점수 배열
+ */
+export function batchCosineSimilarity(
+    queryEmbedding: number[],
+    candidateVectors: number[][]
+): number[] {
+    // 쿼리 벡터의 norm 사전 계산 (한 번만 계산)
+    const queryNorm = Math.sqrt(
+        queryEmbedding.reduce((sum, val) => sum + val * val, 0)
+    );
+
+    return candidateVectors.map(candidate => {
+        let dotProduct = 0;
+        let candidateNorm = 0;
+
+        for (let i = 0; i < queryEmbedding.length; i++) {
+            const q = queryEmbedding[i];
+            const c = candidate[i];
+            if (q !== undefined && c !== undefined) {
+                dotProduct += q * c;
+                candidateNorm += c * c;
+            }
+        }
+
+        const denominator = queryNorm * Math.sqrt(candidateNorm);
+        return denominator === 0 ? 0 : dotProduct / denominator;
+    });
 }
