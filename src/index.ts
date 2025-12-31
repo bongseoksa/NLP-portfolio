@@ -1,11 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { runPipeline } from "./pipeline/runPipeline.js";
-import { runPollingPipeline } from "./pipeline/runPollingPipeline.js";
-import { searchVectors } from "./vector_store/searchVectors.js";
-import { searchVectorsSupabase } from "./vector_store/searchVectorsSupabase.js";
-import { generateAnswer } from "./qa/answer.js";
+import { runPipeline } from "./embedding-pipeline/pipelines/runPipeline.js";
+import { runPollingPipeline } from "./embedding-pipeline/pipelines/runPollingPipeline.js";
+import { searchVectors } from "./service/vector-store/searchVectors.js";
+import { searchVectorsSupabase } from "./service/vector-store/searchVectorsSupabase.js";
+import { generateAnswer } from "./service/qa/answer.js";
 import fs from "fs";
 
 const args = process.argv.slice(2);

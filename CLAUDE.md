@@ -384,3 +384,40 @@ Server status monitoring:
 - Read-only status cards for ChromaDB, API Server, Supabase
 - Environment information
 - Connection diagnostics
+
+## Update README.md
+When all tasks described in claude.md are fully completed, update the root-level README.md to reflect the latest project state.
+
+The README.md update must:
+
+Accurately summarize the completed work (no planned or in-progress items).
+
+Reflect any changes in architecture, setup steps, scripts, or workflows introduced by the completed tasks.
+
+Keep existing sections unless they are no longer valid, in which case revise or remove them explicitly.
+
+Ensure the content is consistent with the current repository structure and configuration.
+
+Do not update README.md before all tasks in claude.md are finished.
+
+## Documentation Structure Rule
+
+The repository must keep only the following reference documents at the root level:
+
+CLAUD.md
+
+README.md
+
+All other documentation files must be placed under the docs/ directory.
+
+Documentation rules:
+
+Do not create or keep any additional .md or documentation files in the root directory.
+
+Organize documents inside docs/ by purpose or structure (e.g. docs/architecture/, docs/api/, docs/setup/).
+
+Create new subdirectories under docs/ when necessary to maintain clear structural separation.
+
+Ensure each document is placed in the most appropriate subdirectory based on its content.
+
+If a document is mistakenly created outside docs/ (except CLAUD.md and README.md), it must be moved to the correct location under docs/.
