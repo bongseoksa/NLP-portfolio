@@ -11,6 +11,7 @@ import { generateQueryEmbedding } from '../src/service/vector-store/embeddingSer
 import { generateAnswerWithUsage } from '../src/service/qa/answer.js';
 import { saveQAHistory } from '../src/service/server/services/supabase.js';
 import { classifyQuestionWithConfidence } from '../src/service/qa/classifier.js';
+import { addQAHistoryToVectors } from '../src/service/vector-store/qaHistoryVectorStore.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -90,7 +91,9 @@ export default async function handler(
 
     const contexts = await searchVectorsFromFile(queryEmbedding, 5, {
       threshold: 0.0,
-      filterMetadata: { owner, repo }
+      filterMetadata: { owner, repo },
+      includeHistory: true,
+      historyWeight: 0.3
     });
 
     vectorSearchEndTime = Date.now();
@@ -194,6 +197,26 @@ export default async function handler(
       console.warn('⚠️ Supabase 저장 실패:', dbError.message);
     }
     const dbSaveTimeMs = Date.now() - dbSaveStartTime;
+
+    // 6. 히스토리 벡터 추가 (비동기, non-blocking)
+    try {
+      await addQAHistoryToVectors({
+        sessionId,
+        question,
+        answer,
+        category,
+        categoryConfidence: confidence,
+        sources: sources.map(s => s.commitHash || s.filePath || ''),
+        status,
+        responseTimeMs,
+        tokenUsage: usage.totalTokens,
+        owner,
+        repo
+      });
+    } catch (historyError: any) {
+      console.warn('⚠️ History vector 추가 실패:', historyError.message);
+      // 실패해도 API 응답은 정상적으로 반환
+    }
 
     console.log(`✅ Serverless 응답 생성 완료 (${responseTimeMs}ms)`);
     console.log(`   📊 단계별: 분류=${classificationTimeMs}ms, 검색=${vectorSearchTimeMs}ms, LLM=${llmGenerationTimeMs}ms, DB=${dbSaveTimeMs}ms`);

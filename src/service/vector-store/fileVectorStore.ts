@@ -362,19 +362,23 @@ export async function searchVectorsFromFile(
         mode?: SearchMode;
         category?: string;
         filterMetadata?: Record<string, any>;
+        includeHistory?: boolean;
+        historyWeight?: number;
     }
 ): Promise<SearchResult[]> {
     const {
         threshold = 0.0,
         mode: explicitMode,
         category,
-        filterMetadata
+        filterMetadata,
+        includeHistory = true,
+        historyWeight = 0.3
     } = options || {};
 
     // 검색 모드 결정 (명시적 > 카테고리 기반 > 기본값)
     const mode = explicitMode || determineSearchMode(category) || "all";
 
-    console.log(`🔍 Searching vectors (mode: ${mode})...`);
+    console.log(`🔍 Searching vectors (mode: ${mode}, history: ${includeHistory})...`);
     const searchStart = Date.now();
     const loadStart = Date.now();
 
@@ -443,7 +447,52 @@ export async function searchVectorsFromFile(
     }
 
     // 3. 유사도 계산 및 필터링
-    const results = searchInVectors(candidates, queryEmbedding, topK, threshold, filterMetadata);
+    let results = searchInVectors(candidates, queryEmbedding, topK, threshold, filterMetadata);
+
+    // 4. 히스토리 벡터 검색 (선택적)
+    if (includeHistory && mode !== "code") {
+        try {
+            const { searchHistoryVectors } = await import("./qaHistoryVectorStore.js");
+            const historyTopK = Math.ceil(topK * historyWeight);
+            const codeTopK = Math.floor(topK * (1 - historyWeight));
+
+            // 코드 결과 조정
+            results = results.slice(0, codeTopK);
+
+            // 히스토리 검색
+            const historyOptions: {
+                threshold?: number;
+                category?: string;
+                sessionId?: string;
+            } = { threshold };
+            if (category) {
+                historyOptions.category = category;
+            }
+            if (filterMetadata?.sessionId) {
+                historyOptions.sessionId = filterMetadata.sessionId as string;
+            }
+            const historyResults = await searchHistoryVectors(queryEmbedding, historyTopK, historyOptions);
+
+            // 결과 병합 및 재정렬
+            const allResults = [
+                ...results,
+                ...historyResults.map(h => ({
+                    id: h.id,
+                    content: h.content,
+                    metadata: h.metadata,
+                    score: h.score
+                }))
+            ]
+                .sort((a, b) => b.score - a.score)
+                .slice(0, topK);
+
+            results = allResults;
+            console.log(`   → Found ${results.length} results (${codeTopK} code + ${historyResults.length} history)`);
+        } catch (error: any) {
+            console.warn("⚠️  History search failed:", error.message);
+            // 히스토리 검색 실패해도 코드 결과는 반환
+        }
+    }
 
     const searchTime = Date.now() - searchStart;
     const actualSearchTime = searchTime - loadTime;
