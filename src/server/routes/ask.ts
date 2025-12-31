@@ -3,6 +3,7 @@
  */
 import { Router, type Request, type Response, type IRouter } from 'express';
 import { searchVectors } from '../../vector_store/searchVectors.js';
+import { searchVectorsSupabase } from '../../vector_store/searchVectorsSupabase.js';
 import { generateAnswer, generateAnswerWithUsage } from '../../qa/answer.js';
 import { saveQAHistory } from '../services/supabase.js';
 import { classifyQuestionWithConfidence } from '../../qa/classifier.js';
@@ -34,6 +35,9 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     try {
+        // Supabase 사용 여부 결정
+        const useSupabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) ? true : false;
+
         // 단계별 시간 측정을 위한 변수
         let classificationEndTime = 0;
         let vectorSearchEndTime = 0;
@@ -44,24 +48,42 @@ router.post('/', async (req: Request, res: Response) => {
         classificationEndTime = Date.now();
         console.log(`📂 질문 분류: ${category} (신뢰도: ${confidence})`);
 
-        const repoName = process.env.TARGET_REPO_NAME || 'portfolio';
-        // 모든 타입(commit, diff, file)이 저장된 컬렉션
-        // 기존 컬렉션 이름과의 호환성을 위해 두 가지 모두 시도
-        let collectionName = `${repoName}-vectors`;
-        let contexts = await searchVectors(collectionName, question, 5);
+        let contexts;
+        let collectionName = '';
 
-        // 기존 컬렉션 이름으로 fallback
-        if (contexts.length === 0) {
-            console.log(`   → ${collectionName} 컬렉션이 없어 기존 컬렉션 시도 중...`);
-            collectionName = `${repoName}-commits`;
+        if (useSupabase) {
+            // Supabase Vector Store 검색
+            console.log(`🔍 API 질의: "${question}" (Supabase Vector Store)`);
+
+            const owner = process.env.TARGET_REPO_OWNER || '';
+            const repo = process.env.TARGET_REPO_NAME || 'portfolio';
+
+            contexts = await searchVectorsSupabase(question, 5, {
+                threshold: 0.0,
+                filterMetadata: { owner, repo }
+            });
+
+            collectionName = `${owner}/${repo}`;
+        } else {
+            // ChromaDB 검색 (기존 로직)
+            const repoName = process.env.TARGET_REPO_NAME || 'portfolio';
+            collectionName = `${repoName}-vectors`;
+
+            console.log(`🔍 API 질의: "${question}" (ChromaDB)`);
             contexts = await searchVectors(collectionName, question, 5);
+
+            // 기존 컬렉션 이름으로 fallback
+            if (contexts.length === 0) {
+                console.log(`   → ${collectionName} 컬렉션이 없어 기존 컬렉션 시도 중...`);
+                collectionName = `${repoName}-commits`;
+                contexts = await searchVectors(collectionName, question, 5);
+            }
         }
 
         vectorSearchEndTime = Date.now();
-        console.log(`🔍 API 질의: "${question}"`);
 
         // 2. 벡터 검색 (위에서 이미 수행됨)
-        console.log(`   → ${contexts.length}개 문서 검색됨 (컬렉션: ${collectionName})`);
+        console.log(`   → ${contexts.length}개 문서 검색됨 (저장소: ${collectionName})`);
 
         // 3. 답변 생성 (토큰 사용량 포함)
         const { answer, usage } = await generateAnswerWithUsage(question, contexts);

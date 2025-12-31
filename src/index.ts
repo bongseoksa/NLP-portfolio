@@ -4,6 +4,7 @@ dotenv.config();
 import { runPipeline } from "./pipeline/runPipeline.js";
 import { runPollingPipeline } from "./pipeline/runPollingPipeline.js";
 import { searchVectors } from "./vector_store/searchVectors.js";
+import { searchVectorsSupabase } from "./vector_store/searchVectorsSupabase.js";
 import { generateAnswer } from "./qa/answer.js";
 import fs from "fs";
 
@@ -84,14 +85,30 @@ async function main() {
             return;
         }
 
-        const repoName = process.env.TARGET_REPO_NAME || "portfolio";
-        const collectionName = `${repoName}-vectors`;
+        // Supabase 사용 여부 결정
+        const useSupabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) ? true : false;
 
-        console.log(`🔍 Searching in collection: ${collectionName}`);
+        console.log(`📊 Vector Store: ${useSupabase ? "Supabase (Cloud)" : "ChromaDB (Local)"}`);
         console.log(`❓ Question: ${query}\n`);
 
         console.log("... 검색 중 (Retrieving contexts) ...");
-        const context = await searchVectors(collectionName, query, 5);
+
+        let context;
+        if (useSupabase) {
+            const owner = process.env.TARGET_REPO_OWNER || '';
+            const repo = process.env.TARGET_REPO_NAME || 'portfolio';
+
+            context = await searchVectorsSupabase(query, 5, {
+                threshold: 0.0,
+                filterMetadata: { owner, repo }
+            });
+        } else {
+            const repoName = process.env.TARGET_REPO_NAME || "portfolio";
+            const collectionName = `${repoName}-vectors`;
+
+            console.log(`🔍 Searching in collection: ${collectionName}`);
+            context = await searchVectors(collectionName, query, 5);
+        }
 
         console.log(`   → Found ${context.length} relevant documents.\n`);
 

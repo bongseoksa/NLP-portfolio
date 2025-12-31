@@ -1,9 +1,12 @@
 import { RepositoryPoller } from "../services/repositoryPoller.js";
+import { RepositoryPollerSupabase } from "../services/repositoryPollerSupabase.js";
 import { runPipeline } from "./runPipeline.js";
 
 export interface PollingPipelineOptions {
     /** 모든 레포지토리 강제 재임베딩 (commit 상태 무시) */
     reset?: boolean;
+    /** Supabase Vector Store 사용 (환경 변수로도 제어 가능) */
+    useSupabase?: boolean;
 }
 
 /**
@@ -20,17 +23,26 @@ export interface PollingPipelineOptions {
  * - --reset 옵션으로 강제 재임베딩 가능
  */
 export async function runPollingPipeline(options: PollingPipelineOptions = {}) {
-    const { reset = false } = options;
+    const { reset = false, useSupabase: optionUseSupabase } = options;
+
+    // Supabase 사용 여부 결정: 옵션 > 환경 변수
+    const useSupabase = optionUseSupabase ?? (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) ? true : false;
 
     console.log("🔄 Polling-based Embedding Pipeline\n");
+    console.log(`📊 Vector Store: ${useSupabase ? "Supabase (Cloud)" : "ChromaDB (Local)"}`);
+    console.log(`📊 Commit State: ${useSupabase ? "Supabase Table" : "Local File (commit-state.json)"}\n`);
 
     // 1. RepositoryPoller 초기화
-    const poller = new RepositoryPoller();
+    const poller = useSupabase ? new RepositoryPollerSupabase() : new RepositoryPoller();
 
     // --reset 옵션: 모든 commit 상태 초기화
     if (reset) {
         console.log("🔄 Reset mode: Clearing all commit states...\n");
-        poller.resetState();
+        if (!useSupabase) {
+            poller.resetState();
+        } else {
+            console.warn("⚠️  Reset mode in Supabase: commit_states table must be manually cleared if needed.\n");
+        }
     }
 
     // 2. 모든 대상 레포지토리 폴링
@@ -76,11 +88,18 @@ export async function runPollingPipeline(options: PollingPipelineOptions = {}) {
                     owner: result.owner,
                     repo: result.repo
                 },
-                reset: reset // ChromaDB collection reset 여부
+                reset: reset, // Vector collection reset 여부
+                useSupabase: useSupabase // Supabase 사용 여부 전달
             });
 
             // 성공 시 commit 상태 업데이트
-            poller.markAsProcessed(result);
+            if (useSupabase) {
+                // Supabase는 비동기 업데이트
+                await (poller as RepositoryPollerSupabase).markAsProcessed(result);
+            } else {
+                // File-based는 동기 업데이트
+                (poller as RepositoryPoller).markAsProcessed(result);
+            }
             successCount++;
 
             console.log(`\n✅ Successfully processed ${result.id}\n`);

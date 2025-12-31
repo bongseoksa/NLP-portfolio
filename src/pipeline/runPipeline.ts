@@ -7,6 +7,8 @@ import type { PipelineOutput } from "../models/PipelineOutput.js";
 import { refineData } from "./steps/preprocessText.js";
 import { generateEmbeddings } from "../nlp/embedding/openaiEmbedding.js";
 import { saveVectors } from "../vector_store/saveVectors.js";
+import { saveVectorsSupabase } from "../vector_store/saveVectorsSupabase.js";
+import type { EmbeddingItem } from "../models/EmbeddingItem.js";
 
 export interface PipelineOptions {
     /** 기존 벡터 컬렉션을 삭제하고 새로 생성 (임베딩 차원 변경 시 필요) */
@@ -15,6 +17,8 @@ export interface PipelineOptions {
     skipFetch?: boolean;
     /** 특정 레포지토리 지정 (owner/repo 형식) */
     targetRepo?: { owner: string; repo: string };
+    /** Supabase Vector Store 사용 (환경 변수로도 제어 가능) */
+    useSupabase?: boolean;
 }
 
 /**
@@ -27,9 +31,14 @@ export interface PipelineOptions {
  * 6. 벡터 저장 (Chroma)
  */
 export async function runPipeline(options: PipelineOptions = {}) {
-    const { reset = false, skipFetch = false, targetRepo } = options;
+    const { reset = false, skipFetch = false, targetRepo, useSupabase: optionUseSupabase } = options;
+
+    // Supabase 사용 여부 결정: 옵션 > 환경 변수
+    const useSupabase = optionUseSupabase ?? (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) ? true : false;
 
     console.log("🚀 Pipeline started\n");
+    console.log(`📊 Vector Store: ${useSupabase ? "Supabase (Cloud)" : "ChromaDB (Local)"}`);
+
     if (reset) {
         console.log("🔄 Reset mode enabled: Vector collection will be recreated.\n");
     }
@@ -143,14 +152,35 @@ export async function runPipeline(options: PipelineOptions = {}) {
 
         console.log(`   → Generated ${embeddings.length} vectors.`);
 
-        console.log("\n📌 Saving to ChromaDB...");
-        // Collection name: 모든 타입(commit, diff, file)을 하나의 컬렉션에 저장
-        // 메타데이터의 type 필드로 구분됨
-        await saveVectors(`${repo}-vectors`, items, embeddings, reset);
+        // 벡터 저장 (Supabase or ChromaDB)
+        if (useSupabase) {
+            console.log("\n📌 Saving to Supabase Vector Store...");
+
+            // EmbeddingItem 형식으로 변환
+            const embeddingItems: EmbeddingItem[] = items.map((item: any, idx: number) => ({
+                id: item.id,
+                content: item.content,
+                embedding: embeddings[idx] || [],
+                metadata: {
+                    ...item.metadata,
+                    owner,
+                    repo
+                }
+            }));
+
+            await saveVectorsSupabase(embeddingItems, { reset, owner, repo });
+        } else {
+            console.log("\n📌 Saving to ChromaDB...");
+            // Collection name: 모든 타입(commit, diff, file)을 하나의 컬렉션에 저장
+            // 메타데이터의 type 필드로 구분됨
+            await saveVectors(`${repo}-vectors`, items, embeddings, reset);
+        }
 
     } catch (err: any) {
         console.error("❌ Embedding/Vector Store Failed:", err.message);
-        console.error("   (Is ChromaDB running? 'pnpm run chroma:start')");
+        if (!useSupabase) {
+            console.error("   (Is ChromaDB running? 'pnpm run chroma:start')");
+        }
     }
 
     console.log("\n🎉 Pipeline finished!");
