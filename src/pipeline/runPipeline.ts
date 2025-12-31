@@ -13,6 +13,8 @@ export interface PipelineOptions {
     reset?: boolean;
     /** 데이터 수집 단계 건너뛰기 (재임베딩만 수행) */
     skipFetch?: boolean;
+    /** 특정 레포지토리 지정 (owner/repo 형식) */
+    targetRepo?: { owner: string; repo: string };
 }
 
 /**
@@ -25,20 +27,23 @@ export interface PipelineOptions {
  * 6. 벡터 저장 (Chroma)
  */
 export async function runPipeline(options: PipelineOptions = {}) {
-    const { reset = false, skipFetch = false } = options;
-    
+    const { reset = false, skipFetch = false, targetRepo } = options;
+
     console.log("🚀 Pipeline started\n");
     if (reset) {
         console.log("🔄 Reset mode enabled: Vector collection will be recreated.\n");
     }
 
-    const owner = process.env.TARGET_REPO_OWNER!;
-    const repo = process.env.TARGET_REPO_NAME!;
+    // targetRepo 옵션이 있으면 사용, 없으면 환경 변수 사용 (하위 호환성)
+    const owner = targetRepo?.owner || process.env.TARGET_REPO_OWNER!;
+    const repo = targetRepo?.repo || process.env.TARGET_REPO_NAME!;
 
     if (!owner || !repo) {
-        console.error("❌ TARGET_REPO_OWNER / TARGET_REPO_NAME 환경 변수가 필요합니다.");
+        console.error("❌ TARGET_REPO_OWNER / TARGET_REPO_NAME 환경 변수 또는 targetRepo 옵션이 필요합니다.");
         return;
     }
+
+    console.log(`📦 Target repository: ${owner}/${repo}`);
 
     const outputDir = path.join(process.cwd(), "output");
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);

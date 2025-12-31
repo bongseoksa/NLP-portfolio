@@ -11,6 +11,7 @@ npm-debug.log*
 # Output & Data
 output/
 chroma_data/
+commit-state.json
 
 # Dependencies
 .chroma_venv/
