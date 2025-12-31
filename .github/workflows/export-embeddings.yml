@@ -12,30 +12,67 @@ on:
   schedule:
     - cron: '30 0 * * *'  # 매일 0:30 (파이프라인 완료 30분 후)
 
+# 동시 실행 방지
+concurrency:
+  group: export-embeddings
+  cancel-in-progress: false  # 실행 중이면 대기
+
 jobs:
   export-to-file:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+      - name: Cache dependencies
+        uses: actions/cache@v3
         with:
-          version: 8
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      # Supabase 연결 확인
+      - name: Verify Supabase connection
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 2
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: |
+            response=$(curl -s -w "%{http_code}" -o /dev/null \
+              -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              "${{ secrets.SUPABASE_URL }}/rest/v1/embeddings?select=count")
+
+            if [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
+              echo "✅ Supabase connection OK"
+            else
+              echo "❌ Supabase connection failed (HTTP $response)"
+              exit 1
+            fi
 
       - name: Export embeddings from Supabase
-        run: pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel
+        id: export
+        run: |
+          pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel 2>&1 | tee export.log
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -43,16 +80,108 @@ jobs:
           TARGET_REPO_OWNER: ${{ github.repository_owner }}
           TARGET_REPO_NAME: ${{ github.event.repository.name }}
 
+      # 파일 검증
+      - name: Verify export file
+        id: verify
+        run: |
+          if [ ! -f "output/embeddings.json.gz" ]; then
+            echo "❌ Export file not found"
+            exit 1
+          fi
+
+          # 파일 크기 확인 (최소 1KB)
+          size=$(stat -c%s "output/embeddings.json.gz" 2>/dev/null || stat -f%z "output/embeddings.json.gz")
+          if [ "$size" -lt 1024 ]; then
+            echo "❌ Export file too small ($size bytes)"
+            exit 1
+          fi
+
+          # JSON 구조 검증
+          count=$(zcat output/embeddings.json.gz | jq '.embeddings | length' || echo "0")
+
+          echo "file_size=$size" >> $GITHUB_OUTPUT
+          echo "embedding_count=$count" >> $GITHUB_OUTPUT
+
+          echo "📊 Export Statistics:"
+          echo "   File size: $(numfmt --to=iec $size 2>/dev/null || echo "$size bytes")"
+          echo "   Embeddings: $count"
+
       - name: Upload to GitHub Artifacts (백업)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: embeddings-${{ github.run_number }}
           path: output/embeddings.json.gz
           retention-days: 30
+        continue-on-error: true
+
+      # 내보내기 로그 저장 (실패 시)
+      - name: Upload export logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-logs-${{ github.run_number }}
+          path: export.log
+          retention-days: 7
+        continue-on-error: true
+
+      # 배포 검증 (Vercel Blob 확인)
+      - name: Verify deployment
+        if: success()
+        run: |
+          echo "⏳ Waiting for CDN propagation (10 seconds)..."
+          sleep 10
+
+          # VECTOR_FILE_URL이 환경 변수에 있으면 검증
+          if [ -n "${{ secrets.VECTOR_FILE_URL }}" ]; then
+            echo "🔍 Verifying CDN deployment..."
+
+            response=$(curl -L -s -w "%{http_code}" -o /tmp/test.json.gz "${{ secrets.VECTOR_FILE_URL }}")
+
+            if [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
+              echo "✅ CDN deployment verified (HTTP $response)"
+
+              # 파일 무결성 확인
+              if zcat /tmp/test.json.gz | jq '.embeddings[0]' > /dev/null 2>&1; then
+                echo "✅ JSON structure valid"
+              else
+                echo "⚠️  JSON structure invalid or file corrupted"
+              fi
+            else
+              echo "⚠️  CDN verification failed (HTTP $response)"
+            fi
+          else
+            echo "⚠️  VECTOR_FILE_URL not set, skipping CDN verification"
+          fi
+
+      # 결과 요약
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 📦 Export Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **File Size**: ${{ steps.verify.outputs.file_size }} bytes" >> $GITHUB_STEP_SUMMARY
+          echo "- **Embeddings**: ${{ steps.verify.outputs.embedding_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Set \`VECTOR_FILE_URL\` in production environment" >> $GITHUB_STEP_SUMMARY
+          echo "2. Deploy service with new URL" >> $GITHUB_STEP_SUMMARY
+          echo "3. Test: \`pnpm run ask \"test question\"\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Notify success
         if: success()
         run: |
           echo "✅ Embeddings exported successfully!"
+          echo "📊 Statistics:"
+          echo "   - Embeddings: ${{ steps.verify.outputs.embedding_count }}"
+          echo "   - File size: ${{ steps.verify.outputs.file_size }} bytes"
           echo "📁 Uploaded to Vercel Blob Storage"
           echo "🔗 Update VECTOR_FILE_URL in your deployment settings"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Export failed. Check logs for details."
+          echo "📝 Download export-logs-${{ github.run_number }} artifact for debugging"
+          exit 1
