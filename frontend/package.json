@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "panda codegen && vite",
     "build": "panda codegen && tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "panda": "panda codegen"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",

@@ -1,0 +1,205 @@
+name: Polling-based Embedding Pipeline
+
+# 목적: 주기적으로 target-repos.json의 저장소들을 폴링하여 새로운 커밋 감지 및 임베딩 생성
+# 실행 주기: 매주 토요일 18:00 UTC (일요일 03:00 KST)
+# 동작:
+#   1. target-repos.json 기반 다중 레포지토리 변경 감지
+#   2. 새 커밋만 임베딩 생성 (증분 업데이트)
+#   3. Supabase pgvector에 저장
+#   4. commit-state.json 업데이트 (다음 실행 시 중복 방지)
+# 특징: Idempotent (동일 커밋 재실행 시 자동 skip)
+
+on:
+  # 매주 토요일 18:00 UTC (일요일 03:00 KST)
+  schedule:
+    - cron: "0 18 * * 6"
+
+  # 수동 실행 허용 (GitHub Actions UI에서 실행 가능)
+  workflow_dispatch:
+    inputs:
+      reset:
+        description: "Reset all commit states and force re-embed (--reset)"
+        required: false
+        type: boolean
+        default: false
+
+# 동시 실행 방지 (비용 절감 + 데이터 무결성)
+concurrency:
+  group: embedding-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  polling-embed:
+    name: Poll and Embed Repositories
+    runs-on: ubuntu-latest
+    timeout-minutes: 300  # 5시간 제한 (6시간 전 종료)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 전체 히스토리 (증분 업데이트 위해)
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 이전 실행 상태 복원 (증분 업데이트의 핵심)
+      - name: Download previous commit state
+        uses: actions/download-artifact@v4
+        with:
+          name: commit-state
+          path: .
+        continue-on-error: true  # 첫 실행 시 없을 수 있음
+
+      - name: Verify commit state
+        run: |
+          if [ -f "commit-state.json" ]; then
+            echo "✅ Found previous commit state"
+            cat commit-state.json | jq '.repositories | keys' || echo "Invalid JSON, will create new state"
+          else
+            echo "⚠️  No previous state, starting fresh"
+            echo '{"repositories":{},"lastUpdated":"'$(date -Iseconds)'"}' > commit-state.json
+          fi
+
+      # Supabase 연결 확인 (retry 3회)
+      - name: Verify Supabase connection
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 2
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: |
+            response=$(curl -s -w "%{http_code}" -o /dev/null \
+              -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              "${{ secrets.SUPABASE_URL }}/rest/v1/")
+
+            if [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
+              echo "✅ Supabase connection OK (HTTP $response)"
+            else
+              echo "❌ Supabase connection failed (HTTP $response)"
+              exit 1
+            fi
+
+      - name: Run polling pipeline (normal mode)
+        if: ${{ !inputs.reset }}
+        id: run_pipeline
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          pnpm run dev 2>&1 | tee pipeline.log
+          echo "Pipeline execution completed"
+
+      - name: Run polling pipeline (reset mode)
+        if: ${{ inputs.reset }}
+        id: run_pipeline_reset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          pnpm run dev --reset 2>&1 | tee pipeline.log
+          echo "Pipeline execution completed"
+
+      # 실행 결과 파싱
+      - name: Parse execution results
+        if: always()
+        id: results
+        run: |
+          if [ -f "pipeline.log" ]; then
+            success=$(grep -c "✅ Successfully processed" pipeline.log || echo "0")
+            failure=$(grep -c "❌ Failed to process" pipeline.log || echo "0")
+
+            echo "success_count=$success" >> $GITHUB_OUTPUT
+            echo "failure_count=$failure" >> $GITHUB_OUTPUT
+
+            echo "📊 Execution Results:"
+            echo "   Success: $success"
+            echo "   Failure: $failure"
+          else
+            echo "⚠️  No pipeline log found"
+            echo "success_count=0" >> $GITHUB_OUTPUT
+            echo "failure_count=0" >> $GITHUB_OUTPUT
+          fi
+
+      # 상태 저장 (실패해도 저장 - 다음 실행 시 복원)
+      - name: Upload commit state artifact
+        if: always()
+        id: upload_state
+        uses: actions/upload-artifact@v4
+        with:
+          name: commit-state
+          path: commit-state.json
+          retention-days: 90
+        continue-on-error: true
+
+      # Artifact 실패 시 Git으로 fallback
+      - name: Fallback commit state to repository
+        if: steps.upload_state.outcome == 'failure'
+        run: |
+          echo "⚠️  Artifact upload failed, committing to repository"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add commit-state.json
+          git commit -m "chore: Update commit state [skip ci]" || echo "No changes to commit"
+          git push || echo "Push failed, state will be lost"
+
+      - name: Upload refined data artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: refined-data-${{ github.run_number }}
+          path: output/refined_data.json
+          retention-days: 30
+        continue-on-error: true
+
+      # 실행 로그 저장 (실패 시 디버깅용)
+      - name: Upload pipeline logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-logs-${{ github.run_number }}
+          path: pipeline.log
+          retention-days: 7
+        continue-on-error: true
+
+      # 결과 요약
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🚀 Embedding Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Success**: ${{ steps.results.outputs.success_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Failure**: ${{ steps.results.outputs.failure_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Polling pipeline failed. Check logs for details."
+          echo "📊 Results: Success=${{ steps.results.outputs.success_count }}, Failure=${{ steps.results.outputs.failure_count }}"
+          exit 1

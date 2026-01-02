@@ -1,0 +1,201 @@
+name: Export Embeddings to File
+
+# 목적: Supabase에 저장된 벡터를 로컬 파일로 내보내기 (Git 커밋)
+# 실행 트리거:
+#   - polling-embed.yml 완료 후 자동 실행
+#   - 매일 0:30 UTC (스케줄)
+#   - 수동 실행 가능
+# 동작:
+#   1. Supabase에서 모든 임베딩 조회
+#   2. embeddings.json.gz 압축 파일 생성
+#   3. output/ 디렉토리에 저장
+#   4. Git 커밋 및 푸시
+# 목적: CDN 비용 없이 GitHub에서 직접 파일 제공
+
+on:
+  # 임베딩 파이프라인 완료 후 자동 실행
+  workflow_run:
+    workflows: ["Polling-based Embedding Pipeline"]
+    types:
+      - completed
+  # 수동 실행
+  workflow_dispatch:
+  # 매일 자동 실행 (선택)
+  schedule:
+    - cron: '30 0 * * *'  # 매일 0:30 (파이프라인 완료 30분 후)
+
+# 동시 실행 방지
+concurrency:
+  group: export-embeddings
+  cancel-in-progress: false  # 실행 중이면 대기
+
+jobs:
+  export-to-file:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Supabase 연결 확인
+      - name: Verify Supabase connection
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 2
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: |
+            response=$(curl -s -w "%{http_code}" -o /dev/null \
+              -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              "${{ secrets.SUPABASE_URL }}/rest/v1/embeddings?select=count")
+
+            if [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
+              echo "✅ Supabase connection OK"
+            else
+              echo "❌ Supabase connection failed (HTTP $response)"
+              exit 1
+            fi
+
+      - name: Export embeddings from Supabase
+        id: export
+        run: |
+          pnpm tsx scripts/export-embeddings.ts --source supabase --output output/embeddings.json.gz 2>&1 | tee export.log
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TARGET_REPO_OWNER: ${{ github.repository_owner }}
+          TARGET_REPO_NAME: ${{ github.event.repository.name }}
+
+      # 파일 검증
+      - name: Verify export file
+        id: verify
+        run: |
+          if [ ! -f "output/embeddings.json.gz" ]; then
+            echo "❌ Export file not found"
+            exit 1
+          fi
+
+          # 파일 크기 확인 (최소 1KB)
+          size=$(stat -c%s "output/embeddings.json.gz" 2>/dev/null || stat -f%z "output/embeddings.json.gz")
+          if [ "$size" -lt 1024 ]; then
+            echo "❌ Export file too small ($size bytes)"
+            exit 1
+          fi
+
+          # JSON 구조 검증
+          count=$(zcat output/embeddings.json.gz | jq '.embeddings | length' || echo "0")
+
+          echo "file_size=$size" >> $GITHUB_OUTPUT
+          echo "embedding_count=$count" >> $GITHUB_OUTPUT
+
+          echo "📊 Export Statistics:"
+          echo "   File size: $(numfmt --to=iec $size 2>/dev/null || echo "$size bytes")"
+          echo "   Embeddings: $count"
+
+      # Git 커밋 및 푸시
+      - name: Commit embeddings file
+        if: success()
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 변경사항 확인
+          git add output/embeddings.json.gz
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chore: Update embeddings [skip ci]
+
+            - Generated: Run #${{ github.run_number }}
+            - Embeddings: ${{ steps.verify.outputs.embedding_count }}
+            - File size: ${{ steps.verify.outputs.file_size }} bytes
+            - Triggered by: ${{ github.event_name }}"
+
+            git push
+            echo "✅ Committed embeddings.json.gz"
+            echo "committed=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️  No changes to commit"
+            echo "committed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload to GitHub Artifacts (백업)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: embeddings-${{ github.run_number }}
+          path: output/embeddings.json.gz
+          retention-days: 30
+        continue-on-error: true
+
+      # 내보내기 로그 저장 (실패 시)
+      - name: Upload export logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-logs-${{ github.run_number }}
+          path: export.log
+          retention-days: 7
+        continue-on-error: true
+
+      # 결과 요약
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 📦 Export Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **File Size**: ${{ steps.verify.outputs.file_size }} bytes" >> $GITHUB_STEP_SUMMARY
+          echo "- **Embeddings**: ${{ steps.verify.outputs.embedding_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Committed**: ${{ steps.commit.outputs.committed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### File Location" >> $GITHUB_STEP_SUMMARY
+          echo "- \`output/embeddings.json.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Raw URL: \`https://raw.githubusercontent.com/${{ github.repository }}/main/output/embeddings.json.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Set \`VECTOR_FILE_URL=https://raw.githubusercontent.com/${{ github.repository }}/main/output/embeddings.json.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Test: \`pnpm run ask \"test question\"\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Embeddings exported and committed successfully!"
+          echo "📊 Statistics:"
+          echo "   - Embeddings: ${{ steps.verify.outputs.embedding_count }}"
+          echo "   - File size: ${{ steps.verify.outputs.file_size }} bytes"
+          echo "   - Committed: ${{ steps.commit.outputs.committed }}"
+          echo "📁 Saved to: output/embeddings.json.gz"
+          echo "🔗 Raw URL: https://raw.githubusercontent.com/${{ github.repository }}/main/output/embeddings.json.gz"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Export failed. Check logs for details."
+          echo "📝 Download export-logs-${{ github.run_number }} artifact for debugging"
+          exit 1

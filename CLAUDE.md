@@ -4,16 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a GitHub repository analyzer that uses NLP/RAG to answer questions about code structure, commit history, and implementation details. The system collects repository data, generates embeddings, stores vectors in ChromaDB, and provides a Q&A interface powered by OpenAI or Claude.
+This is a GitHub repository analyzer that uses NLP/RAG to answer questions about code structure, commit history, and implementation details. The system collects repository data, generates embeddings, stores vectors, and provides a Q&A interface powered by OpenAI or Claude.
 
 **Tech Stack:**
 - Backend: Node.js + TypeScript + Express (ESM modules)
 - Frontend: React 19 + TypeScript + Vite + PandaCSS
 - State: Jotai (atoms) + TanStack Query (server state)
-- Vector DB: ChromaDB (Python server on port 8000)
+- Vector Storage: **File-based (Serverless)** / Supabase pgvector (Cloud) / ChromaDB (Local)
 - LLM: OpenAI GPT-4o (primary) / Claude Sonnet 4 (fallback)
 - Embeddings: OpenAI text-embedding-3-small (primary) / Chroma default (fallback)
-- Storage: Supabase (Q&A history)
+- Storage: Supabase (Q&A history, embedding storage)
 
 ## Development Commands
 
@@ -22,16 +22,19 @@ This is a GitHub repository analyzer that uses NLP/RAG to answer questions about
 ```bash
 # Setup & Infrastructure
 pnpm install                    # Install dependencies
-pnpm run chroma:setup          # One-time ChromaDB installation (creates .chroma_venv)
-pnpm run chroma:start          # Start ChromaDB server (required for all operations)
+pnpm run chroma:setup          # One-time ChromaDB installation (creates .chroma_venv) - OPTIONAL for local dev
+pnpm run chroma:start          # Start ChromaDB server (required for local ChromaDB mode) - OPTIONAL
 
 # Data Pipeline
-pnpm run dev                   # Full pipeline: fetch data → embed → store in ChromaDB
+pnpm run dev                   # Full pipeline: fetch data → embed → store in Supabase/ChromaDB
 pnpm run dev --reset           # Reset vector collection, then run full pipeline
 pnpm run reindex               # Re-embed existing data without fetching (use when switching embedding providers)
 
+# Export Embeddings to File (for serverless deployment)
+pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel
+
 # Q&A (CLI)
-pnpm run ask "your question"   # Query via command line (requires ChromaDB running)
+pnpm run ask "your question"   # Query via command line (auto-detects: File > Supabase > ChromaDB)
 
 # Servers
 pnpm run server                # Start API server (:3001) for Q&A and dashboard
@@ -59,43 +62,69 @@ pnpm run panda                 # Generate PandaCSS utility classes
 
 ## System Architecture
 
-### Multi-Server Architecture
+### Vector Storage Modes (Priority: File > Supabase)
 
-The system requires **2 servers** to operate:
+The system supports **two vector storage modes** with automatic detection:
 
-1. **ChromaDB Server** (port 8000)
-   - Python-based vector database
-   - Stores embeddings and performs similarity search
-   - Must start first (run `pnpm run chroma:start`)
+**1. File-Based (Local/GitHub - Recommended for Production)** 🌟
+   - Zero server cost (completely free)
+   - Serverless compatible (Vercel, Lambda)
+   - Static file stored in Git repository (`output/embeddings.json.gz`)
+   - Delivered via GitHub Raw URL (no CDN cost)
+   - Memory cached with 5-minute TTL
+   - Cold start: 150-380ms, Warm start: 51-151ms
+   - Enabled by: `VECTOR_FILE_URL` environment variable (or defaults to `output/embeddings.json.gz`)
 
-2. **API Server** (port 3001)
-   - Main application backend
-   - Handles Q&A, history, dashboard stats
-   - Connects to ChromaDB for vector search
-   - Connects to Supabase for persistent storage
+**2. Supabase pgvector (Cloud - For Embedding Pipeline)**
+   - Managed PostgreSQL with pgvector extension
+   - Used during embedding generation (write operations)
+   - $25-30/month for Pro plan
+   - Enabled by: `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
+   - **Note**: Not used for Q&A queries (file-based is used instead)
+
+### Required Services
+
+**Production (Serverless)**:
+- API Server (port 3001 or Vercel Serverless Function)
+- GitHub repository (for hosting `output/embeddings.json.gz`)
+- No persistent database servers required
+- No CDN costs
+
+**Local Development**:
+- API Server (port 3001)
+- Supabase connection (for embedding pipeline only)
+- Local embeddings file (`output/embeddings.json.gz`)
 
 ### Data Flow
 
+**Pipeline Mode (Offline - runs in GitHub Actions weekly):**
 ```
-Pipeline Mode:
-GitHub API → Fetch commits + files + repository source code
+GitHub API → Fetch commits + files (with patch) + repository source code
          ↓
-Local Git → Parse git log + extract diffs
+Data Refinement → Convert to NLP-friendly format (commit + diff + file types)
          ↓
-Data Refinement → Convert to NLP-friendly format (commit + file types)
+Embedding Generation → OpenAI text-embedding-3-small
          ↓
-Embedding Generation → OpenAI (primary) / Chroma (fallback)
+Vector Storage → Supabase pgvector (Cloud)
          ↓
-ChromaDB → Store vectors with metadata
+Export to File → embeddings.json.gz → output/ directory
+         ↓
+Git Commit → Push to repository (automated via GitHub Actions)
+```
 
-Q&A Mode:
-User Question → Generate embedding for query
+**Q&A Mode (Online - serverless API):**
+```
+User Question → Generate query embedding (OpenAI)
             ↓
-ChromaDB → Vector similarity search (returns commits + files)
+Load Vector File → output/embeddings.json.gz (local file or GitHub Raw URL)
+            ↓
+Vector Search → Brute-force cosine similarity (in-memory)
+            ↓
+Retrieve Top-K similar documents (commits + files + Q&A history)
             ↓
 LLM (OpenAI/Claude) → Generate answer with context
             ↓
-Supabase → Store Q&A history
+Supabase → Store Q&A history (optional)
             ↓
 Frontend → Display answer + sources
 ```
@@ -105,9 +134,8 @@ Frontend → Display answer + sources
 The system implements graceful fallbacks for external APIs:
 
 **Embeddings:**
-- Primary: OpenAI `text-embedding-3-small` (1536 dimensions)
-- Fallback: Chroma default embedding (local, no API key needed)
-- Use `pnpm run reindex` when switching embedding providers
+- OpenAI `text-embedding-3-small` (1536 dimensions)
+- No fallback (OpenAI API key required for embedding generation)
 
 **Answer Generation (both required - at least one API key must be set):**
 - Primary: OpenAI `gpt-4o`
@@ -118,20 +146,32 @@ The system implements graceful fallbacks for external APIs:
 
 Required `.env` variables:
 ```bash
-# GitHub data source (required)
+# GitHub data source (required for embedding pipeline)
 GITHUB_TOKEN=ghp_xxx
 TARGET_REPO_OWNER=username
 TARGET_REPO_NAME=repo-name
-LOCAL_REPO_PATH=/path/to/local/clone
 
 # AI APIs (at least one required for Q&A)
 OPENAI_API_KEY=sk-proj-xxx    # Primary for embeddings + answers
 CLAUDE_API_KEY=sk-ant-xxx     # Fallback for answers only
 
-# Supabase (optional for history storage)
+# Vector Storage Mode:
+
+# Option 1: Local file (Default - Zero cost)
+# No configuration needed - uses output/embeddings.json.gz by default
+
+# Option 2: Remote file (GitHub Raw URL or custom CDN)
+VECTOR_FILE_URL=https://raw.githubusercontent.com/owner/repo/main/output/embeddings.json.gz
+
+# Supabase (Required for embedding pipeline, optional for Q&A history)
 SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_ANON_KEY=xxx
+SUPABASE_SERVICE_ROLE_KEY=xxx    # For embedding pipeline
+SUPABASE_ANON_KEY=xxx            # For Q&A history only
 ```
+
+**Note**:
+- Q&A queries **always** use file-based vector search (local or remote)
+- Supabase is **only** used for embedding generation pipeline and Q&A history storage
 
 ## Code Architecture
 
@@ -148,15 +188,13 @@ src/
 │   ├── github/               # GitHub API integrations
 │   │   ├── fetchCommit.ts    # Fetch all commits
 │   │   ├── fetchFiles.ts     # Fetch changed files per commit
-│   │   └── fetchRepositoryFiles.ts  # ⭐ NEW: Fetch all source code files
-│   └── git/                  # Local Git operations
-│       ├── parseLog.ts       # Parse git log output
-│       └── extractDiff.ts    # Extract commit diffs
+│   │   └── fetchRepositoryFiles.ts  # Fetch all source code files
 ├── nlp/embedding/
-│   └── openaiEmbedding.ts    # Embedding generation (OpenAI → Chroma fallback)
+│   └── openaiEmbedding.ts    # Embedding generation (OpenAI only)
 ├── vector_store/
-│   ├── saveVectors.ts        # Save to ChromaDB
-│   └── searchVectors.ts      # Query ChromaDB
+│   ├── saveVectors.ts        # Save to Supabase
+│   ├── searchVectors.ts      # Query Supabase (pipeline only)
+│   └── fileVectorStore.ts    # File-based search (Q&A production)
 ├── qa/
 │   └── answer.ts             # LLM answer generation (OpenAI → Claude fallback)
 └── server/                   # API Server (:3001)
@@ -171,12 +209,12 @@ src/
 
 **Key Pipeline Steps:**
 1. `fetchAllCommits()` - Get commit list from GitHub
-2. `fetchFiles()` - Get changed files per commit
-3. `fetchRepositoryFiles()` - ⭐ NEW: Get all source code (for implementation questions)
-4. `parseLog()` + `extractDiff()` - Get local git diffs
-5. `refineData()` - Convert to NLP format (separate commit/file items)
-6. `generateEmbeddings()` - Create vectors (OpenAI → Chroma fallback)
-7. `saveVectors()` - Store in ChromaDB with metadata
+2. `fetchFiles()` - Get changed files per commit (includes patch/diff from GitHub API)
+3. `fetchRepositoryFiles()` - Get all source code (for implementation questions)
+4. `refineData()` - Convert to NLP format (separate commit/diff/file items)
+5. `generateEmbeddings()` - Create vectors (OpenAI text-embedding-3-small)
+6. `saveVectors()` - Store in Supabase pgvector
+7. `exportEmbeddings()` - Export to embeddings.json.gz (GitHub Actions)
 
 **Repository File Collection:**
 - Automatically fetches all source files from default branch (main/master auto-detected)
@@ -303,23 +341,13 @@ ChromaDB stores two types of items:
 3. Update `PipelineOutput` type in `src/models/PipelineOutput.ts`
 4. Update `refineData()` in `src/pipeline/steps/preprocessText.ts` if new data type
 
-### Handling Embedding Provider Changes
-
-When switching between OpenAI and Chroma embeddings (different dimensions):
-```bash
-pnpm run reindex  # Uses existing refined_data.json, regenerates embeddings
-```
-This avoids re-fetching data from GitHub/Git.
-
 ## Testing & Debugging
 
 ### Verify Server Status
 ```bash
-# Check all services
-curl http://localhost:8000/api/v1/heartbeat     # ChromaDB
-curl http://localhost:3001/api/health           # API server
-curl http://localhost:3001/api/health/chromadb  # API → ChromaDB check
-curl http://localhost:3001/api/health/status    # All servers status
+# Check API server
+curl http://localhost:3001/api/health           # API server health
+curl http://localhost:3001/api/health/status    # All services status
 ```
 
 ### Test Q&A Flow
@@ -333,21 +361,29 @@ curl -X POST http://localhost:3001/api/ask \
   -d '{"question": "프로젝트의 기술스택은?"}'
 ```
 
-### Check Vector Collection
+### Check Vector File
 ```bash
-# View ChromaDB collections
-curl http://localhost:8000/api/v1/collections
+# Verify local embeddings file
+ls -lh output/embeddings.json.gz
+
+# Inspect contents
+zcat output/embeddings.json.gz | jq '.statistics'
+zcat output/embeddings.json.gz | jq '.vectors | length'
 ```
 
 ### Common Issues
 
+**"Failed to load vector file"**
+- Cause: embeddings.json.gz not found
+- Fix: Run export workflow or generate locally: `pnpm tsx scripts/export-embeddings.ts --source supabase --output output/embeddings.json.gz`
+
 **"Found 0 relevant documents"**
-- Cause: Embedding dimension mismatch (switched between OpenAI ↔ Chroma)
-- Fix: `pnpm run reindex`
+- Cause: Empty or corrupted embeddings file
+- Fix: Re-export embeddings from Supabase
 
 **"API 서버에 연결할 수 없습니다"**
-- Check if both servers are running (ChromaDB, API)
-- Verify ports 8000, 3001 are available
+- Check if API server is running: `pnpm run server`
+- Verify port 3001 is available
 - Check `.env` configuration
 
 **"답변을 생성할 수 없습니다"**
@@ -358,17 +394,20 @@ curl http://localhost:8000/api/v1/collections
 ## Deployment Notes
 
 **Local Development:**
-- ChromaDB and API servers running locally
+- API server running on port 3001
+- Uses local embeddings file (`output/embeddings.json.gz`)
 - Settings page shows read-only server status
 
-**Production (Vercel):**
-- Only API server deployed
-- ChromaDB must be hosted separately (e.g., via Docker on cloud VM)
-- Settings page shows read-only status
+**Production (Vercel Serverless):**
+- Serverless API deployed to Vercel
+- Uses GitHub Raw URL for embeddings:
+  `VECTOR_FILE_URL=https://raw.githubusercontent.com/owner/repo/main/output/embeddings.json.gz`
+- No persistent database servers required
+- Total cost: $0/month (GitHub Free + Vercel Hobby)
 
 **Environment Variables:**
-- Set `VITE_API_URL` to point to deployed API server
-- ChromaDB URL must be updated in API server config if not localhost
+- Frontend: Set `VITE_API_URL` to point to deployed API server
+- Backend: Set `VECTOR_FILE_URL` to GitHub Raw URL or leave empty for local file
 
 ## Frontend Pages
 
@@ -391,3 +430,40 @@ Server status monitoring:
 - Read-only status cards for ChromaDB, API Server, Supabase
 - Environment information
 - Connection diagnostics
+
+## Update README.md
+When all tasks described in claude.md are fully completed, update the root-level README.md to reflect the latest project state.
+
+The README.md update must:
+
+Accurately summarize the completed work (no planned or in-progress items).
+
+Reflect any changes in architecture, setup steps, scripts, or workflows introduced by the completed tasks.
+
+Keep existing sections unless they are no longer valid, in which case revise or remove them explicitly.
+
+Ensure the content is consistent with the current repository structure and configuration.
+
+Do not update README.md before all tasks in claude.md are finished.
+
+## Documentation Structure Rule
+
+The repository must keep only the following reference documents at the root level:
+
+CLAUD.md
+
+README.md
+
+All other documentation files must be placed under the docs/ directory.
+
+Documentation rules:
+
+Do not create or keep any additional .md or documentation files in the root directory.
+
+Organize documents inside docs/ by purpose or structure (e.g. docs/architecture/, docs/api/, docs/setup/).
+
+Create new subdirectories under docs/ when necessary to maintain clear structural separation.
+
+Ensure each document is placed in the most appropriate subdirectory based on its content.
+
+If a document is mistakenly created outside docs/ (except CLAUD.md and README.md), it must be moved to the correct location under docs/.

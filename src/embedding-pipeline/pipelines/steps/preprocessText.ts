@@ -1,0 +1,395 @@
+import type { CommitItem } from "../../../shared/models/Commit.js";
+import type { FileModel } from "../../../shared/models/File.js";
+import type { RefinedData, RefinedItem } from "../../../shared/models/refinedData.js";
+import type { PipelineOutput } from "../../../shared/models/PipelineOutput.js";
+import {
+    generateCommitEmbeddingText,
+    generateDiffEmbeddingText,
+    generateFileEmbeddingText
+} from "../../nlp/embedding/embeddingTextGenerator.js";
+
+/**
+ * 수집된 Raw Data(PipelineOutput)를 NLP 모델이 이해하기 쉬운 텍스트 포맷으로 변환(정제)합니다.
+ * 커밋 메시지, 파일 변경 내역, Diff 내용, 레포지토리 파일 내용을 합쳐 하나의 문맥(Text Chunk)으로 만듭니다.
+ * 
+ * @param {PipelineOutput} data - 파이프라인에서 수집된 원본 데이터
+ * @returns {RefinedData} 정제된 데이터 객체
+ */
+export function refineData(data: PipelineOutput): RefinedData {
+    const items: RefinedItem[] = [];
+
+    // 1. 커밋 데이터 정제 (Diff 제외, 메타데이터만)
+    for (const commit of data.commits) {
+        const sha = commit.sha;
+        const fileModels = data.commitFiles[sha] || [];
+
+        // Commit Entity: 히스토리 정보만 포함 (Diff 제외)
+        const lines: string[] = [];
+
+        lines.push(`Commit: ${sha}`);
+        lines.push(`Author: ${commit.author || "Unknown"}`);
+        lines.push(`Date: ${commit.date}`);
+        lines.push(`Message: ${commit.message}`);
+        lines.push("");
+
+        lines.push("Affected Files:");
+        const affectedFiles: string[] = [];
+        let totalAdditions = 0;
+        let totalDeletions = 0;
+
+        if (fileModels.length > 0) {
+            for (const file of fileModels) {
+                lines.push(`- ${file.filename} (${file.status}) +${file.additions || 0} -${file.deletions || 0}`);
+                affectedFiles.push(file.filename);
+                totalAdditions += file.additions || 0;
+                totalDeletions += file.deletions || 0;
+            }
+        } else {
+            lines.push("(No file changes detected or fetched)");
+        }
+
+        const content = lines.join("\n");
+
+        // Commit Entity 생성
+        const commitItem: RefinedItem = {
+            id: `commit-${sha}`,
+            type: "commit",
+            content: content,
+            embeddingText: "", // 임시로 빈 문자열, 아래에서 생성
+            metadata: {
+                sha: sha,
+                author: commit.author || "Unknown",
+                date: commit.date,
+                message: commit.message,
+                affectedFiles: affectedFiles,
+                fileCount: fileModels.length,
+                additions: totalAdditions,
+                deletions: totalDeletions
+            }
+        };
+
+        // Embedding text 생성
+        commitItem.embeddingText = generateCommitEmbeddingText(commitItem);
+
+        items.push(commitItem);
+
+        // 2. Diff Entity 생성 (각 파일별로 독립적으로) - GitHub API 데이터 사용
+        if (fileModels && fileModels.length > 0) {
+            for (const file of fileModels) {
+                const diffLines: string[] = [];
+
+                diffLines.push(`Diff for File: ${file.filename}`);
+                diffLines.push(`Commit: ${sha}`);
+                diffLines.push(`Changes: +${file.additions} -${file.deletions}`);
+                diffLines.push("");
+
+                // Limit patch size to avoid extremely large chunks
+                let patch = file.patch || "";
+                if (patch.length > 2000) {
+                    patch = patch.slice(0, 2000) + "\n...(Truncated)...";
+                }
+
+                diffLines.push("Patch:");
+                diffLines.push(patch);
+
+                const diffContent = diffLines.join("\n");
+
+                // Diff 타입 결정
+                const diffType = file.status === "added" ? "add" :
+                                file.status === "removed" ? "delete" :
+                                file.status === "renamed" ? "rename" : "modify";
+
+                // 변경 카테고리 추론 (커밋 메시지 기반)
+                const message = commit.message.toLowerCase();
+                const changeCategory = message.includes("feat") ? "feat" :
+                                      message.includes("fix") ? "fix" :
+                                      message.includes("refactor") ? "refactor" :
+                                      message.includes("docs") ? "docs" :
+                                      message.includes("style") ? "style" :
+                                      message.includes("test") ? "test" : "chore";
+
+                // 의미론적 힌트 추출
+                const semanticHint: string[] = [];
+                if (patch.includes("if (") || patch.includes("if(")) semanticHint.push("조건문 변경");
+                if (patch.includes("import ")) semanticHint.push("의존성 변경");
+                if (patch.includes("export ")) semanticHint.push("export 변경");
+                if (patch.includes("function ") || patch.includes("const ") || patch.includes("let ")) semanticHint.push("함수/변수 정의");
+                if (patch.includes("//") || patch.includes("/*")) semanticHint.push("주석 변경");
+
+                const diffItem: RefinedItem = {
+                    id: `diff-${sha}-${file.filename.replace(/\//g, '-')}`,
+                    type: "diff",
+                    content: diffContent,
+                    embeddingText: "", // 임시로 빈 문자열, 아래에서 생성
+                    metadata: {
+                        commitId: sha,
+                        filePath: file.filename,
+                        diffType: diffType,
+                        fileAdditions: file.additions || 0,
+                        fileDeletions: file.deletions || 0,
+                        changeCategory: changeCategory,
+                        ...(semanticHint.length > 0 && { semanticHint })
+                    }
+                };
+
+                // Embedding text 생성
+                diffItem.embeddingText = generateDiffEmbeddingText(diffItem);
+
+                items.push(diffItem);
+            }
+        }
+    }
+
+    // 2. 레포지토리 파일 데이터 정제 (소스 코드 레벨 질문용)
+    if (data.repositoryFiles && data.repositoryFiles.length > 0) {
+        console.log(`📝 ${data.repositoryFiles.length}개 파일을 정제 중...`);
+        
+        for (const file of data.repositoryFiles) {
+            // 파일 내용이 너무 긴 경우 청크로 분할
+            const maxChunkSize = 5000; // 5KB per chunk
+            const chunks = splitFileIntoChunks(file.content, maxChunkSize);
+
+            chunks.forEach((chunk, index) => {
+                const lines: string[] = [];
+                lines.push(`File: ${file.path}`);
+                lines.push(`Type: ${file.type}`);
+                lines.push(`Size: ${file.size} bytes`);
+                lines.push(`Extension: ${file.extension}`);
+                lines.push("");
+
+                if (chunks.length > 1) {
+                    lines.push(`[Chunk ${index + 1}/${chunks.length}]`);
+                    lines.push("");
+                }
+
+                lines.push("Content:");
+                lines.push(chunk);
+
+                const content = lines.join("\n");
+
+                const fileItem: RefinedItem = {
+                    id: `file-${file.path}-${index}`,
+                    type: "file",
+                    content: content,
+                    embeddingText: "", // 임시로 빈 문자열, 아래에서 생성
+                    metadata: {
+                        path: file.path,
+                        fileType: file.type,
+                        size: file.size,
+                        extension: file.extension,
+                        sha: file.sha,
+                        ...(chunks.length > 1 && {
+                            chunkIndex: index,
+                            totalChunks: chunks.length
+                        })
+                    }
+                };
+
+                // Embedding text 생성
+                fileItem.embeddingText = generateFileEmbeddingText(fileItem);
+
+                items.push(fileItem);
+            });
+        }
+
+        console.log(`   → ${items.filter(item => item.type === 'file').length}개 파일 청크 생성됨`);
+    }
+
+    // 로그: 생성된 엔티티 통계
+    const commitCount = items.filter(item => item.type === 'commit').length;
+    const diffCount = items.filter(item => item.type === 'diff').length;
+    const fileCount = items.filter(item => item.type === 'file').length;
+
+    console.log(`\n📊 생성된 엔티티:`);
+    console.log(`   - Commit: ${commitCount}개 (히스토리)`);
+    console.log(`   - Diff: ${diffCount}개 (변경사항)`);
+    console.log(`   - File: ${fileCount}개 (소스코드)`);
+    console.log(`   - 총합: ${items.length}개`);
+
+    return { items };
+}
+
+/**
+ * 파일 내용을 지정된 크기로 청크로 분할합니다.
+ * 의미 기반 오버랩(Semantic Overlap)을 적용하여 함수/클래스 경계를 인식합니다.
+ *
+ * @param content - 분할할 파일 내용
+ * @param maxChunkSize - 청크 최대 크기 (바이트)
+ * @param overlapRatio - 오버랩 비율 (기본값: 0.15 = 15%)
+ * @returns 분할된 청크 배열
+ */
+function splitFileIntoChunks(content: string, maxChunkSize: number, overlapRatio: number = 0.15): string[] {
+    if (content.length <= maxChunkSize) {
+        return [content];
+    }
+
+    const chunks: string[] = [];
+    const lines = content.split('\n');
+    const overlapSize = Math.floor(maxChunkSize * overlapRatio);
+
+    let startIndex = 0;
+
+    while (startIndex < lines.length) {
+        let currentChunk: string[] = [];
+        let currentSize = 0;
+        let endIndex = startIndex;
+
+        // 최대 크기까지 라인 추가
+        while (endIndex < lines.length && currentSize < maxChunkSize) {
+            const line = lines[endIndex];
+            if (line === undefined) {
+                endIndex++;
+                continue;
+            }
+
+            const lineSize = line.length + 1; // +1 for newline
+
+            // 크기 초과 시 현재 라인 제외하고 종료
+            if (currentSize + lineSize > maxChunkSize && currentChunk.length > 0) {
+                break;
+            }
+
+            currentChunk.push(line);
+            currentSize += lineSize;
+            endIndex++;
+        }
+
+        // 청크가 비어있으면 무한 루프 방지를 위해 강제로 진행
+        if (currentChunk.length === 0) {
+            startIndex = endIndex;
+            if (startIndex >= lines.length) {
+                break;
+            }
+            continue;
+        }
+
+        // 청크 저장
+        chunks.push(currentChunk.join('\n'));
+
+        // 다음 청크 시작 위치 계산 (의미 기반 오버랩)
+        if (endIndex >= lines.length) {
+            break; // 마지막 청크
+        }
+
+        // 1단계: 의미 경계 찾기 (함수/클래스 선언)
+        const semanticBoundary = findSemanticBoundary(lines, endIndex, startIndex, overlapSize);
+
+        if (semanticBoundary !== null && semanticBoundary > startIndex) {
+            // 의미 경계를 찾았으면 그 지점부터 시작 (단, 진행 보장)
+            startIndex = semanticBoundary;
+        } else {
+            // 의미 경계를 못 찾았으면 기본 오버랩 적용
+            let overlapLines = 0;
+            let overlapBytes = 0;
+            for (let i = endIndex - 1; i >= startIndex && overlapBytes < overlapSize; i--) {
+                const overlapLine = lines[i];
+                if (overlapLine === undefined) continue;
+
+                overlapBytes += overlapLine.length + 1;
+                overlapLines++;
+            }
+
+            // 최소 1줄 이상, 최대 절반까지만 오버랩
+            overlapLines = Math.max(1, Math.min(overlapLines, Math.floor(currentChunk.length / 2)));
+            startIndex = endIndex - overlapLines;
+        }
+
+        // 무한 루프 방지: startIndex가 진행되지 않으면 강제로 1칸 이동
+        if (startIndex <= endIndex - currentChunk.length) {
+            startIndex = endIndex;
+        }
+    }
+
+    return chunks;
+}
+
+/**
+ * 의미 있는 코드 경계를 찾습니다 (함수/클래스/주석 블록 시작점).
+ *
+ * @param lines - 전체 라인 배열
+ * @param endIndex - 현재 청크 끝 인덱스
+ * @param startIndex - 현재 청크 시작 인덱스
+ * @param maxOverlapSize - 최대 오버랩 크기 (바이트)
+ * @returns 의미 경계 인덱스 (찾지 못하면 null)
+ */
+function findSemanticBoundary(
+    lines: string[],
+    endIndex: number,
+    startIndex: number,
+    maxOverlapSize: number
+): number | null {
+    // 함수/클래스/주석 선언 패턴 (다양한 언어 지원)
+    const semanticPatterns = [
+        // JavaScript/TypeScript
+        /^\s*(export\s+)?(async\s+)?function\s+\w+/,           // function foo()
+        /^\s*(export\s+)?(const|let|var)\s+\w+\s*=\s*(async\s+)?\(/,  // const foo = () =>
+        /^\s*(export\s+)?(default\s+)?class\s+\w+/,            // class Foo
+        /^\s*(export\s+)?interface\s+\w+/,                      // interface Foo
+        /^\s*(export\s+)?type\s+\w+/,                           // type Foo
+        /^\s*(export\s+)?enum\s+\w+/,                           // enum Foo
+
+        // Python
+        /^\s*def\s+\w+/,                                        // def foo():
+        /^\s*class\s+\w+/,                                      // class Foo:
+        /^\s*async\s+def\s+\w+/,                                // async def foo():
+
+        // Java/C#/C++
+        /^\s*(public|private|protected|static)\s+.*\s+\w+\s*\(/,  // public void foo()
+
+        // 주석 블록
+        /^\s*\/\*\*/,                                           // JSDoc 시작
+        /^\s*\/\*/,                                             // 블록 주석 시작
+        /^\s*"""/,                                              // Python docstring
+        /^\s*'''/,                                              // Python docstring
+        /^\s*#\s*===+/,                                         // 구분선 주석
+    ];
+
+    let overlapBytes = 0;
+
+    // 현재 청크 끝에서 역방향으로 탐색
+    for (let i = endIndex - 1; i >= startIndex && overlapBytes < maxOverlapSize; i--) {
+        const line = lines[i];
+        if (!line) continue;
+
+        overlapBytes += line.length + 1;
+
+        // 의미 있는 경계인지 확인
+        const trimmedLine = line.trim();
+
+        // 빈 줄이나 닫는 괄호는 건너뛰기
+        if (!trimmedLine || trimmedLine === '}' || trimmedLine === '};') {
+            continue;
+        }
+
+        // 패턴 매칭
+        for (const pattern of semanticPatterns) {
+            if (pattern.test(trimmedLine)) {
+                // 의미 경계를 찾았음 - 이 라인부터 다음 청크 시작
+                return i;
+            }
+        }
+
+        // 주석 블록 시작도 의미 경계로 간주
+        if (trimmedLine.startsWith('//') || trimmedLine.startsWith('#')) {
+            // 연속된 주석 블록의 시작점 찾기
+            let commentStart = i;
+            while (commentStart > startIndex) {
+                const prevLine = lines[commentStart - 1];
+                if (!prevLine) break;
+                const prevTrimmed = prevLine.trim();
+                if (!prevTrimmed.startsWith('//') && !prevTrimmed.startsWith('#')) {
+                    break;
+                }
+                commentStart--;
+            }
+
+            // 주석 블록이 3줄 이상이면 의미 있는 경계로 간주
+            if (i - commentStart >= 2) {
+                return commentStart;
+            }
+        }
+    }
+
+    // 의미 경계를 찾지 못함
+    return null;
+}
