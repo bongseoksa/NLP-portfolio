@@ -62,66 +62,65 @@ pnpm run panda                 # Generate PandaCSS utility classes
 
 ## System Architecture
 
-### Vector Storage Modes (Priority: File > Supabase > ChromaDB)
+### Vector Storage Modes (Priority: File > Supabase)
 
-The system supports **three vector storage modes** with automatic detection:
+The system supports **two vector storage modes** with automatic detection:
 
-**1. File-Based (Serverless - Recommended for Production)** 🌟
-   - Zero server cost ($0.11/month vs $20-50/month for ChromaDB)
+**1. File-Based (Local/GitHub - Recommended for Production)** 🌟
+   - Zero server cost (completely free)
    - Serverless compatible (Vercel, Lambda)
-   - Static file delivery via CDN (Vercel Blob, S3 + CloudFront)
+   - Static file stored in Git repository (`output/embeddings.json.gz`)
+   - Delivered via GitHub Raw URL (no CDN cost)
    - Memory cached with 5-minute TTL
    - Cold start: 150-380ms, Warm start: 51-151ms
-   - Enabled by: `VECTOR_FILE_URL` environment variable
-   - See [docs/architecture/FILE-BASED-VECTOR-STORE.md](docs/architecture/FILE-BASED-VECTOR-STORE.md) for details
+   - Enabled by: `VECTOR_FILE_URL` environment variable (or defaults to `output/embeddings.json.gz`)
 
-**2. Supabase pgvector (Cloud)**
+**2. Supabase pgvector (Cloud - For Embedding Pipeline)**
    - Managed PostgreSQL with pgvector extension
-   - Read/write operations supported
+   - Used during embedding generation (write operations)
    - $25-30/month for Pro plan
-   - Good for write-heavy workloads
    - Enabled by: `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
-
-**3. ChromaDB (Local Development)**
-   - Python-based vector database on port 8000
-   - Requires persistent server process
-   - Free for local development
-   - Must run `pnpm run chroma:start` before use
-   - Fallback when no file URL or Supabase credentials
+   - **Note**: Not used for Q&A queries (file-based is used instead)
 
 ### Required Services
 
-**Minimal Setup (Serverless)**:
-- Only API Server (port 3001)
-- Static file hosting (Vercel Blob / S3)
+**Production (Serverless)**:
+- API Server (port 3001 or Vercel Serverless Function)
+- GitHub repository (for hosting `output/embeddings.json.gz`)
 - No persistent database servers required
+- No CDN costs
 
 **Local Development**:
 - API Server (port 3001)
-- ChromaDB Server (port 8000) - optional if using Supabase/File mode
+- Supabase connection (for embedding pipeline only)
+- Local embeddings file (`output/embeddings.json.gz`)
 
 ### Data Flow
 
-**Pipeline Mode (Offline - runs in GitHub Actions or locally):**
+**Pipeline Mode (Offline - runs in GitHub Actions weekly):**
 ```
 GitHub API → Fetch commits + files (with patch) + repository source code
          ↓
 Data Refinement → Convert to NLP-friendly format (commit + diff + file types)
          ↓
-Embedding Generation → OpenAI (primary) / Chroma (fallback)
+Embedding Generation → OpenAI text-embedding-3-small
          ↓
-Vector Storage → Supabase pgvector (Cloud) or ChromaDB (Local)
+Vector Storage → Supabase pgvector (Cloud)
          ↓
-Export to File (optional) → embeddings.json.gz → Vercel Blob / S3
+Export to File → embeddings.json.gz → output/ directory
+         ↓
+Git Commit → Push to repository (automated via GitHub Actions)
 ```
 
 **Q&A Mode (Online - serverless API):**
 ```
 User Question → Generate query embedding (OpenAI)
             ↓
-Vector Search → File-based (primary) / Supabase (fallback) / ChromaDB (local dev)
+Load Vector File → output/embeddings.json.gz (local file or GitHub Raw URL)
             ↓
-Retrieve Top-K similar documents (commits + files)
+Vector Search → Brute-force cosine similarity (in-memory)
+            ↓
+Retrieve Top-K similar documents (commits + files + Q&A history)
             ↓
 LLM (OpenAI/Claude) → Generate answer with context
             ↓
@@ -135,9 +134,8 @@ Frontend → Display answer + sources
 The system implements graceful fallbacks for external APIs:
 
 **Embeddings:**
-- Primary: OpenAI `text-embedding-3-small` (1536 dimensions)
-- Fallback: Chroma default embedding (local, no API key needed)
-- Use `pnpm run reindex` when switching embedding providers
+- OpenAI `text-embedding-3-small` (1536 dimensions)
+- No fallback (OpenAI API key required for embedding generation)
 
 **Answer Generation (both required - at least one API key must be set):**
 - Primary: OpenAI `gpt-4o`
@@ -157,23 +155,23 @@ TARGET_REPO_NAME=repo-name
 OPENAI_API_KEY=sk-proj-xxx    # Primary for embeddings + answers
 CLAUDE_API_KEY=sk-ant-xxx     # Fallback for answers only
 
-# Vector Storage Mode (choose one):
+# Vector Storage Mode:
 
-# Option 1: File-based (Serverless - Recommended for production)
-VECTOR_FILE_URL=https://xxx.vercel-storage.com/embeddings.json.gz
-BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxx  # For export script
+# Option 1: Local file (Default - Zero cost)
+# No configuration needed - uses output/embeddings.json.gz by default
 
-# Option 2: Supabase (Cloud - write-heavy workloads)
+# Option 2: Remote file (GitHub Raw URL or custom CDN)
+VECTOR_FILE_URL=https://raw.githubusercontent.com/owner/repo/main/output/embeddings.json.gz
+
+# Supabase (Required for embedding pipeline, optional for Q&A history)
 SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=xxx    # For vector operations
+SUPABASE_SERVICE_ROLE_KEY=xxx    # For embedding pipeline
 SUPABASE_ANON_KEY=xxx            # For Q&A history only
-
-# Option 3: ChromaDB (Local development - fallback)
-CHROMA_HOST=localhost
-CHROMA_PORT=8000
 ```
 
-**Priority**: If `VECTOR_FILE_URL` is set, it takes precedence over Supabase and ChromaDB.
+**Note**:
+- Q&A queries **always** use file-based vector search (local or remote)
+- Supabase is **only** used for embedding generation pipeline and Q&A history storage
 
 ## Code Architecture
 
@@ -192,10 +190,11 @@ src/
 │   │   ├── fetchFiles.ts     # Fetch changed files per commit
 │   │   └── fetchRepositoryFiles.ts  # Fetch all source code files
 ├── nlp/embedding/
-│   └── openaiEmbedding.ts    # Embedding generation (OpenAI → Chroma fallback)
+│   └── openaiEmbedding.ts    # Embedding generation (OpenAI only)
 ├── vector_store/
-│   ├── saveVectors.ts        # Save to ChromaDB
-│   └── searchVectors.ts      # Query ChromaDB
+│   ├── saveVectors.ts        # Save to Supabase
+│   ├── searchVectors.ts      # Query Supabase (pipeline only)
+│   └── fileVectorStore.ts    # File-based search (Q&A production)
 ├── qa/
 │   └── answer.ts             # LLM answer generation (OpenAI → Claude fallback)
 └── server/                   # API Server (:3001)
@@ -213,8 +212,9 @@ src/
 2. `fetchFiles()` - Get changed files per commit (includes patch/diff from GitHub API)
 3. `fetchRepositoryFiles()` - Get all source code (for implementation questions)
 4. `refineData()` - Convert to NLP format (separate commit/diff/file items)
-5. `generateEmbeddings()` - Create vectors (OpenAI → Chroma fallback)
-6. `saveVectors()` - Store in ChromaDB with metadata
+5. `generateEmbeddings()` - Create vectors (OpenAI text-embedding-3-small)
+6. `saveVectors()` - Store in Supabase pgvector
+7. `exportEmbeddings()` - Export to embeddings.json.gz (GitHub Actions)
 
 **Repository File Collection:**
 - Automatically fetches all source files from default branch (main/master auto-detected)
@@ -341,23 +341,13 @@ ChromaDB stores two types of items:
 3. Update `PipelineOutput` type in `src/models/PipelineOutput.ts`
 4. Update `refineData()` in `src/pipeline/steps/preprocessText.ts` if new data type
 
-### Handling Embedding Provider Changes
-
-When switching between OpenAI and Chroma embeddings (different dimensions):
-```bash
-pnpm run reindex  # Uses existing refined_data.json, regenerates embeddings
-```
-This avoids re-fetching data from GitHub/Git.
-
 ## Testing & Debugging
 
 ### Verify Server Status
 ```bash
-# Check all services
-curl http://localhost:8000/api/v1/heartbeat     # ChromaDB
-curl http://localhost:3001/api/health           # API server
-curl http://localhost:3001/api/health/chromadb  # API → ChromaDB check
-curl http://localhost:3001/api/health/status    # All servers status
+# Check API server
+curl http://localhost:3001/api/health           # API server health
+curl http://localhost:3001/api/health/status    # All services status
 ```
 
 ### Test Q&A Flow
@@ -371,21 +361,29 @@ curl -X POST http://localhost:3001/api/ask \
   -d '{"question": "프로젝트의 기술스택은?"}'
 ```
 
-### Check Vector Collection
+### Check Vector File
 ```bash
-# View ChromaDB collections
-curl http://localhost:8000/api/v1/collections
+# Verify local embeddings file
+ls -lh output/embeddings.json.gz
+
+# Inspect contents
+zcat output/embeddings.json.gz | jq '.statistics'
+zcat output/embeddings.json.gz | jq '.vectors | length'
 ```
 
 ### Common Issues
 
+**"Failed to load vector file"**
+- Cause: embeddings.json.gz not found
+- Fix: Run export workflow or generate locally: `pnpm tsx scripts/export-embeddings.ts --source supabase --output output/embeddings.json.gz`
+
 **"Found 0 relevant documents"**
-- Cause: Embedding dimension mismatch (switched between OpenAI ↔ Chroma)
-- Fix: `pnpm run reindex`
+- Cause: Empty or corrupted embeddings file
+- Fix: Re-export embeddings from Supabase
 
 **"API 서버에 연결할 수 없습니다"**
-- Check if both servers are running (ChromaDB, API)
-- Verify ports 8000, 3001 are available
+- Check if API server is running: `pnpm run server`
+- Verify port 3001 is available
 - Check `.env` configuration
 
 **"답변을 생성할 수 없습니다"**
@@ -396,17 +394,20 @@ curl http://localhost:8000/api/v1/collections
 ## Deployment Notes
 
 **Local Development:**
-- ChromaDB and API servers running locally
+- API server running on port 3001
+- Uses local embeddings file (`output/embeddings.json.gz`)
 - Settings page shows read-only server status
 
-**Production (Vercel):**
-- Only API server deployed
-- ChromaDB must be hosted separately (e.g., via Docker on cloud VM)
-- Settings page shows read-only status
+**Production (Vercel Serverless):**
+- Serverless API deployed to Vercel
+- Uses GitHub Raw URL for embeddings:
+  `VECTOR_FILE_URL=https://raw.githubusercontent.com/owner/repo/main/output/embeddings.json.gz`
+- No persistent database servers required
+- Total cost: $0/month (GitHub Free + Vercel Hobby)
 
 **Environment Variables:**
-- Set `VITE_API_URL` to point to deployed API server
-- ChromaDB URL must be updated in API server config if not localhost
+- Frontend: Set `VITE_API_URL` to point to deployed API server
+- Backend: Set `VECTOR_FILE_URL` to GitHub Raw URL or leave empty for local file
 
 ## Frontend Pages
 

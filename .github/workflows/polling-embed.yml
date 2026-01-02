@@ -1,6 +1,14 @@
 name: Polling-based Embedding Pipeline
 
-# 트리거 조건
+# 목적: 주기적으로 target-repos.json의 저장소들을 폴링하여 새로운 커밋 감지 및 임베딩 생성
+# 실행 주기: 매주 토요일 18:00 UTC (일요일 03:00 KST)
+# 동작:
+#   1. target-repos.json 기반 다중 레포지토리 변경 감지
+#   2. 새 커밋만 임베딩 생성 (증분 업데이트)
+#   3. Supabase pgvector에 저장
+#   4. commit-state.json 업데이트 (다음 실행 시 중복 방지)
+# 특징: Idempotent (동일 커밋 재실행 시 자동 skip)
+
 on:
   # 매주 토요일 18:00 UTC (일요일 03:00 KST)
   schedule:
@@ -25,18 +33,6 @@ jobs:
     name: Poll and Embed Repositories
     runs-on: ubuntu-latest
     timeout-minutes: 300  # 5시간 제한 (6시간 전 종료)
-
-    # ChromaDB 서버를 서비스로 실행
-    services:
-      chromadb:
-        image: chromadb/chroma:latest
-        ports:
-          - 8000:8000
-        options: >-
-          --health-cmd "curl -f http://localhost:8000/api/v1/heartbeat || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -84,15 +80,6 @@ jobs:
             echo '{"repositories":{},"lastUpdated":"'$(date -Iseconds)'"}' > commit-state.json
           fi
 
-      - name: Wait for ChromaDB to be ready
-        run: |
-          echo "Waiting for ChromaDB service..."
-          timeout 30 bash -c 'until curl -f http://localhost:8000/api/v1/heartbeat; do sleep 2; done'
-          echo "ChromaDB is ready!"
-
-      - name: Check ChromaDB health
-        run: curl -f http://localhost:8000/api/v1/heartbeat
-
       # Supabase 연결 확인 (retry 3회)
       - name: Verify Supabase connection
         uses: nick-invision/retry@v2
@@ -121,8 +108,6 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          CHROMA_HOST: localhost
-          CHROMA_PORT: 8000
         run: |
           pnpm run dev 2>&1 | tee pipeline.log
           echo "Pipeline execution completed"
@@ -135,8 +120,6 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          CHROMA_HOST: localhost
-          CHROMA_PORT: 8000
         run: |
           pnpm run dev --reset 2>&1 | tee pipeline.log
           echo "Pipeline execution completed"

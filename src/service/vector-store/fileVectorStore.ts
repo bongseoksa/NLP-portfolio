@@ -184,6 +184,10 @@ function convertLegacyToUnified(legacy: LegacyVectorIndex): VectorFile {
 
 /**
  * 벡터 파일 로딩 (메모리 캐싱)
+ *
+ * 로딩 우선순위:
+ * 1. VECTOR_FILE_URL 환경 변수 (HTTP/HTTPS URL)
+ * 2. 로컬 파일 (output/embeddings.json.gz)
  */
 async function loadVectorFile(): Promise<VectorFile> {
     const now = Date.now();
@@ -194,48 +198,75 @@ async function loadVectorFile(): Promise<VectorFile> {
         return cachedVectorFile;
     }
 
-    console.log("📥 Loading vector file from CDN...");
     const startTime = Date.now();
 
-    // 환경 변수로 파일 URL 지정
-    const vectorFileUrl = process.env.VECTOR_FILE_URL ||
-                          process.env.VERCEL_BLOB_URL ||
-                          "https://your-cdn.com/embeddings.json.gz";
+    // 환경 변수로 URL 지정 (옵션)
+    const vectorFileUrl = process.env.VECTOR_FILE_URL;
+
+    let buffer: Buffer;
+
+    // 1. URL이 지정된 경우: HTTP/HTTPS로 다운로드
+    if (vectorFileUrl && (vectorFileUrl.startsWith('http://') || vectorFileUrl.startsWith('https://'))) {
+        console.log(`📥 Loading vector file from URL: ${vectorFileUrl}`);
+
+        try {
+            // HTTP 캐싱 헤더 활용 (조건부 요청)
+            const headers: HeadersInit = {
+                'Accept-Encoding': 'gzip'
+            };
+
+            if (cachedETag) {
+                headers['If-None-Match'] = cachedETag;
+            }
+
+            const response = await fetch(vectorFileUrl, { headers });
+
+            // 304 Not Modified: 캐시된 파일 사용
+            if (response.status === 304 && cachedVectorFile) {
+                console.log("✅ Using cached file (304 Not Modified)");
+                cacheTimestamp = Date.now();
+                return cachedVectorFile;
+            }
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch vector file: ${response.statusText}`);
+            }
+
+            // ETag 저장 (다음 요청 시 사용)
+            const etag = response.headers.get('ETag');
+            if (etag) {
+                cachedETag = etag;
+            }
+
+            buffer = Buffer.from(await response.arrayBuffer());
+        } catch (error: any) {
+            throw new Error(`Failed to load vector file from URL: ${error.message}`);
+        }
+    }
+    // 2. URL이 없거나 로컬 경로인 경우: 로컬 파일 시스템에서 읽기
+    else {
+        const fs = await import('fs/promises');
+        const path = await import('path');
+
+        const localPath = vectorFileUrl || 'output/embeddings.json.gz';
+        const resolvedPath = path.resolve(process.cwd(), localPath);
+
+        console.log(`📂 Loading vector file from local: ${resolvedPath}`);
+
+        try {
+            buffer = await fs.readFile(resolvedPath);
+        } catch (error: any) {
+            throw new Error(`Failed to load vector file from ${resolvedPath}: ${error.message}`);
+        }
+    }
 
     try {
-        // HTTP 캐싱 헤더 활용 (조건부 요청)
-        const headers: HeadersInit = {
-            'Accept-Encoding': 'gzip'
-        };
-        
-        if (cachedETag) {
-            headers['If-None-Match'] = cachedETag;
-        }
-
-        const response = await fetch(vectorFileUrl, { headers });
-
-        // 304 Not Modified: 캐시된 파일 사용
-        if (response.status === 304 && cachedVectorFile) {
-            console.log("✅ Using cached file (304 Not Modified)");
-            cacheTimestamp = Date.now();
-            return cachedVectorFile;
-        }
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch vector file: ${response.statusText}`);
-        }
-
-        // ETag 저장 (다음 요청 시 사용)
-        const etag = response.headers.get('ETag');
-        if (etag) {
-            cachedETag = etag;
-        }
-
-        const buffer = Buffer.from(await response.arrayBuffer());
-
         // gzip 압축 해제 (파일이 .gz로 끝나는 경우)
         let jsonString: string;
-        if (vectorFileUrl.endsWith('.gz')) {
+        const isGzipped = (vectorFileUrl && vectorFileUrl.endsWith('.gz')) ||
+                         (!vectorFileUrl && 'output/embeddings.json.gz'.endsWith('.gz'));
+
+        if (isGzipped) {
             const decompressed = await gunzipAsync(buffer);
             jsonString = decompressed.toString('utf-8');
         } else {

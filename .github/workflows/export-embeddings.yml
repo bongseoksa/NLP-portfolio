@@ -1,5 +1,17 @@
 name: Export Embeddings to File
 
+# 목적: Supabase에 저장된 벡터를 로컬 파일로 내보내기 (Git 커밋)
+# 실행 트리거:
+#   - polling-embed.yml 완료 후 자동 실행
+#   - 매일 0:30 UTC (스케줄)
+#   - 수동 실행 가능
+# 동작:
+#   1. Supabase에서 모든 임베딩 조회
+#   2. embeddings.json.gz 압축 파일 생성
+#   3. output/ 디렉토리에 저장
+#   4. Git 커밋 및 푸시
+# 목적: CDN 비용 없이 GitHub에서 직접 파일 제공
+
 on:
   # 임베딩 파이프라인 완료 후 자동 실행
   workflow_run:
@@ -72,11 +84,10 @@ jobs:
       - name: Export embeddings from Supabase
         id: export
         run: |
-          pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel 2>&1 | tee export.log
+          pnpm tsx scripts/export-embeddings.ts --source supabase --output output/embeddings.json.gz 2>&1 | tee export.log
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
           TARGET_REPO_OWNER: ${{ github.repository_owner }}
           TARGET_REPO_NAME: ${{ github.event.repository.name }}
 
@@ -106,6 +117,33 @@ jobs:
           echo "   File size: $(numfmt --to=iec $size 2>/dev/null || echo "$size bytes")"
           echo "   Embeddings: $count"
 
+      # Git 커밋 및 푸시
+      - name: Commit embeddings file
+        if: success()
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 변경사항 확인
+          git add output/embeddings.json.gz
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chore: Update embeddings [skip ci]
+
+            - Generated: Run #${{ github.run_number }}
+            - Embeddings: ${{ steps.verify.outputs.embedding_count }}
+            - File size: ${{ steps.verify.outputs.file_size }} bytes
+            - Triggered by: ${{ github.event_name }}"
+
+            git push
+            echo "✅ Committed embeddings.json.gz"
+            echo "committed=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️  No changes to commit"
+            echo "committed=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload to GitHub Artifacts (백업)
         if: always()
         uses: actions/upload-artifact@v4
@@ -125,35 +163,6 @@ jobs:
           retention-days: 7
         continue-on-error: true
 
-      # 배포 검증 (Vercel Blob 확인)
-      - name: Verify deployment
-        if: success()
-        run: |
-          echo "⏳ Waiting for CDN propagation (10 seconds)..."
-          sleep 10
-
-          # VECTOR_FILE_URL이 환경 변수에 있으면 검증
-          if [ -n "${{ secrets.VECTOR_FILE_URL }}" ]; then
-            echo "🔍 Verifying CDN deployment..."
-
-            response=$(curl -L -s -w "%{http_code}" -o /tmp/test.json.gz "${{ secrets.VECTOR_FILE_URL }}")
-
-            if [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
-              echo "✅ CDN deployment verified (HTTP $response)"
-
-              # 파일 무결성 확인
-              if zcat /tmp/test.json.gz | jq '.embeddings[0]' > /dev/null 2>&1; then
-                echo "✅ JSON structure valid"
-              else
-                echo "⚠️  JSON structure invalid or file corrupted"
-              fi
-            else
-              echo "⚠️  CDN verification failed (HTTP $response)"
-            fi
-          else
-            echo "⚠️  VECTOR_FILE_URL not set, skipping CDN verification"
-          fi
-
       # 결과 요약
       - name: Summary
         if: always()
@@ -162,22 +171,27 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **File Size**: ${{ steps.verify.outputs.file_size }} bytes" >> $GITHUB_STEP_SUMMARY
           echo "- **Embeddings**: ${{ steps.verify.outputs.embedding_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Committed**: ${{ steps.commit.outputs.committed }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Run Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### File Location" >> $GITHUB_STEP_SUMMARY
+          echo "- \`output/embeddings.json.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Raw URL: \`https://raw.githubusercontent.com/${{ github.repository }}/main/output/embeddings.json.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "1. Set \`VECTOR_FILE_URL\` in production environment" >> $GITHUB_STEP_SUMMARY
-          echo "2. Deploy service with new URL" >> $GITHUB_STEP_SUMMARY
-          echo "3. Test: \`pnpm run ask \"test question\"\`" >> $GITHUB_STEP_SUMMARY
+          echo "1. Set \`VECTOR_FILE_URL=https://raw.githubusercontent.com/${{ github.repository }}/main/output/embeddings.json.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Test: \`pnpm run ask \"test question\"\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Notify success
         if: success()
         run: |
-          echo "✅ Embeddings exported successfully!"
+          echo "✅ Embeddings exported and committed successfully!"
           echo "📊 Statistics:"
           echo "   - Embeddings: ${{ steps.verify.outputs.embedding_count }}"
           echo "   - File size: ${{ steps.verify.outputs.file_size }} bytes"
-          echo "📁 Uploaded to Vercel Blob Storage"
-          echo "🔗 Update VECTOR_FILE_URL in your deployment settings"
+          echo "   - Committed: ${{ steps.commit.outputs.committed }}"
+          echo "📁 Saved to: output/embeddings.json.gz"
+          echo "🔗 Raw URL: https://raw.githubusercontent.com/${{ github.repository }}/main/output/embeddings.json.gz"
 
       - name: Notify failure
         if: failure()
