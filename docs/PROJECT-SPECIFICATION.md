@@ -88,6 +88,104 @@
 - ✅ 임베딩은 CI 단계에서만 수행
 - ✅ 런타임은 읽기 전용 구조
 
+### 환경별 GitHub API 인증 전략
+
+본 프로젝트는 **GitHub Actions CI 환경**과 **로컬 개발 환경**에서 서로 다른 인증 방식을 사용한다.
+
+#### GitHub Actions (CI 환경)
+```yaml
+# .github/workflows/polling-embed.yml
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # ✅ 자동 제공
+```
+
+**특징**:
+- GitHub Actions가 워크플로우 실행 시 자동 생성
+- 해당 레포지토리 및 같은 owner의 레포지토리 접근 가능
+- 워크플로우 종료 시 자동 만료
+- **설정 불필요** (GitHub Secrets에 추가 안 함)
+
+**접근 가능 범위**:
+- ✅ `NLP-portfolio` (현재 레포지토리)
+- ✅ `portfolio` (같은 owner의 다른 레포지토리)
+- ✅ Public 레포지토리 읽기
+- ✅ Private 레포지토리 읽기 (owner 일치 시)
+
+#### 로컬 개발 환경
+```bash
+# .env
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxx  # Personal Access Token 필요
+TARGET_REPO_OWNER=username
+TARGET_REPO_NAME1=portfolio
+TARGET_REPO_NAME2=NLP-portfolio
+```
+
+**특징**:
+- 개발자가 직접 Personal Access Token (PAT) 생성 필요
+- GitHub Settings → Developer settings → Personal access tokens
+- 권한: `repo` (Full control of private repositories)
+- `.env` 파일에 수동 추가
+
+**접근 가능 범위**:
+- ✅ PAT 생성자가 접근 가능한 모든 레포지토리
+- ✅ Public/Private 레포지토리 읽기
+- ✅ 권한에 따라 쓰기 가능
+
+#### 코드 레벨 분기 처리
+
+```typescript
+// src/embedding-pipeline/data_sources/github/client.ts (예시)
+import { Octokit } from "@octokit/rest";
+
+// 환경에 따라 자동으로 올바른 토큰 사용
+const githubToken = process.env.GITHUB_TOKEN; // CI: 자동 제공, 로컬: .env에서 로드
+
+if (!githubToken) {
+  throw new Error(
+    "GITHUB_TOKEN is required. " +
+    "CI: Automatically provided. " +
+    "Local: Add Personal Access Token to .env file"
+  );
+}
+
+const octokit = new Octokit({
+  auth: githubToken,
+});
+
+export { octokit };
+```
+
+**환경 감지 로직** (선택적):
+```typescript
+const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+
+if (isCI) {
+  console.log("🔄 Running in CI: Using GitHub Actions token");
+} else {
+  console.log("💻 Running locally: Using Personal Access Token");
+
+  if (!process.env.GITHUB_TOKEN?.startsWith("ghp_")) {
+    console.warn("⚠️  Local token should start with 'ghp_'");
+  }
+}
+```
+
+#### 필요한 GitHub Secrets 요약
+
+**GitHub Actions에만 필요** (Settings → Secrets and variables → Actions):
+- ✅ `SUPABASE_URL`
+- ✅ `SUPABASE_SERVICE_ROLE_KEY`
+- ✅ `OPENAI_API_KEY` (현재 사용 중, 향후 제거 예정)
+- ⏳ `CLAUDE_API_KEY` (추가 예정)
+- ⏳ `GEMINI_API_KEY` (추가 예정)
+- ⏳ `HUGGINGFACE_API_KEY` (선택 사항)
+- ❌ `GITHUB_TOKEN` (**자동 제공, 설정 불필요**)
+
+**로컬 개발에만 필요** (.env 파일):
+- ✅ `GITHUB_TOKEN` (Personal Access Token)
+- ✅ `TARGET_REPO_OWNER`, `TARGET_REPO_NAME`
+- ✅ 위의 모든 Supabase, LLM API 키들
+
 ---
 
 ## 5. 데이터 흐름
@@ -98,6 +196,7 @@
 - 변경 diff (patch)
 - 파일 내용 (source code)
 - **대상 레포지토리**: `portfolio`, `NLP-portfolio` (2개)
+- **인증**: GitHub Actions 자동 토큰 (CI) / Personal Access Token (로컬)
 
 **Supabase**
 - 사용자 질의응답 원문
@@ -274,7 +373,7 @@ CI 단계에서의 **로컬**이란 **GitHub Actions 러너 내부의 임시 실
       "id": "username/portfolio",
       "owner": "username",
       "repo": "portfolio",
-      "defaultBranch": "main",
+      "defaultBranch": "master",
       "lastProcessedCommit": "abc123def456",
       "lastProcessedAt": "2026-01-01T15:00:00Z",
       "totalCommitsProcessed": 150
@@ -283,7 +382,7 @@ CI 단계에서의 **로컬**이란 **GitHub Actions 러너 내부의 임시 실
       "id": "username/NLP-portfolio",
       "owner": "username",
       "repo": "NLP-portfolio",
-      "defaultBranch": "main",
+      "defaultBranch": "master",
       "lastProcessedCommit": "xyz789uvw012",
       "lastProcessedAt": "2026-01-01T15:05:00Z",
       "totalCommitsProcessed": 80
