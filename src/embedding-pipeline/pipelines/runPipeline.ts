@@ -5,7 +5,8 @@ import { fetchFiles } from "../data_sources/github/fetchFiles.js";
 import { fetchRepositoryFiles } from "../data_sources/github/fetchRepositoryFiles.js";
 import type { PipelineOutput } from "../../shared/models/PipelineOutput.js";
 import { refineData } from "./steps/preprocessText.js";
-import { generateEmbeddings } from "../nlp/embedding/openaiEmbedding.js";
+// 기획서에 명시된 기술 스택: Hugging Face sentence-transformers/all-MiniLM-L6-v2
+import { generateEmbeddings } from "../nlp/embedding/huggingFaceEmbedding.js";
 import { saveVectors } from "../storage/saveVectors.js";
 import { saveVectorsSupabase } from "../storage/saveVectorsSupabase.js";
 import type { EmbeddingItem } from "../../shared/models/EmbeddingItem.js";

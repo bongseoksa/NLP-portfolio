@@ -1,23 +1,22 @@
 /**
  * 검색된 문맥(Context)을 바탕으로 사용자 질문에 대한 답변을 생성합니다.
- * OpenAI 실패 시 Claude로, Claude 실패 시 Gemini로 자동 fallback합니다.
+ * 기획서에 명시된 Fallback Chain: Claude Sonnet 4 → Gemini 1.5 Flash → Mistral-7B-Instruct
  */
-import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import fetch from "node-fetch";
 import type { SearchResult } from "../vector-store/searchVectors.js";
 
-// OpenAI 클라이언트 (API 키가 없으면 null)
-const openaiApiKey = process.env.OPENAI_API_KEY;
-const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
-
-// Claude 클라이언트 (API 키가 없으면 null)
+// Claude 클라이언트 (Primary - API 키가 없으면 null)
 const anthropicApiKey = process.env.CLAUDE_API_KEY;
 const anthropic = anthropicApiKey ? new Anthropic({ apiKey: anthropicApiKey }) : null;
 
-// Gemini 클라이언트 (API 키가 없으면 null)
+// Gemini 클라이언트 (Fallback 1 - API 키가 없으면 null)
 const geminiApiKey = process.env.GEMINI_API_KEY;
 const gemini = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
+
+// Mistral-7B-Instruct (Fallback 2 - Hugging Face Inference API)
+const huggingFaceApiKey = process.env.HUGGING_FACE_API_KEY;
 
 const SYSTEM_PROMPT = `
 당신은 GitHub 레포지토리 분석 전문가입니다.
@@ -57,53 +56,63 @@ function buildContext(results: SearchResult[]): string {
 }
 
 /**
- * OpenAI를 사용하여 답변을 생성합니다.
+ * Mistral-7B-Instruct를 사용하여 답변을 생성합니다.
+ * Hugging Face Inference API를 통해 호출합니다.
  */
-async function generateWithOpenAI(query: string, contextText: string): Promise<string> {
-    if (!openai) {
-        throw new Error("OpenAI API key not configured");
+async function generateWithMistral(query: string, contextText: string): Promise<string> {
+    if (!huggingFaceApiKey) {
+        throw new Error("Hugging Face API key not configured");
     }
 
-    const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: `[Context]\n${contextText}\n\n[Question]\n${query}` }
-        ],
-        temperature: 0.1,
-    });
+    const prompt = `${SYSTEM_PROMPT}\n\n[Context]\n${contextText}\n\n[Question]\n${query}`;
 
-    return response.choices[0]?.message?.content || "답변을 생성할 수 없습니다.";
+    const response = await fetch(
+        "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+        {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${huggingFaceApiKey}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                inputs: prompt,
+                parameters: {
+                    max_new_tokens: 512,
+                    temperature: 0.1,
+                },
+            }),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(`Mistral API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json() as any;
+    
+    // Hugging Face API 응답 형식에 따라 처리
+    if (Array.isArray(data) && data.length > 0 && data[0].generated_text) {
+        return data[0].generated_text;
+    } else if (data.generated_text) {
+        return data.generated_text;
+    } else {
+        throw new Error("Unexpected Mistral API response format");
+    }
 }
 
 /**
- * OpenAI를 사용하여 답변과 토큰 사용량을 반환합니다.
+ * Mistral-7B-Instruct를 사용하여 답변과 토큰 사용량을 반환합니다.
+ * Hugging Face API는 토큰 사용량을 제공하지 않으므로 0을 반환합니다.
  */
-async function generateWithOpenAIAndUsage(query: string, contextText: string): Promise<{
+async function generateWithMistralAndUsage(query: string, contextText: string): Promise<{
     answer: string;
     usage: { promptTokens: number; completionTokens: number; totalTokens: number };
 }> {
-    if (!openai) {
-        throw new Error("OpenAI API key not configured");
-    }
-
-    const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: `[Context]\n${contextText}\n\n[Question]\n${query}` }
-        ],
-        temperature: 0.1,
-    });
-
-    const answer = response.choices[0]?.message?.content || "답변을 생성할 수 없습니다.";
-    const usage = {
-        promptTokens: response.usage?.prompt_tokens || 0,
-        completionTokens: response.usage?.completion_tokens || 0,
-        totalTokens: response.usage?.total_tokens || 0,
+    const answer = await generateWithMistral(query, contextText);
+    return {
+        answer,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, // Hugging Face는 토큰 카운팅 없음
     };
-
-    return { answer, usage };
 }
 
 /**
@@ -210,7 +219,7 @@ async function generateWithGeminiAndUsage(query: string, contextText: string): P
 
 /**
  * LLM을 사용하여 질문에 대한 답변을 생성합니다.
- * OpenAI 실패 시 Claude로, Claude 실패 시 Gemini로 자동 fallback합니다.
+ * 기획서에 명시된 Fallback Chain: Claude Sonnet 4 → Gemini 1.5 Flash → Mistral-7B-Instruct
  * 
  * @param {string} query - 사용자 질문
  * @param {SearchResult[]} context - 검색된 관련 문서 리스트
@@ -239,22 +248,7 @@ export async function generateAnswer(query: string, context: SearchResult[]): Pr
         }
     }
 
-    // 1차 시도: OpenAI
-    if (openai) {
-        try {
-            console.log("🔄 Generating answer with OpenAI (GPT-4o)...");
-            const answer = await generateWithOpenAI(query, contextText);
-            console.log("✅ OpenAI answer generation successful");
-            return answer;
-        } catch (error: any) {
-            console.warn("⚠️ OpenAI failed:", error.message || error);
-            console.log("🔄 Falling back to Claude...");
-        }
-    } else {
-        console.log("ℹ️ OpenAI API key not set, trying Claude...");
-    }
-
-    // 2차 시도: Claude
+    // 1차 시도: Claude Sonnet 4 (Primary)
     if (anthropic) {
         try {
             console.log("🔄 Generating answer with Claude...");
@@ -269,26 +263,41 @@ export async function generateAnswer(query: string, context: SearchResult[]): Pr
         console.log("ℹ️ CLAUDE_API_KEY not set, trying Gemini...");
     }
 
-    // 3차 시도: Gemini
+    // 2차 시도: Gemini 1.5 Flash (Fallback 1)
     if (gemini) {
         try {
-            console.log("🔄 Generating answer with Gemini 1.5 Flash...");
+            console.log("🔄 Generating answer with Gemini 1.5 Flash (Fallback 1)...");
             const answer = await generateWithGemini(query, contextText);
             console.log("✅ Gemini answer generation successful");
             return answer;
         } catch (error: any) {
-            console.error("❌ Gemini failed:", error.message || error);
+            console.warn("⚠️ Gemini failed:", error.message || error);
+            console.log("🔄 Falling back to Mistral...");
         }
     } else {
-        console.warn("⚠️ GEMINI_API_KEY not set, Gemini unavailable");
+        console.log("ℹ️ GEMINI_API_KEY not set, trying Mistral...");
     }
 
-    return "오류가 발생하여 답변을 생성할 수 없습니다. OpenAI, Anthropic 또는 Google API 키를 확인해주세요.";
+    // 3차 시도: Mistral-7B-Instruct (Fallback 2)
+    if (huggingFaceApiKey) {
+        try {
+            console.log("🔄 Generating answer with Mistral-7B-Instruct (Fallback 2)...");
+            const answer = await generateWithMistral(query, contextText);
+            console.log("✅ Mistral answer generation successful");
+            return answer;
+        } catch (error: any) {
+            console.error("❌ Mistral failed:", error.message || error);
+        }
+    } else {
+        console.warn("⚠️ HUGGING_FACE_API_KEY not set, Mistral unavailable");
+    }
+
+    return "현재 응답을 생성할 수 없습니다. Claude, Gemini 또는 Mistral API 키를 확인해주세요.";
 }
 
 /**
  * LLM을 사용하여 질문에 대한 답변과 토큰 사용량을 생성합니다.
- * OpenAI 실패 시 Claude로, Claude 실패 시 Gemini로 자동 fallback합니다.
+ * 기획서에 명시된 Fallback Chain: Claude Sonnet 4 → Gemini 1.5 Flash → Mistral-7B-Instruct
  *
  * @param {string} query - 사용자 질문
  * @param {SearchResult[]} context - 검색된 관련 문서 리스트
@@ -332,26 +341,10 @@ export async function generateAnswerWithUsage(
         }
     }
 
-    // 1차 시도: OpenAI
-    if (openai) {
-        try {
-            console.log("🔄 Generating answer with OpenAI (GPT-4o)...");
-            const result = await generateWithOpenAIAndUsage(query, contextText);
-            console.log("✅ OpenAI answer generation successful");
-            console.log(`📊 토큰 사용량: prompt=${result.usage.promptTokens}, completion=${result.usage.completionTokens}, total=${result.usage.totalTokens}`);
-            return result;
-        } catch (error: any) {
-            console.warn("⚠️ OpenAI failed:", error.message || error);
-            console.log("🔄 Falling back to Claude...");
-        }
-    } else {
-        console.log("ℹ️ OpenAI API key not set, trying Claude...");
-    }
-
-    // 2차 시도: Claude
+    // 1차 시도: Claude Sonnet 4 (Primary)
     if (anthropic) {
         try {
-            console.log("🔄 Generating answer with Claude...");
+            console.log("🔄 Generating answer with Claude Sonnet 4 (Primary)...");
             const result = await generateWithClaudeAndUsage(query, contextText);
             console.log("✅ Claude answer generation successful");
             console.log(`📊 토큰 사용량: prompt=${result.usage.promptTokens}, completion=${result.usage.completionTokens}, total=${result.usage.totalTokens}`);
@@ -364,23 +357,39 @@ export async function generateAnswerWithUsage(
         console.log("ℹ️ CLAUDE_API_KEY not set, trying Gemini...");
     }
 
-    // 3차 시도: Gemini
+    // 2차 시도: Gemini 1.5 Flash (Fallback 1)
     if (gemini) {
         try {
-            console.log("🔄 Generating answer with Gemini 1.5 Flash...");
+            console.log("🔄 Generating answer with Gemini 1.5 Flash (Fallback 1)...");
             const result = await generateWithGeminiAndUsage(query, contextText);
             console.log("✅ Gemini answer generation successful");
             console.log(`📊 토큰 사용량: prompt=${result.usage.promptTokens}, completion=${result.usage.completionTokens}, total=${result.usage.totalTokens}`);
             return result;
         } catch (error: any) {
-            console.error("❌ Gemini failed:", error.message || error);
+            console.warn("⚠️ Gemini failed:", error.message || error);
+            console.log("🔄 Falling back to Mistral...");
         }
     } else {
-        console.warn("⚠️ GEMINI_API_KEY not set, Gemini unavailable");
+        console.log("ℹ️ GEMINI_API_KEY not set, trying Mistral...");
+    }
+
+    // 3차 시도: Mistral-7B-Instruct (Fallback 2)
+    if (huggingFaceApiKey) {
+        try {
+            console.log("🔄 Generating answer with Mistral-7B-Instruct (Fallback 2)...");
+            const result = await generateWithMistralAndUsage(query, contextText);
+            console.log("✅ Mistral answer generation successful");
+            console.log(`📊 토큰 사용량: prompt=${result.usage.promptTokens}, completion=${result.usage.completionTokens}, total=${result.usage.totalTokens}`);
+            return result;
+        } catch (error: any) {
+            console.error("❌ Mistral failed:", error.message || error);
+        }
+    } else {
+        console.warn("⚠️ HUGGING_FACE_API_KEY not set, Mistral unavailable");
     }
 
     return {
-        answer: "오류가 발생하여 답변을 생성할 수 없습니다. OpenAI, Anthropic 또는 Google API 키를 확인해주세요.",
+        answer: "현재 응답을 생성할 수 없습니다. Claude, Gemini 또는 Mistral API 키를 확인해주세요.",
         usage: defaultUsage,
     };
 }
