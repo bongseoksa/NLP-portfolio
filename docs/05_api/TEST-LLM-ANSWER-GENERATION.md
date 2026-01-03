@@ -27,12 +27,12 @@
    - Context 구조화 (커밋, 파일, Diff, 이전 대화)
    - 한국어 답변 요구사항 명시
 
-### ⚠️ 확인 필요 항목
+### ✅ 추가 완료 항목
 
-1. **Gemini 1.5 Flash 통합** ⚠️
-   - 현재 미구현
-   - 마일스톤 문서에는 Fallback으로 명시되어 있으나, 실제 구현에서는 선택적
-   - OpenAI → Claude Fallback으로 충분한 것으로 판단
+1. **Gemini 1.5 Flash 통합** ✅
+   - 모델: `gemini-1.5-flash`
+   - 역할: 3차 Fallback (OpenAI → Claude → Gemini)
+   - 토큰 사용량 추적: 구현됨
 
 ## 구현 상태
 
@@ -44,6 +44,8 @@
 [1차 시도] OpenAI GPT-4o
     ↓ (실패 시)
 [2차 시도] Claude Sonnet 4
+    ↓ (실패 시)
+[3차 시도] Gemini 1.5 Flash
     ↓ (실패 시)
 에러 메시지 반환
 ```
@@ -60,10 +62,19 @@ if (openai) {
     }
 }
 
-// Fallback: Claude
+// Fallback 1: Claude
 if (anthropic) {
     try {
         return await generateWithClaudeAndUsage(query, contextText);
+    } catch (error) {
+        // Fallback to Gemini
+    }
+}
+
+// Fallback 2: Gemini
+if (gemini) {
+    try {
+        return await generateWithGeminiAndUsage(query, contextText);
     } catch (error) {
         // Return error message
     }
@@ -150,19 +161,19 @@ curl -X POST http://localhost:3001/api/ask \
 ### 완료된 기능
 
 - ✅ Claude Sonnet 4 통합 (Fallback)
-- ✅ Fallback 체인 구현 (OpenAI → Claude)
+- ✅ Gemini 1.5 Flash 통합 (3차 Fallback)
+- ✅ Fallback 체인 구현 (OpenAI → Claude → Gemini)
 - ✅ 토큰 사용량 추적
 - ✅ 프롬프트 최적화 (SYSTEM_PROMPT)
 
 ### 선택적 개선 사항
 
-- ⚠️ Gemini 1.5 Flash 추가 (현재는 불필요)
 - ⚠️ 프롬프트 세부 최적화 (현재 상태로도 충분)
 
 ### 권장 사항
 
-1. **현재 구현 유지**: OpenAI → Claude Fallback으로 충분
-2. **Gemini 추가는 선택적**: 비용 절감이 필요한 경우에만 고려
+1. **현재 구현 유지**: OpenAI → Claude → Gemini Fallback 체인 완성
+2. **Gemini 활용**: 무료 tier 활용으로 비용 절감 가능
 3. **프롬프트는 현재 상태 유지**: 필요 시 점진적 개선
 
 ## 다음 단계

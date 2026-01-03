@@ -220,8 +220,8 @@ graph TD
 
 #### 3. LLM 답변 생성
 - [x] Claude Sonnet 4 통합 (Fallback으로 구현됨, Primary는 OpenAI GPT-4o)
-- [ ] Gemini 1.5 Flash 통합 (Fallback) - 선택적 (현재는 OpenAI → Claude로 충분)
-- [x] Fallback 체인 구현 (OpenAI → Claude) ✅ 테스트 완료
+- [x] Gemini 1.5 Flash 통합 (Fallback) ✅ 구현 완료
+- [x] Fallback 체인 구현 (OpenAI → Claude → Gemini) ✅ 구현 완료
 - [x] 프롬프트 최적화 (SYSTEM_PROMPT 구현됨) ✅ 검토 완료
 - [x] 토큰 사용량 추적 (구현됨) ✅ 테스트 완료
 

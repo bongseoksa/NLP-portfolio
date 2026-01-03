@@ -1,9 +1,10 @@
 /**
  * 검색된 문맥(Context)을 바탕으로 사용자 질문에 대한 답변을 생성합니다.
- * OpenAI 실패 시 Claude AI로 자동 fallback합니다.
+ * OpenAI 실패 시 Claude로, Claude 실패 시 Gemini로 자동 fallback합니다.
  */
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { SearchResult } from "../vector-store/searchVectors.js";
 
 // OpenAI 클라이언트 (API 키가 없으면 null)
@@ -13,6 +14,10 @@ const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
 // Claude 클라이언트 (API 키가 없으면 null)
 const anthropicApiKey = process.env.CLAUDE_API_KEY;
 const anthropic = anthropicApiKey ? new Anthropic({ apiKey: anthropicApiKey }) : null;
+
+// Gemini 클라이언트 (API 키가 없으면 null)
+const geminiApiKey = process.env.GEMINI_API_KEY;
+const gemini = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 const SYSTEM_PROMPT = `
 당신은 GitHub 레포지토리 분석 전문가입니다.
@@ -155,8 +160,57 @@ async function generateWithClaudeAndUsage(query: string, contextText: string): P
 }
 
 /**
+ * Gemini를 사용하여 답변을 생성합니다.
+ */
+async function generateWithGemini(query: string, contextText: string): Promise<string> {
+    if (!gemini) {
+        throw new Error("Gemini API key not configured");
+    }
+
+    const model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `${SYSTEM_PROMPT}\n\n[Context]\n${contextText}\n\n[Question]\n${query}`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    
+    return response.text() || "답변을 생성할 수 없습니다.";
+}
+
+/**
+ * Gemini를 사용하여 답변과 토큰 사용량을 반환합니다.
+ */
+async function generateWithGeminiAndUsage(query: string, contextText: string): Promise<{
+    answer: string;
+    usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+}> {
+    if (!gemini) {
+        throw new Error("Gemini API key not configured");
+    }
+
+    const model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `${SYSTEM_PROMPT}\n\n[Context]\n${contextText}\n\n[Question]\n${query}`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    
+    const answer = response.text() || "답변을 생성할 수 없습니다.";
+    
+    // Gemini는 usage 정보를 result.response.usageMetadata에 제공
+    const usageInfo = result.response.usageMetadata;
+    const usage = {
+        promptTokens: usageInfo?.promptTokenCount || 0,
+        completionTokens: usageInfo?.candidatesTokenCount || 0,
+        totalTokens: usageInfo?.totalTokenCount || (usageInfo?.promptTokenCount || 0) + (usageInfo?.candidatesTokenCount || 0),
+    };
+
+    return { answer, usage };
+}
+
+/**
  * LLM을 사용하여 질문에 대한 답변을 생성합니다.
- * OpenAI 실패 시 Claude로 자동 fallback합니다.
+ * OpenAI 실패 시 Claude로, Claude 실패 시 Gemini로 자동 fallback합니다.
  * 
  * @param {string} query - 사용자 질문
  * @param {SearchResult[]} context - 검색된 관련 문서 리스트
@@ -208,18 +262,33 @@ export async function generateAnswer(query: string, context: SearchResult[]): Pr
             console.log("✅ Claude answer generation successful");
             return answer;
         } catch (error: any) {
-            console.error("❌ Claude failed:", error.message || error);
+            console.warn("⚠️ Claude failed:", error.message || error);
+            console.log("🔄 Falling back to Gemini...");
         }
     } else {
-        console.warn("⚠️ CLAUDE_API_KEY not set, Claude unavailable");
+        console.log("ℹ️ CLAUDE_API_KEY not set, trying Gemini...");
     }
 
-    return "오류가 발생하여 답변을 생성할 수 없습니다. OpenAI 또는 Anthropic API 키를 확인해주세요.";
+    // 3차 시도: Gemini
+    if (gemini) {
+        try {
+            console.log("🔄 Generating answer with Gemini 1.5 Flash...");
+            const answer = await generateWithGemini(query, contextText);
+            console.log("✅ Gemini answer generation successful");
+            return answer;
+        } catch (error: any) {
+            console.error("❌ Gemini failed:", error.message || error);
+        }
+    } else {
+        console.warn("⚠️ GEMINI_API_KEY not set, Gemini unavailable");
+    }
+
+    return "오류가 발생하여 답변을 생성할 수 없습니다. OpenAI, Anthropic 또는 Google API 키를 확인해주세요.";
 }
 
 /**
  * LLM을 사용하여 질문에 대한 답변과 토큰 사용량을 생성합니다.
- * OpenAI 실패 시 Claude로 자동 fallback합니다.
+ * OpenAI 실패 시 Claude로, Claude 실패 시 Gemini로 자동 fallback합니다.
  *
  * @param {string} query - 사용자 질문
  * @param {SearchResult[]} context - 검색된 관련 문서 리스트
@@ -288,14 +357,30 @@ export async function generateAnswerWithUsage(
             console.log(`📊 토큰 사용량: prompt=${result.usage.promptTokens}, completion=${result.usage.completionTokens}, total=${result.usage.totalTokens}`);
             return result;
         } catch (error: any) {
-            console.error("❌ Claude failed:", error.message || error);
+            console.warn("⚠️ Claude failed:", error.message || error);
+            console.log("🔄 Falling back to Gemini...");
         }
     } else {
-        console.warn("⚠️ CLAUDE_API_KEY not set, Claude unavailable");
+        console.log("ℹ️ CLAUDE_API_KEY not set, trying Gemini...");
+    }
+
+    // 3차 시도: Gemini
+    if (gemini) {
+        try {
+            console.log("🔄 Generating answer with Gemini 1.5 Flash...");
+            const result = await generateWithGeminiAndUsage(query, contextText);
+            console.log("✅ Gemini answer generation successful");
+            console.log(`📊 토큰 사용량: prompt=${result.usage.promptTokens}, completion=${result.usage.completionTokens}, total=${result.usage.totalTokens}`);
+            return result;
+        } catch (error: any) {
+            console.error("❌ Gemini failed:", error.message || error);
+        }
+    } else {
+        console.warn("⚠️ GEMINI_API_KEY not set, Gemini unavailable");
     }
 
     return {
-        answer: "오류가 발생하여 답변을 생성할 수 없습니다. OpenAI 또는 Anthropic API 키를 확인해주세요.",
+        answer: "오류가 발생하여 답변을 생성할 수 없습니다. OpenAI, Anthropic 또는 Google API 키를 확인해주세요.",
         usage: defaultUsage,
     };
 }
