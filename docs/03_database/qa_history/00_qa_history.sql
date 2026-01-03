@@ -53,28 +53,34 @@ CREATE TABLE IF NOT EXISTS qa_history (
 -- ============================================================
 
 -- Time-based queries (dashboard daily stats)
-CREATE INDEX idx_qa_history_created_at ON qa_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_qa_history_created_at ON qa_history(created_at DESC);
 
 -- Category filtering (dashboard category distribution)
-CREATE INDEX idx_qa_history_category ON qa_history(category) WHERE category IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_qa_history_category ON qa_history(category) WHERE category IS NOT NULL;
 
 -- Status filtering (dashboard success rate)
-CREATE INDEX idx_qa_history_status ON qa_history(status);
+CREATE INDEX IF NOT EXISTS idx_qa_history_status ON qa_history(status);
 
 -- LLM provider analytics
-CREATE INDEX idx_qa_history_llm_provider ON qa_history(llm_provider) WHERE llm_provider IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_qa_history_llm_provider ON qa_history(llm_provider) WHERE llm_provider IS NOT NULL;
 
 -- Session-based queries (conversation threads)
-CREATE INDEX idx_qa_history_session_id ON qa_history(session_id) WHERE session_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_qa_history_session_id ON qa_history(session_id) WHERE session_id IS NOT NULL;
 
 -- Full-text search (question search)
-CREATE INDEX idx_qa_history_question_fts ON qa_history USING GIN (to_tsvector('english', question));
+CREATE INDEX IF NOT EXISTS idx_qa_history_question_fts ON qa_history USING GIN (to_tsvector('english', question));
 
 -- ============================================================
 -- Row Level Security (RLS)
 -- ============================================================
 
 ALTER TABLE qa_history ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (to allow re-running this script)
+DROP POLICY IF EXISTS "qa_history_select_policy" ON qa_history;
+DROP POLICY IF EXISTS "qa_history_insert_policy" ON qa_history;
+DROP POLICY IF EXISTS "qa_history_update_policy" ON qa_history;
+DROP POLICY IF EXISTS "qa_history_delete_policy" ON qa_history;
 
 -- Allow SELECT for all (anonymous users can read)
 CREATE POLICY "qa_history_select_policy"
@@ -94,7 +100,6 @@ USING (auth.role() = 'service_role');
 CREATE POLICY "qa_history_delete_policy"
 ON qa_history FOR DELETE
 USING (auth.role() = 'service_role');
-
 -- ============================================================
 -- Sample Queries
 -- ============================================================
@@ -167,10 +172,10 @@ ORDER BY count DESC;
 -- Maintenance Queries
 -- ============================================================
 
--- 1. Delete old Q&A records (older than 1 year)
+-- 1. Delete old Q&A records (older than 6 months)
 /*
 DELETE FROM qa_history
-WHERE created_at < NOW() - INTERVAL '1 year';
+WHERE created_at < NOW() - INTERVAL '6 months';
 */
 
 -- 2. Update question_summary for NULL entries (first 20 chars)
@@ -178,6 +183,23 @@ WHERE created_at < NOW() - INTERVAL '1 year';
 UPDATE qa_history
 SET question_summary = LEFT(question, 20)
 WHERE question_summary IS NULL;
+*/
+
+-- 3. Analyze table for query optimization
+/*
+ANALYZE qa_history;
+*/
+
+-- 4. Check table size and index usage
+/*
+SELECT
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
+  pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS table_size,
+  pg_size_pretty(pg_indexes_size(schemaname||'.'||tablename)) AS indexes_size
+FROM pg_tables
+WHERE tablename = 'qa_history';
 */
 
 -- ============================================================

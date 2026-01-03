@@ -31,16 +31,19 @@ CREATE TABLE IF NOT EXISTS ping (
 -- ============================================================
 
 -- Time-based queries (recent pings)
-CREATE INDEX idx_ping_created_at ON ping(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ping_created_at ON ping(created_at DESC);
 
 -- Status filtering (error detection)
-CREATE INDEX idx_ping_status ON ping(status);
+CREATE INDEX IF NOT EXISTS idx_ping_status ON ping(status);
 
 -- ============================================================
 -- Row Level Security (RLS)
 -- ============================================================
 
 ALTER TABLE ping ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policy if exists
+DROP POLICY IF EXISTS "ping_service_role_policy" ON ping;
 
 -- Service role only (GitHub Actions access)
 CREATE POLICY "ping_service_role_policy"

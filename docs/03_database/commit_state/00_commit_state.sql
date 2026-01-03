@@ -32,14 +32,17 @@ CREATE TABLE IF NOT EXISTS commit_state (
 -- ============================================================
 
 -- Query by owner/repo combination
-CREATE INDEX idx_commit_state_owner_repo ON commit_state(owner, repo);
+CREATE INDEX IF NOT EXISTS idx_commit_state_owner_repo ON commit_state(owner, repo);
 
 -- Time-based queries
-CREATE INDEX idx_commit_state_updated_at ON commit_state(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_commit_state_updated_at ON commit_state(updated_at DESC);
 
 -- ============================================================
 -- Triggers
 -- ============================================================
+
+-- Drop existing trigger if exists
+DROP TRIGGER IF EXISTS update_commit_state_updated_at ON commit_state;
 
 -- Auto-update updated_at on row modification
 CREATE TRIGGER update_commit_state_updated_at
@@ -52,6 +55,9 @@ EXECUTE FUNCTION update_updated_at_column();
 -- ============================================================
 
 ALTER TABLE commit_state ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policy if exists
+DROP POLICY IF EXISTS "commit_state_service_role_policy" ON commit_state;
 
 -- Service role only (CI pipeline access)
 CREATE POLICY "commit_state_service_role_policy"

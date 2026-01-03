@@ -23,25 +23,28 @@
 ```
 docs/03_database/
 ├── 00_Schema_Documentation.md    # 현재 문서
-├── tables/                        # 테이블별 SQL 파일
-│   ├── 00_init.sql               # PostgreSQL extensions & common functions
-│   ├── 01_qa_history.sql         # Q&A 히스토리 테이블
-│   ├── 02_embeddings.sql         # 임베딩 벡터 테이블
-│   ├── 03_ping.sql               # Supabase ping 테이블
-│   └── 04_commit_state.sql       # 커밋 처리 상태 테이블
-└── (deprecated) 01_Schema.sql     # 통합 스키마 파일 (백업용)
+├── 00_tables/                     # 공통 초기화
+│   └── 00_init.sql               # PostgreSQL extensions & common functions
+├── qa_history/
+│   └── 00_qa_history.sql         # Q&A 히스토리 테이블
+├── embeddings/
+│   └── 00_embeddings.sql         # 임베딩 벡터 테이블
+├── ping/
+│   └── 00_ping.sql               # Supabase ping 테이블
+└── commit_state/
+    └── 00_commit_state.sql       # 커밋 처리 상태 테이블
 ```
 
 **실행 순서**:
 ```bash
-# 1. 초기화 (extensions & functions)
-psql -f tables/00_init.sql
+# 1. 초기화 (extensions & functions) - 필수, 가장 먼저 실행
+psql -f 00_tables/00_init.sql
 
 # 2. 테이블 생성 (순서 무관)
-psql -f tables/01_qa_history.sql
-psql -f tables/02_embeddings.sql
-psql -f tables/03_ping.sql
-psql -f tables/04_commit_state.sql
+psql -f qa_history/00_qa_history.sql
+psql -f embeddings/00_embeddings.sql
+psql -f ping/00_ping.sql
+psql -f commit_state/00_commit_state.sql
 ```
 
 ---
@@ -61,7 +64,7 @@ psql -f tables/04_commit_state.sql
 
 ### 3.1 qa_history (질의응답 히스토리)
 
-**파일**: [tables/01_qa_history.sql](tables/01_qa_history.sql)
+**파일**: [qa_history/00_qa_history.sql](qa_history/00_qa_history.sql)
 
 **목적**: 사용자 질의응답 원문을 저장하여 연속 질의응답 컨텍스트 및 대시보드 통계 제공
 
@@ -222,7 +225,7 @@ CREATE TABLE qa_history (
 
 ### 3.2 embeddings (임베딩 벡터)
 
-**파일**: [tables/02_embeddings.sql](tables/02_embeddings.sql)
+**파일**: [embeddings/00_embeddings.sql](embeddings/00_embeddings.sql)
 
 **목적**: CI 단계에서 생성한 임베딩 벡터를 임시 저장하여 `embeddings.json.gz` export
 
@@ -307,7 +310,7 @@ LIMIT 10;
 
 ### 3.3 ping (Supabase 연결 상태)
 
-**파일**: [tables/03_ping.sql](tables/03_ping.sql)
+**파일**: [ping/00_ping.sql](ping/00_ping.sql)
 
 **목적**: Supabase Free Tier 7일 비활성 방지 (GitHub Actions 주간 실행)
 
@@ -363,7 +366,7 @@ CREATE TABLE ping (
 
 ### 3.4 commit_state (커밋 처리 상태)
 
-**파일**: [tables/04_commit_state.sql](tables/04_commit_state.sql)
+**파일**: [commit_state/00_commit_state.sql](commit_state/00_commit_state.sql)
 
 **목적**: 증분 업데이트를 위한 마지막 처리 커밋 SHA 저장 (GitHub Artifacts 대체)
 
@@ -490,7 +493,12 @@ USING (auth.role() = 'service_role');
 
 ## 📚 관련 문서
 
-- [SQL 스키마 파일 (분리 버전)](./tables/)
+- SQL 스키마 파일:
+  - [초기화 스크립트](./00_tables/00_init.sql)
+  - [qa_history 테이블](./qa_history/00_qa_history.sql)
+  - [embeddings 테이블](./embeddings/00_embeddings.sql)
+  - [ping 테이블](./ping/00_ping.sql)
+  - [commit_state 테이블](./commit_state/00_commit_state.sql)
 - [시스템 아키텍처](../02_architecture/01_System_Architecture.md)
 - [CI/CD 워크플로우](../04_ci-cd/01_Workflows.md)
 

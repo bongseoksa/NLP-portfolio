@@ -33,20 +33,23 @@ CREATE TABLE IF NOT EXISTS embeddings (
 -- ============================================================
 
 -- Type filtering
-CREATE INDEX idx_embeddings_type ON embeddings(type);
+CREATE INDEX IF NOT EXISTS idx_embeddings_type ON embeddings(type);
 
 -- Time-based queries
-CREATE INDEX idx_embeddings_created_at ON embeddings(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_embeddings_created_at ON embeddings(created_at DESC);
 
 -- Vector similarity search index (ivfflat)
 -- Note: lists = 100 is suitable for datasets up to 100,000 rows
 -- Adjust based on your expected data size
-CREATE INDEX idx_embeddings_vector ON embeddings USING ivfflat (embedding vector_cosine_ops)
+CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON embeddings USING ivfflat (embedding vector_cosine_ops)
 WITH (lists = 100);
 
 -- ============================================================
 -- Triggers
 -- ============================================================
+
+-- Drop existing trigger if exists
+DROP TRIGGER IF EXISTS update_embeddings_updated_at ON embeddings;
 
 -- Auto-update updated_at on row modification
 CREATE TRIGGER update_embeddings_updated_at
@@ -59,6 +62,9 @@ EXECUTE FUNCTION update_updated_at_column();
 -- ============================================================
 
 ALTER TABLE embeddings ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policy if exists
+DROP POLICY IF EXISTS "embeddings_service_role_policy" ON embeddings;
 
 -- Service role only (CI pipeline access)
 CREATE POLICY "embeddings_service_role_policy"
@@ -179,6 +185,18 @@ VACUUM ANALYZE embeddings;
 -- 3. Rebuild vector index (if performance degrades)
 /*
 REINDEX INDEX idx_embeddings_vector;
+*/
+
+-- 4. Check table and index sizes
+/*
+SELECT
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
+  pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS table_size,
+  pg_size_pretty(pg_indexes_size(schemaname||'.'||tablename)) AS indexes_size
+FROM pg_tables
+WHERE tablename = 'embeddings';
 */
 
 -- ============================================================
