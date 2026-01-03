@@ -25,17 +25,8 @@ pnpm install                    # Install dependencies
 pnpm run chroma:setup          # One-time ChromaDB installation (creates .chroma_venv) - OPTIONAL for local dev
 pnpm run chroma:start          # Start ChromaDB server (required for local ChromaDB mode) - OPTIONAL
 
-# Local CLI (Embedding Pipeline)
-pnpm run local_dev             # Full pipeline: fetch data → embed → store in Supabase/ChromaDB
-pnpm run local_dev:reset       # Reset vector collection, then run full pipeline
+# Export Embeddings
 pnpm run local_export          # Export embeddings to file (for serverless deployment)
-
-# Q&A (CLI)
-pnpm run local_ask "question"  # Query via command line (auto-detects: File > Supabase > ChromaDB)
-
-# Legacy Aliases (for compatibility)
-pnpm run dev                   # → local_dev
-pnpm run ask "question"        # → local_ask
 
 # Servers
 pnpm run server                # Start Vercel dev server (:3001) for Q&A and dashboard
@@ -46,11 +37,6 @@ pnpm run build                 # Compile TypeScript to dist/
 pnpm run start                 # Run compiled JS from dist/
 ```
 
-**Important zsh Note:** When using `pnpm run ask`, always quote questions containing special characters (`?`, `*`, etc.) to avoid shell glob expansion errors:
-```bash
-pnpm run ask "차트는 뭐로 만들어졌어?"  # Correct
-pnpm run ask 차트는 뭐로 만들어졌어?   # ERROR: zsh glob pattern
-```
 
 ### Frontend (frontend/)
 
@@ -207,19 +193,7 @@ api/                                    # Vercel serverless functions
     ├── responseFormatter.ts           # Response formatting
     └── healthCheck.ts                 # Health check logic
 
-local-cli/                             # Local CLI tools (embedding pipeline)
-├── index.ts                          # CLI entry point (commands: dev, ask)
-├── embedding-pipeline/               # Data collection & embedding generation
-│   ├── data_sources/github/         # GitHub API integrations
-│   ├── nlp/embedding/               # Embedding generation (HuggingFace)
-│   ├── pipelines/                   # Pipeline orchestration
-│   ├── services/                    # Commit state management
-│   └── storage/                     # Vector storage (ChromaDB, Supabase, File export)
-└── vector-store/                    # CLI-only vector search
-    ├── searchVectors.ts              # ChromaDB search
-    └── searchVectorsSupabase.ts      # Supabase search
-
-shared/                                # Shared libraries (API + CLI)
+shared/                                # Shared libraries (API)
 ├── lib/                              # Business logic
 │   ├── supabase.ts                   # Supabase client & operations
 │   └── supabaseMigration.ts          # Database migrations
@@ -409,10 +383,7 @@ curl http://localhost:3001/api/health/status    # All services status
 
 ### Test Q&A Flow
 ```bash
-# CLI mode (fastest)
-pnpm run ask "프로젝트의 기술스택은?"
-
-# Or via HTTP
+# Via HTTP API
 curl -X POST http://localhost:3001/api/ask \
   -H "Content-Type: application/json" \
   -d '{"question": "프로젝트의 기술스택은?"}'
@@ -464,6 +435,7 @@ zcat output/embeddings.json.gz | jq '.vectors | length'
 - No persistent database servers required
 - No Express server or Node.js runtime needed
 - Total cost: $0/month (GitHub Free + Vercel Hobby)
+- **Automatic deployment**: Pushes to `main` branch trigger automatic deployment via Vercel GitHub integration
 
 **Environment Variables:**
 - Frontend: Set `VITE_API_URL` to point to deployed API server

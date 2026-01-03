@@ -5,12 +5,7 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "local_dev": "tsx local-cli/index.ts",
-    "local_dev:reset": "tsx local-cli/index.ts --reset",
-    "local_ask": "tsx local-cli/index.ts ask",
     "local_export": "tsx scripts/export-embeddings.ts",
-    "dev": "pnpm run local_dev",
-    "ask": "pnpm run local_ask",
     "server": "vercel dev --listen 3001",
     "vercel:dev": "vercel dev",
     "build": "tsc",

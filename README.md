@@ -128,19 +128,14 @@ CHROMA_PORT=8000
 ### 백엔드
 
 ```bash
-# 데이터 수집 및 임베딩
-pnpm run dev                    # 전체 파이프라인 실행
-pnpm run dev --reset            # 벡터 컬렉션 리셋 후 실행
-
 # 임베딩 내보내기 (Serverless 배포용)
-pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel
+pnpm run local_export           # Export embeddings to file
+# 또는
+pnpm tsx scripts/export-embeddings.ts --source supabase --output output/embeddings.json.gz
 
 # 서버 실행
 pnpm run server                 # API 서버 (:3001)
-pnpm run chroma:start           # ChromaDB (:8000) - 로컬 개발 시
-
-# CLI 질의응답
-pnpm run ask "질문"             # File/Supabase 모드는 서버 불필요
+pnpm run chroma:start           # ChromaDB (:8000) - 로컬 개발 시 (선택적)
 ```
 
 ### 프론트엔드
@@ -168,8 +163,8 @@ pnpm run build    # 프로덕션 빌드
 - Charts: Recharts
 
 **인프라**
-- Storage: Supabase (Q&A history), Vercel Blob (embeddings)
-- Deployment: Vercel (Serverless)
+- Storage: Supabase (Q&A history), GitHub Raw URL (embeddings)
+- Deployment: Vercel (Serverless) - 자동 배포 (main 브랜치 push 시)
 
 ---
 
@@ -235,19 +230,37 @@ cat .env | grep -E "OPENAI_API_KEY|CLAUDE_API_KEY"
 
 최소 1개의 API 키 필요 (OpenAI 또는 Claude)
 
-### zsh glob 오류
+### "API 서버에 연결할 수 없습니다"
 
-물음표(`?`), 별표(`*`) 포함 시 따옴표 필수:
-```bash
-pnpm run ask "차트는 뭐로 만들어졌어?"  # ✅
-pnpm run ask 차트는 뭐로 만들어졌어?   # ❌
-```
+- API 서버 실행 확인: `pnpm run server`
+- 포트 3001 사용 가능 여부 확인
+- `.env` 파일 설정 확인
+
+---
+
+## 🚀 배포
+
+### Vercel 자동 배포
+
+이 프로젝트는 Vercel과 GitHub가 연동되어 **자동으로 배포**됩니다:
+
+1. **GitHub 연동**: Vercel 프로젝트에 GitHub 저장소 연결
+2. **자동 배포**: `main` 브랜치에 push 시 자동으로 배포 시작
+3. **배포 완료**: 배포 후 프로덕션 URL 자동 생성
+
+**배포 설정 가이드**: [docs/04_ci-cd/02_Vercel_Deployment.md](docs/04_ci-cd/02_Vercel_Deployment.md)
+
+**주의사항**:
+- Vercel 대시보드에서 환경 변수 설정 필요
+- `VECTOR_FILE_URL`을 GitHub Raw URL로 설정 권장
 
 ---
 
 ## 📝 프로젝트 상세 문서
 
 - **전체 가이드**: [CLAUDE.md](CLAUDE.md)
+- **Vercel 배포 가이드**: [docs/04_ci-cd/02_Vercel_Deployment.md](docs/04_ci-cd/02_Vercel_Deployment.md)
+- **CI/CD 워크플로우**: [docs/04_ci-cd/01_Workflows.md](docs/04_ci-cd/01_Workflows.md)
 - **설계 판단 설명**: [docs/architecture/DESIGN-RATIONALE.md](docs/architecture/DESIGN-RATIONALE.md) ⭐
 - **파일 기반 벡터 스토어**: [docs/architecture/FILE-BASED-VECTOR-STORE.md](docs/architecture/FILE-BASED-VECTOR-STORE.md)
 - **Serverless API 흐름**: [docs/architecture/VERCEL-ASK-API-FLOW.md](docs/architecture/VERCEL-ASK-API-FLOW.md)
