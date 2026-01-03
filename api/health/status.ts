@@ -4,10 +4,10 @@ import { handleError } from '../_lib/errorHandler.js';
 import { checkSupabaseConnection } from '../_lib/healthCheck.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCorsHeaders(res);
+  setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
-    return handleOptionsRequest(res);
+    return handleOptionsRequest(req, res);
   }
 
   if (req.method !== 'GET') {

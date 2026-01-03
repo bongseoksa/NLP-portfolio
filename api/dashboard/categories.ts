@@ -3,10 +3,10 @@ import { setCorsHeaders, handleOptionsRequest } from '../_lib/cors.js';
 import { getCategoryDistribution } from '../../shared/lib/supabase.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCorsHeaders(res);
+  setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
-    return handleOptionsRequest(res);
+    return handleOptionsRequest(req, res);
   }
 
   if (req.method !== 'GET') {

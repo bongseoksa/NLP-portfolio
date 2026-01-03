@@ -14,6 +14,7 @@ import { classifyQuestionWithConfidence } from '../shared/services/qa/classifier
 import { addQAHistoryToVectors } from '../shared/services/vector-store/qaHistoryVectorStore.js';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from '../shared/config/env.js';
+import { setCorsHeaders, handleOptionsRequest } from './_lib/cors.js';
 
 /**
  * Serverless Function Handler
@@ -56,19 +57,12 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  // CORS 설정
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-Type'
-  );
+  // CORS 설정 (공통 함수 사용)
+  setCorsHeaders(req, res);
 
   // Preflight 요청 처리
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return handleOptionsRequest(req, res);
   }
 
   // POST만 허용

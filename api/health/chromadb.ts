@@ -6,10 +6,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { setCorsHeaders, handleOptionsRequest } from '../_lib/cors.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCorsHeaders(res);
+  setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
-    return handleOptionsRequest(res);
+    return handleOptionsRequest(req, res);
   }
 
   if (req.method !== 'GET') {

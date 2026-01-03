@@ -22,3 +22,5 @@ frontend/.env
 
 # AI
 .claude
+.vercel
+.env*.local
