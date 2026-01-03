@@ -12,6 +12,10 @@ import type {
   SourceContribution
 } from '../types';
 
+// API Base URL 설정
+// - 로컬 개발: http://localhost:3001 (Express 서버)
+// - Vercel 배포 (같은 프로젝트): 빈 문자열 또는 설정 안 함 (상대 경로 /api/* 사용)
+// - Vercel 배포 (별도 프로젝트): https://your-api-project.vercel.app
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const CONTROL_BASE_URL = import.meta.env.VITE_CONTROL_URL || 'http://localhost:3000';
 
@@ -33,7 +37,15 @@ async function apiRequest<T>(
       ...(options?.headers as Record<string, string> || {}),
     });
 
-    const response = await fetch(`${baseUrl}${endpoint}`, {
+    // Vercel 배포 시 같은 프로젝트에 있으면 상대 경로 사용
+    // baseUrl이 빈 문자열이거나 endpoint가 이미 절대 경로인 경우 처리
+    const url = baseUrl && baseUrl.trim() && !endpoint.startsWith('http') 
+      ? `${baseUrl}${endpoint}` 
+      : endpoint.startsWith('http') 
+        ? endpoint 
+        : endpoint; // 상대 경로 사용 (같은 도메인)
+    
+    const response = await fetch(url, {
       ...options,
       headers,
     });

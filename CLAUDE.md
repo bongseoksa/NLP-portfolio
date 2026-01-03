@@ -450,20 +450,54 @@ Do not update README.md before all tasks in claude.md are finished.
 
 The repository must keep only the following reference documents at the root level:
 
-CLAUD.md
+- `CLAUDE.md` (project instructions for Claude Code)
+- `README.md` (project overview and setup)
 
-README.md
+All other documentation files must be placed under the `docs/` directory.
 
-All other documentation files must be placed under the docs/ directory.
+### Documentation Directory Structure
 
-Documentation rules:
+```
+docs/
+├── README.md                    # Documentation guide
+├── 01_planning/                 # Planning documents
+│   ├── 00_Product_Plan.md      # Final PRD (Product Requirements Document)
+│   └── 01_Project_Specification_Archive.md  # Archived specifications
+├── 02_architecture/             # Architecture design
+│   ├── 01_System_Architecture.md
+│   └── 02_Environment_Variables.md
+├── 03_database/                 # Database schemas and docs
+│   ├── 00_Schema_Documentation.md
+│   └── [subdirectories for table-specific SQL files]
+├── 04_ci-cd/                    # CI/CD workflows
+│   └── 01_Workflows.md
+├── 05_api/                      # API specifications and tests
+│   └── ADR-*.md, TEST-*.md
+└── 06_milestones/               # Project milestones
+    └── 00_Project_Milestones.md
+```
 
-Do not create or keep any additional .md or documentation files in the root directory.
+### Documentation Rules
 
-Organize documents inside docs/ by purpose or structure (e.g. docs/architecture/, docs/api/, docs/setup/).
+1. **Root-level restrictions**
+   - Do not create or keep any additional `.md` or documentation files in the root directory
+   - Only `CLAUDE.md` and `README.md` are allowed at root level
 
-Create new subdirectories under docs/ when necessary to maintain clear structural separation.
+2. **Directory organization**
+   - Organize documents inside `docs/` by category using numbered prefixes (01_, 02_, etc.)
+   - Create new subdirectories under `docs/` when necessary to maintain clear structural separation
+   - Ensure each document is placed in the most appropriate subdirectory based on its content
 
-Ensure each document is placed in the most appropriate subdirectory based on its content.
+3. **File naming convention**
+   - Use numbered prefixes for ordered documents: `01_`, `02_`, etc.
+   - Use descriptive names with underscores: `01_System_Architecture.md`
+   - Archive files use higher numbers: `99_*_backup.md` or `01_*_Archive.md`
 
-If a document is mistakenly created outside docs/ (except CLAUD.md and README.md), it must be moved to the correct location under docs/.
+4. **Primary reference document**
+   - The final PRD is always `docs/01_planning/00_Product_Plan.md`
+   - Never rename this file to maintain consistency
+   - Always keep it up-to-date with latest project specifications
+
+5. **Moving misplaced files**
+   - If a document is mistakenly created outside `docs/` (except CLAUDE.md and README.md), move it to the correct location under `docs/`
+   - Update all internal references when moving files
