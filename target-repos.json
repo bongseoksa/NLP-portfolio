@@ -1,0 +1,17 @@
+{
+  "repositories": [
+    {
+      "owner": "bongseoksa",
+      "repo": "portfolio",
+      "enabled": true,
+      "description": "포트폴리오 레포지토리"
+    },
+    {
+      "owner": "bongseoksa",
+      "repo": "NLP-portfolio",
+      "enabled": true,
+      "description": "NLP 포트폴리오 레포지토리"
+    }
+  ]
+}
+

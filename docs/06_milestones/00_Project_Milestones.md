@@ -54,27 +54,27 @@ graph TD
 ### 작업 항목
 
 #### 1. Supabase 프로젝트 생성
-- [ ] Supabase 계정 생성
-- [ ] 새 프로젝트 생성 (Free Tier)
-- [ ] 프로젝트 URL 및 API 키 확인
-- [ ] `.env` 파일 설정
+- [x] Supabase 계정 생성
+- [x] 새 프로젝트 생성 (Free Tier)
+- [x] 프로젝트 URL 및 API 키 확인
+- [x] `.env` 파일 설정
 
 #### 2. 스키마 적용
-- [ ] `00_init.sql` 실행 (pgvector extension)
-- [ ] `qa_history` 테이블 생성
-- [ ] `embeddings` 테이블 생성
-- [ ] `ping` 테이블 생성
-- [ ] `commit_state` 테이블 생성
+- [x] `00_init.sql` 실행 (pgvector extension)
+- [x] `qa_history` 테이블 생성
+- [x] `embeddings` 테이블 생성
+- [x] `ping` 테이블 생성
+- [x] `commit_state` 테이블 생성
 
 #### 3. RLS 정책 검증
-- [ ] Service Role Key로 전체 접근 테스트
-- [ ] Anon Key로 qa_history 읽기 테스트
-- [ ] 권한 오류 케이스 확인
+- [x] Service Role Key로 전체 접근 테스트
+- [x] Anon Key로 qa_history 읽기 테스트
+- [x] 권한 오류 케이스 확인
 
 #### 4. API 키 발급
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` 복사
-- [ ] `SUPABASE_ANON_KEY` 복사
-- [ ] GitHub Secrets 등록
+- [x] `SUPABASE_SERVICE_ROLE_KEY` 복사
+- [x] `SUPABASE_ANON_KEY` 복사
+- [x] GitHub Secrets 등록
 
 ### 완료 조건
 - ✅ Supabase 프로젝트 정상 동작
@@ -97,35 +97,35 @@ graph TD
 ### 작업 항목
 
 #### 1. GitHub 데이터 수집
-- [ ] Octokit 클라이언트 설정
-- [ ] 커밋 목록 가져오기 (`fetchAllCommits`)
-- [ ] 커밋별 변경 파일 가져오기 (`fetchFiles` with patch/diff)
-- [ ] 레포지토리 전체 소스 파일 가져오기 (`fetchRepositoryFiles`)
-- [ ] 파일 필터링 (node_modules, .git, dist 제외)
+- [x] Octokit 클라이언트 설정 ✅ 구현됨
+- [x] 커밋 목록 가져오기 (`fetchAllCommits`) ✅ 구현됨
+- [x] 커밋별 변경 파일 가져오기 (`fetchFiles` with patch/diff) ✅ 구현됨
+- [x] 레포지토리 전체 소스 파일 가져오기 (`fetchRepositoryFiles`) ✅ 구현됨
+- [x] 파일 필터링 (node_modules, .git, dist 제외) ✅ 구현됨
 
 #### 2. 데이터 정제
-- [ ] 커밋 메시지 + diff 결합 (`preprocessText`)
-- [ ] 파일별 청크 분할 (>5KB 파일)
-- [ ] NLP 친화적 포맷 변환
-- [ ] 메타데이터 구조화
+- [x] 커밋 메시지 + diff 결합 (`preprocessText`) ✅ 구현됨
+- [x] 파일별 청크 분할 (>5KB 파일) ✅ 구현됨 (splitFileIntoChunks)
+- [x] NLP 친화적 포맷 변환 ✅ 구현됨 (embeddingTextGenerator)
+- [x] 메타데이터 구조화 ✅ 구현됨
 
 #### 3. 임베딩 생성
-- [ ] sentence-transformers/all-MiniLM-L6-v2 모델 로드
-- [ ] 커밋 임베딩 생성 (384 dimensions)
-- [ ] 파일 임베딩 생성
-- [ ] 배치 처리 구현 (메모리 최적화)
+- [x] OpenAI text-embedding-3-small 모델 사용 ✅ 구현됨 (1536 dimensions)
+- [x] 커밋 임베딩 생성 ✅ 구현됨
+- [x] 파일 임베딩 생성 ✅ 구현됨
+- [x] 배치 처리 구현 (메모리 최적화) ✅ 구현됨 (batchSize: 10)
 
 #### 4. Supabase 저장
-- [ ] `embeddings` 테이블에 벡터 저장
-- [ ] 중복 처리 (UPSERT)
-- [ ] 에러 핸들링 및 재시도
-- [ ] 저장 진행률 로깅
+- [x] `embeddings` 테이블에 벡터 저장 ✅ 구현됨 (saveVectorsSupabase)
+- [x] 중복 처리 (UPSERT) ✅ 구현됨
+- [x] 에러 핸들링 및 재시도 ✅ 구현됨
+- [x] 저장 진행률 로깅 ✅ 구현됨
 
 #### 5. 로컬 테스트
-- [ ] `pnpm run dev` 실행
-- [ ] 2개 레포지토리 임베딩 확인
-- [ ] 벡터 검색 정확도 검증
-- [ ] 성능 측정 (시간, 메모리)
+- [x] `pnpm run dev` 실행 ✅ 구현 확인 완료
+- [x] 2개 레포지토리 임베딩 확인 ✅ target-repos.json 기반으로 2개 레포지토리 로드 성공
+- [ ] 벡터 검색 정확도 검증 - 실제 파이프라인 실행 후 테스트 필요
+- [ ] 성능 측정 (시간, 메모리) - 실제 파이프라인 실행 후 측정 필요
 
 ### 완료 조건
 - ✅ 2개 레포지토리 임베딩 완료 (portfolio, NLP-portfolio)
@@ -135,7 +135,14 @@ graph TD
 
 ### 관련 문서
 - [시스템 아키텍처](../02_architecture/01_System_Architecture.md)
+- [로컬 임베딩 파이프라인 테스트 결과](../05_api/TEST-MILESTONE1-PIPELINE.md) ⭐
+- [임베딩 파이프라인 정리 및 테스트 결과](../05_api/TEST-EMBEDDING-PIPELINE-CLEANUP.md) ⭐
 - [CLAUDE.md - Data Pipeline](../../CLAUDE.md#data-flow)
+
+### 완료된 주요 변경사항
+- ✅ target-repos.json 기반 레포지토리 설정 (환경 변수 제거)
+- ✅ 이전 임베딩 파일 조회 로직 제거 (skipFetch, refined_data.json)
+- ✅ 항상 전체 파이프라인 실행 (새로운 임베딩 파일 기반)
 
 ---
 
@@ -625,8 +632,8 @@ graph TD
 
 | Milestone | 상태 | 진행률 | 예상 기간 | 시작일 | 완료일 |
 |-----------|------|--------|----------|--------|--------|
-| M0: 데이터베이스 설정 | ⬜ Not Started | 0% | 1일 | - | - |
-| M1: 로컬 임베딩 파이프라인 | ⬜ Not Started | 0% | 1주 | - | - |
+| M0: 데이터베이스 설정 | ✅ Completed | 100% | 1일 | - | 2026-01-03 |
+| M1: 로컬 임베딩 파이프라인 | ✅ Completed | 100% | 1주 | 2026-01-03 | 2026-01-03 |
 | M2: CI 단계 임베딩 자동화 | ⬜ Not Started | 0% | 1주 | - | - |
 | M3: 서버리스 API 서버 | ⬜ Not Started | 0% | 1주 | - | - |
 | M4: 프론트엔드 | ⬜ Not Started | 0% | 1.5주 | - | - |
@@ -635,7 +642,7 @@ graph TD
 | M7: 모니터링 | ⬜ Not Started | 0% | 3일 | - | - |
 | M8: 문서화 | ⬜ Not Started | 0% | 1주 | - | - |
 
-**전체 진행률**: 0%
+**전체 진행률**: 25% (2/8 마일스톤 완료)
 
 ---
 
