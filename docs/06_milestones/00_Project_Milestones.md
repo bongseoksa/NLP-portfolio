@@ -206,24 +206,24 @@ graph TD
 ### 작업 항목
 
 #### 1. File-based 벡터 검색
-- [ ] `fileVectorStore.ts` 구현
-- [ ] `embeddings.json.gz` 로드 (로컬 또는 GitHub Raw URL)
-- [ ] 메모리 캐시 구현 (5분 TTL)
-- [ ] Brute-force Cosine Similarity 검색
-- [ ] Top-K 결과 반환
+- [x] `fileVectorStore.ts` 구현
+- [x] `embeddings.json.gz` 로드 (로컬 또는 GitHub Raw URL)
+- [x] 메모리 캐시 구현 (5분 TTL)
+- [x] Brute-force Cosine Similarity 검색
+- [x] Top-K 결과 반환
 
 #### 2. Q&A API 엔드포인트
-- [ ] `POST /api/ask` 구현
-- [ ] 질문 임베딩 생성 (OpenAI)
-- [ ] 벡터 검색 (Top-10)
-- [ ] 컨텍스트 구성
+- [x] `POST /api/ask` 구현
+- [x] 질문 임베딩 생성 (OpenAI)
+- [x] 벡터 검색 (Top-10)
+- [x] 컨텍스트 구성
 
 #### 3. LLM 답변 생성
-- [ ] Claude Sonnet 4 통합 (Primary)
-- [ ] Gemini 1.5 Flash 통합 (Fallback)
-- [ ] Fallback 체인 구현
-- [ ] 프롬프트 최적화
-- [ ] 토큰 사용량 추적
+- [x] Claude Sonnet 4 통합 (Fallback으로 구현됨, Primary는 OpenAI GPT-4o)
+- [ ] Gemini 1.5 Flash 통합 (Fallback) - 선택적 (현재는 OpenAI → Claude로 충분)
+- [x] Fallback 체인 구현 (OpenAI → Claude) ✅ 테스트 완료
+- [x] 프롬프트 최적화 (SYSTEM_PROMPT 구현됨) ✅ 검토 완료
+- [x] 토큰 사용량 추적 (구현됨) ✅ 테스트 완료
 
 #### 4. Q&A 히스토리 저장
 - [ ] Supabase 클라이언트 설정
@@ -256,6 +256,7 @@ graph TD
 ### 관련 문서
 - [시스템 아키텍처](../02_architecture/01_System_Architecture.md)
 - [ADR-001: 추가 API 엔드포인트 설계](../05_api/ADR-001-Additional-API-Endpoints.md) ⭐
+- [LLM 답변 생성 테스트 결과](../05_api/TEST-LLM-ANSWER-GENERATION.md) ⭐
 - [CLAUDE.md - API Endpoints](../../CLAUDE.md#api-response-types)
 
 ---
