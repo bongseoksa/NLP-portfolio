@@ -63,7 +63,7 @@ export async function runPipeline(options: PipelineOptions = {}) {
 
         // 1️⃣ GitHub 커밋 전체 가져오기
         console.log("📌 Fetching commit list from GitHub...");
-        const commits = await fetchAllCommits();
+        const commits = await fetchAllCommits(owner, repo);
         result.commits = commits;
         console.log(`   → ${commits.length} commits fetched.`);
 

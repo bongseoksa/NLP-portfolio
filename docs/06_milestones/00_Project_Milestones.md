@@ -124,8 +124,9 @@ graph TD
 #### 5. 로컬 테스트
 - [x] `pnpm run dev` 실행 ✅ 구현 확인 완료
 - [x] 2개 레포지토리 임베딩 확인 ✅ target-repos.json 기반으로 2개 레포지토리 로드 성공
-- [ ] 벡터 검색 정확도 검증 - 실제 파이프라인 실행 후 테스트 필요
-- [ ] 성능 측정 (시간, 메모리) - 실제 파이프라인 실행 후 측정 필요
+- [x] 실제 파이프라인 실행 테스트 ✅ 72 커밋, 103 파일 수집 성공, 610 벡터 생성 완료
+- [ ] 벡터 검색 정확도 검증 - 벡터 저장 완료 후 테스트 필요
+- [ ] 성능 측정 (시간, 메모리) - 벡터 저장 완료 후 측정 필요
 
 ### 완료 조건
 - ✅ 2개 레포지토리 임베딩 완료 (portfolio, NLP-portfolio)
@@ -137,6 +138,7 @@ graph TD
 - [시스템 아키텍처](../02_architecture/01_System_Architecture.md)
 - [로컬 임베딩 파이프라인 테스트 결과](../05_api/TEST-MILESTONE1-PIPELINE.md) ⭐
 - [임베딩 파이프라인 정리 및 테스트 결과](../05_api/TEST-EMBEDDING-PIPELINE-CLEANUP.md) ⭐
+- [로컬 임베딩 파이프라인 수정 및 테스트 결과](../05_api/TEST-LOCAL-EMBEDDING-FIX.md) ⭐
 - [CLAUDE.md - Data Pipeline](../../CLAUDE.md#data-flow)
 
 ### 완료된 주요 변경사항
