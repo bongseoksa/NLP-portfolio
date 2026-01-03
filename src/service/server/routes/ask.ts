@@ -188,8 +188,9 @@ router.post('/', async (req: Request, res: Response) => {
 
         // 4. Supabase에 이력 저장 (부수 효과, 실패해도 응답 흐름 중단 안됨)
         const dbSaveStartTime = Date.now();
+        let savedRecord: any = null;
         try {
-            await saveQAHistory({
+            savedRecord = await saveQAHistory({
                 session_id: sessionId,
                 question,
                 question_summary: questionSummary,
@@ -208,9 +209,16 @@ router.post('/', async (req: Request, res: Response) => {
                 completion_tokens: usage.completionTokens,
                 embedding_tokens: 0, // 임베딩 토큰은 별도 추적 필요 (현재는 0)
             });
+            
+            if (savedRecord) {
+                console.log(`✅ QA 이력 저장 완료: ID=${savedRecord.id}, Session=${sessionId}`);
+            } else {
+                console.warn('⚠️ QA 이력 저장 실패: null 반환');
+            }
         } catch (dbError: any) {
             // Supabase 저장 실패는 로그만 남기고 계속 진행
-            console.warn('⚠️ Supabase 이력 저장 실패:', dbError.message);
+            console.error('❌ Supabase 이력 저장 예외:', dbError.message);
+            console.error('   Stack:', dbError.stack);
         }
         const dbSaveTimeMs = Date.now() - dbSaveStartTime;
 

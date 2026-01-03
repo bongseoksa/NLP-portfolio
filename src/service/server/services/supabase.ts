@@ -25,7 +25,26 @@ function getSupabaseConfig(): { url: string; key: string } | null {
 }
 
 /**
- * Supabase 클라이언트 가져오기
+ * Service Role Key로 Supabase 클라이언트 가져오기 (INSERT/UPDATE 작업용)
+ */
+function getSupabaseServiceClient(): SupabaseClient | null {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+        return null;
+    }
+
+    return createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+        },
+    });
+}
+
+/**
+ * Supabase 클라이언트 가져오기 (읽기 전용 작업용)
  */
 export function getSupabaseClient(): SupabaseClient | null {
     const config = getSupabaseConfig();
@@ -95,12 +114,23 @@ export interface ServerStatusLog {
 
 /**
  * 질문-응답 이력 저장
+ * Service Role Key를 사용하여 INSERT 작업 수행
  */
 export async function saveQAHistory(record: Omit<QAHistoryRecord, 'id' | 'created_at'>): Promise<QAHistoryRecord | null> {
-    const client = getSupabaseClient();
-    if (!client) return null;
+    // Service Role Key로 클라이언트 생성 (INSERT 작업용)
+    const client = getSupabaseServiceClient();
+    if (!client) {
+        console.warn('⚠️ Supabase Service Role Key가 설정되지 않았습니다. 이력 저장이 비활성화됩니다.');
+        return null;
+    }
 
     try {
+        console.log('💾 QA 이력 저장 시도:', {
+            session_id: record.session_id,
+            question: record.question.substring(0, 50) + '...',
+            category: record.category,
+        });
+
         const { data, error } = await client
             .from('qa_history')
             .insert(record)
@@ -124,20 +154,26 @@ export async function saveQAHistory(record: Omit<QAHistoryRecord, 'id' | 'create
                     
                     if (retryError) {
                         console.error('❌ QA 이력 저장 실패 (재시도 후):', retryError.message);
+                        console.error('   Error details:', JSON.stringify(retryError, null, 2));
                         return null;
                     }
                     
+                    console.log('✅ QA 이력 저장 성공 (마이그레이션 후):', retryData?.id);
                     return retryData;
                 }
             }
             
             console.error('❌ QA 이력 저장 실패:', error.message);
+            console.error('   Error code:', error.code);
+            console.error('   Error details:', JSON.stringify(error, null, 2));
             return null;
         }
 
+        console.log('✅ QA 이력 저장 성공:', data?.id);
         return data;
-    } catch (err) {
-        console.error('❌ QA 이력 저장 오류:', err);
+    } catch (err: any) {
+        console.error('❌ QA 이력 저장 오류:', err.message);
+        console.error('   Stack:', err.stack);
         return null;
     }
 }

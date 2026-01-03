@@ -233,10 +233,10 @@ graph TD
 - [x] 토큰 사용량 추적 (구현됨) ✅ 테스트 완료
 
 #### 4. Q&A 히스토리 저장
-- [ ] Supabase 클라이언트 설정
-- [ ] `qa_history` 테이블 INSERT
-- [ ] 메타데이터 저장 (category, sources, timings)
-- [ ] 에러 핸들링
+- [x] Supabase 클라이언트 설정 ✅ Service Role Key 사용으로 수정
+- [x] `qa_history` 테이블 INSERT ✅ 정상 동작 확인
+- [x] 메타데이터 저장 (category, sources, timings) ✅ 구현 완료
+- [x] 에러 핸들링 ✅ 로깅 개선 및 결과 확인 로직 추가
 
 #### 5. 추가 API 엔드포인트
 - [ ] `GET /api/health` - Health check
@@ -248,11 +248,11 @@ graph TD
 - [ ] `GET /api/dashboard/source` - 소스 기여도
 
 #### 6. 로컬 테스트
-- [ ] `pnpm run server` 실행 (포트 3001)
-- [ ] Q&A 요청 테스트
-- [ ] 벡터 파일 로드 검증
-- [ ] LLM 답변 품질 확인
-- [ ] 에러 시나리오 테스트
+- [x] `pnpm run server` 실행 (포트 3001) ✅ 정상 동작
+- [x] Q&A 요청 테스트 ✅ API 응답 정상
+- [ ] 벡터 파일 로드 검증 - 벡터 파일 생성 후 테스트 필요
+- [ ] LLM 답변 품질 확인 - 벡터 파일 생성 후 테스트 필요
+- [x] 에러 시나리오 테스트 ✅ qa_history 저장 실패 시 에러 핸들링 확인
 
 ### 완료 조건
 - ✅ 모든 API 엔드포인트 정상 동작
@@ -264,6 +264,7 @@ graph TD
 - [시스템 아키텍처](../02_architecture/01_System_Architecture.md)
 - [ADR-001: 추가 API 엔드포인트 설계](../05_api/ADR-001-Additional-API-Endpoints.md) ⭐
 - [LLM 답변 생성 테스트 결과](../05_api/TEST-LLM-ANSWER-GENERATION.md) ⭐
+- [Q&A History 저장 테스트 결과](../05_api/TEST-QA-HISTORY-SAVE.md) ⭐
 - [CLAUDE.md - API Endpoints](../../CLAUDE.md#api-response-types)
 
 ---
