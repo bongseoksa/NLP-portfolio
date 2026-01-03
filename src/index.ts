@@ -140,24 +140,16 @@ async function main() {
         console.log("---------------------------------------------------");
 
     } else if (cmd === "reindex") {
-        // 재임베딩 모드: 기존 데이터를 새 임베딩으로 다시 저장
-        console.log("\n🔄 Reindex mode: Re-embedding existing data with current embedding provider...\n");
-        await runPipeline({ reset: true, skipFetch: true });
+        // 재임베딩 모드 제거됨: 이전 임베딩 파일 기반 재임베딩은 더 이상 지원하지 않음
+        console.error("\n❌ Reindex mode is no longer supported.");
+        console.error("   Please run the full pipeline instead: pnpm run dev\n");
+        return;
 
     } else {
         // 기본 모드: 폴링 기반 파이프라인 실행
-        // target-repos.json이 존재하면 폴링 모드, 없으면 레거시 모드
-        const targetReposPath = "target-repos.json";
-
-        if (fs.existsSync(targetReposPath)) {
-            // 폴링 모드: 다중 레포지토리 자동 변경 감지
-            console.log("\n📡 Polling mode: Using target-repos.json\n");
-            await runPollingPipeline({ reset: hasReset });
-        } else {
-            // 레거시 모드: 환경 변수 기반 단일 레포지토리
-            console.log("\n⚠️  target-repos.json not found, using legacy mode (환경 변수)\n");
-            await runPipeline({ reset: hasReset });
-        }
+        // target-repos.json 파일 사용 (로컬 설정)
+        console.log("\n📡 Polling mode: Using target-repos.json\n");
+        await runPollingPipeline({ reset: hasReset });
     }
 }
 

@@ -35,10 +35,36 @@ export class SupabaseVectorStore {
 
         for (let i = 0; i < items.length; i += batchSize) {
             const batch = items.slice(i, i + batchSize);
+            
+            // Supabase embeddings 테이블 형식에 맞게 변환
+            // type 컬럼이 NOT NULL이고 CHECK 제약조건 ('commit' | 'file' | 'qa')이 있음
+            const supabaseBatch = batch.map(item => {
+                // metadata에서 type 추출
+                let type = item.metadata?.type || 'file'; // 기본값: 'file'
+                
+                // 'diff' 타입은 'commit'으로 매핑 (스키마에는 'commit', 'file', 'qa'만 허용)
+                if (type === 'diff') {
+                    type = 'commit';
+                }
+                
+                // 허용된 타입이 아니면 'file'로 기본값 설정
+                if (!['commit', 'file', 'qa'].includes(type)) {
+                    console.warn(`⚠️ Unknown type '${type}' for item ${item.id}, defaulting to 'file'`);
+                    type = 'file';
+                }
+                
+                return {
+                    id: item.id,
+                    content: item.content,
+                    embedding: item.embedding, // 1차원 배열 (384 dimensions)
+                    metadata: item.metadata,
+                    type: type as 'commit' | 'file' | 'qa'
+                };
+            });
 
             const { error } = await this.supabase
                 .from('embeddings')
-                .upsert(batch, {
+                .upsert(supabaseBatch, {
                     onConflict: 'id'
                 });
 

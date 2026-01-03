@@ -183,9 +183,9 @@ function createEmptyHistoryFile(): QAHistoryVectorFile {
             name: repo
         },
         embedding: {
-            model: "text-embedding-3-small",
-            provider: "openai",
-            dimension: 1536
+            model: "sentence-transformers/all-MiniLM-L6-v2",
+            provider: "huggingface",
+            dimension: 384
         },
         statistics: {
             totalVectors: 0,

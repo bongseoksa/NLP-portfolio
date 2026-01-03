@@ -1,4 +1,6 @@
 import { Octokit } from "@octokit/rest";
+import fs from "fs";
+import path from "path";
 import type { TargetRepository, TargetRepositoriesConfig } from "../../shared/models/TargetRepository.js";
 import { SupabaseCommitStateManager } from "./supabaseCommitStateManager.js";
 
@@ -43,29 +45,36 @@ export class RepositoryPollerSupabase {
     }
 
     /**
-     * 환경 변수에서 대상 레포지토리 로드
-     * target-repos.json 제거 (Serverless 호환)
+     * target-repos.json에서 대상 레포지토리 로드
      */
     private loadTargetRepositories(): TargetRepository[] {
-        const owner = process.env.TARGET_REPO_OWNER;
-        const repo = process.env.TARGET_REPO_NAME;
-
-        if (!owner || !repo) {
+        const configPath = path.join(process.cwd(), "target-repos.json");
+        
+        // target-repos.json 파일 필수 (로컬 설정 파일)
+        if (!fs.existsSync(configPath)) {
             throw new Error(
-                `TARGET_REPO_OWNER and TARGET_REPO_NAME environment variables are required`
+                `target-repos.json file not found at ${configPath}. ` +
+                `Please create this file with your target repositories.`
             );
         }
 
-        console.log(`📌 Using repository from environment variables: ${owner}/${repo}`);
+        try {
+            const content = fs.readFileSync(configPath, "utf-8");
+            const config: TargetRepositoriesConfig = JSON.parse(content);
 
-        return [
-            {
-                owner,
-                repo,
-                enabled: true,
-                description: "From environment variables"
+            // enabled가 false인 레포지토리 제외
+            const repos = config.repositories.filter(repo => repo.enabled !== false);
+
+            if (repos.length === 0) {
+                throw new Error(`No enabled repositories in ${configPath}`);
             }
-        ];
+
+            console.log(`📄 Loaded ${repos.length} repository(ies) from ${configPath}:`);
+            repos.forEach(r => console.log(`   - ${r.owner}/${r.repo}`));
+            return repos;
+        } catch (error: any) {
+            throw new Error(`Failed to load ${configPath}: ${error.message}`);
+        }
     }
 
     /**

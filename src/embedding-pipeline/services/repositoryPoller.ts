@@ -51,48 +51,31 @@ export class RepositoryPoller {
      * 파일이 없으면 환경 변수에서 단일 레포 로드 (fallback)
      */
     private loadTargetRepositories(): TargetRepository[] {
-        // 1. target-repos.json 파일이 있으면 사용
-        if (fs.existsSync(this.configPath)) {
-            try {
-                const content = fs.readFileSync(this.configPath, "utf-8");
-                const config: TargetRepositoriesConfig = JSON.parse(content);
-
-                // enabled가 false인 레포지토리 제외
-                const repos = config.repositories.filter(repo => repo.enabled !== false);
-
-                if (repos.length === 0) {
-                    console.warn(`⚠️  No enabled repositories in ${this.configPath}, falling back to env vars`);
-                } else {
-                    console.log(`📄 Loaded ${repos.length} repositories from ${this.configPath}`);
-                    return repos;
-                }
-            } catch (error) {
-                console.warn(`⚠️  Failed to load ${this.configPath}: ${error}`);
-                console.warn("   Falling back to environment variables...");
-            }
-        }
-
-        // 2. Fallback: 환경 변수에서 단일 레포 로드
-        const owner = process.env.TARGET_REPO_OWNER;
-        const repo = process.env.TARGET_REPO_NAME;
-
-        if (!owner || !repo) {
+        // target-repos.json 파일 필수 (로컬 설정 파일)
+        if (!fs.existsSync(this.configPath)) {
             throw new Error(
-                `Neither ${this.configPath} nor TARGET_REPO_OWNER/TARGET_REPO_NAME env vars found. ` +
-                `Please provide target repositories via config file or environment variables.`
+                `target-repos.json file not found at ${this.configPath}. ` +
+                `Please create this file with your target repositories.`
             );
         }
 
-        console.log(`📌 Using single repository from environment variables: ${owner}/${repo}`);
+        try {
+            const content = fs.readFileSync(this.configPath, "utf-8");
+            const config: TargetRepositoriesConfig = JSON.parse(content);
 
-        return [
-            {
-                owner,
-                repo,
-                enabled: true,
-                description: "From environment variables"
+            // enabled가 false인 레포지토리 제외
+            const repos = config.repositories.filter(repo => repo.enabled !== false);
+
+            if (repos.length === 0) {
+                throw new Error(`No enabled repositories in ${this.configPath}`);
             }
-        ];
+
+            console.log(`📄 Loaded ${repos.length} repository(ies) from ${this.configPath}:`);
+            repos.forEach(r => console.log(`   - ${r.owner}/${r.repo}`));
+            return repos;
+        } catch (error: any) {
+            throw new Error(`Failed to load ${this.configPath}: ${error.message}`);
+        }
     }
 
     /**
