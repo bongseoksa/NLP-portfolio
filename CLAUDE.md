@@ -25,16 +25,17 @@ pnpm install                    # Install dependencies
 pnpm run chroma:setup          # One-time ChromaDB installation (creates .chroma_venv) - OPTIONAL for local dev
 pnpm run chroma:start          # Start ChromaDB server (required for local ChromaDB mode) - OPTIONAL
 
-# Data Pipeline
-pnpm run dev                   # Full pipeline: fetch data → embed → store in Supabase/ChromaDB
-pnpm run dev --reset           # Reset vector collection, then run full pipeline
-pnpm run reindex               # Re-embed existing data without fetching (use when switching embedding providers)
-
-# Export Embeddings to File (for serverless deployment)
-pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel
+# Local CLI (Embedding Pipeline)
+pnpm run local_dev             # Full pipeline: fetch data → embed → store in Supabase/ChromaDB
+pnpm run local_dev:reset       # Reset vector collection, then run full pipeline
+pnpm run local_export          # Export embeddings to file (for serverless deployment)
 
 # Q&A (CLI)
-pnpm run ask "your question"   # Query via command line (auto-detects: File > Supabase > ChromaDB)
+pnpm run local_ask "question"  # Query via command line (auto-detects: File > Supabase > ChromaDB)
+
+# Legacy Aliases (for compatibility)
+pnpm run dev                   # → local_dev
+pnpm run ask "question"        # → local_ask
 
 # Servers
 pnpm run server                # Start Vercel dev server (:3001) for Q&A and dashboard
@@ -206,25 +207,34 @@ api/                                    # Vercel serverless functions
     ├── responseFormatter.ts           # Response formatting
     └── healthCheck.ts                 # Health check logic
 
-src/
-├── lib/                               # Business logic (shared services)
+local-cli/                             # Local CLI tools (embedding pipeline)
+├── index.ts                          # CLI entry point (commands: dev, ask)
+├── embedding-pipeline/               # Data collection & embedding generation
+│   ├── data_sources/github/         # GitHub API integrations
+│   ├── nlp/embedding/               # Embedding generation (HuggingFace)
+│   ├── pipelines/                   # Pipeline orchestration
+│   ├── services/                    # Commit state management
+│   └── storage/                     # Vector storage (ChromaDB, Supabase, File export)
+└── vector-store/                    # CLI-only vector search
+    ├── searchVectors.ts              # ChromaDB search
+    └── searchVectorsSupabase.ts      # Supabase search
+
+shared/                                # Shared libraries (API + CLI)
+├── lib/                              # Business logic
 │   ├── supabase.ts                   # Supabase client & operations
 │   └── supabaseMigration.ts          # Database migrations
-├── index.ts                          # CLI entry point (commands: ask, reindex)
-├── pipeline/
-│   ├── runPipeline.ts                # Orchestrates full data pipeline
-│   └── steps/
-│       └── preprocessText.ts         # Refines raw data for NLP
-├── data_sources/
-│   └── github/                       # GitHub API integrations
-├── nlp/embedding/
-│   └── openaiEmbedding.ts            # Embedding generation (OpenAI only)
-├── vector_store/
-│   ├── saveVectors.ts                # Save to Supabase
-│   ├── searchVectors.ts              # Query Supabase (pipeline only)
-│   └── fileVectorStore.ts            # File-based search (Q&A production)
-└── qa/
-    └── answer.ts                     # LLM answer generation (OpenAI → Claude fallback)
+├── services/
+│   ├── qa/
+│   │   ├── answer.ts                 # LLM answer generation (shared)
+│   │   └── classifier.ts             # Question classification
+│   └── vector-store/
+│       ├── fileVectorStore.ts        # File-based search (serverless)
+│       ├── embeddingService.ts       # Query embedding generation
+│       └── qaHistoryVectorStore.ts   # Q&A history vector management
+└── models/                           # Type definitions (shared)
+    ├── EmbeddingItem.ts
+    ├── SearchResult.ts
+    └── ...
 ```
 
 **Key Pipeline Steps:**

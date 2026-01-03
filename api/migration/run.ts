@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { setCorsHeaders, handleOptionsRequest } from '../_lib/cors.js';
 import { handleError } from '../_lib/errorHandler.js';
-import { initializeTables } from '../../src/lib/supabaseMigration.js';
+import { initializeTables } from '../../shared/lib/supabaseMigration.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res);

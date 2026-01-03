@@ -6,12 +6,12 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { searchVectorsFromFile } from '../src/service/vector-store/fileVectorStore.js';
-import { generateQueryEmbedding } from '../src/service/vector-store/embeddingService.js';
-import { generateAnswerWithUsage } from '../src/service/qa/answer.js';
-import { saveQAHistory } from '../src/lib/supabase.js';
-import { classifyQuestionWithConfidence } from '../src/service/qa/classifier.js';
-import { addQAHistoryToVectors } from '../src/service/vector-store/qaHistoryVectorStore.js';
+import { searchVectorsFromFile } from '../shared/services/vector-store/fileVectorStore.js';
+import { generateQueryEmbedding } from '../shared/services/vector-store/embeddingService.js';
+import { generateAnswerWithUsage } from '../shared/services/qa/answer.js';
+import { saveQAHistory } from '../shared/lib/supabase.js';
+import { classifyQuestionWithConfidence } from '../shared/services/qa/classifier.js';
+import { addQAHistoryToVectors } from '../shared/services/vector-store/qaHistoryVectorStore.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
