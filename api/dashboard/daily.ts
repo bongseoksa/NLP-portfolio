@@ -22,8 +22,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       endDate as string | undefined
     );
 
-    res.json(stats);
-  } catch (error) {
-    handleError(res, error, 'Daily stats retrieval failed');
+    res.json(stats || []);
+  } catch (error: any) {
+    console.error('Dashboard daily error:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+    });
+    
+    // getDailyStats는 에러를 throw하지 않고 빈 배열을 반환하므로,
+    // 여기에 도달했다면 예상치 못한 에러
+    // 안전하게 빈 배열 반환
+    res.json([]);
   }
 }

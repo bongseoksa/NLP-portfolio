@@ -317,9 +317,37 @@ export async function getDashboardStats(): Promise<{
 
     try {
         // 전체 통계
-        const { data: allData } = await client
+        const { data: allData, error: queryError } = await client
             .from('qa_history')
             .select('status, response_time_ms, token_usage, created_at');
+
+        // 테이블이 없거나 에러 발생 시
+        if (queryError) {
+            console.warn('⚠️ QA history 테이블 조회 실패:', queryError.message);
+            // 테이블이 없으면 기본값 반환
+            if (queryError.code === 'PGRST205' || queryError.message?.includes('does not exist')) {
+                return {
+                    totalQuestions: 0,
+                    successRate: 0,
+                    failureRate: 0,
+                    averageResponseTimeMs: 0,
+                    todayQuestions: 0,
+                    dailyTokenUsage: 0,
+                    totalTokenUsage: 0,
+                };
+            }
+            // 다른 에러는 로그만 남기고 기본값 반환 (UI 정상 표시)
+            console.error('⚠️ QA history 조회 에러:', queryError);
+            return {
+                totalQuestions: 0,
+                successRate: 0,
+                failureRate: 0,
+                averageResponseTimeMs: 0,
+                todayQuestions: 0,
+                dailyTokenUsage: 0,
+                totalTokenUsage: 0,
+            };
+        }
 
         if (!allData || allData.length === 0) {
             return {
@@ -336,7 +364,9 @@ export async function getDashboardStats(): Promise<{
         const totalQuestions = allData.length;
         const successCount = allData.filter(r => r.status === 'success').length;
         const failureCount = allData.filter(r => r.status === 'failed').length;
-        const avgResponseTime = allData.reduce((sum, r) => sum + (r.response_time_ms || 0), 0) / totalQuestions;
+        const avgResponseTime = totalQuestions > 0 
+            ? allData.reduce((sum, r) => sum + (r.response_time_ms || 0), 0) / totalQuestions
+            : 0;
         
         // 토큰 사용량 계산
         const totalTokenUsage = allData.reduce((sum, r) => sum + (r.token_usage || 0), 0);
@@ -401,7 +431,18 @@ export async function getDailyStats(startDate?: string, endDate?: string): Promi
 
         const { data, error } = await query;
 
-        if (error || !data || data.length === 0) {
+        // 테이블이 없으면 빈 배열 반환
+        if (error) {
+            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                console.warn('⚠️ QA history 테이블이 없습니다.');
+                return [];
+            }
+            // 다른 에러도 로그만 남기고 빈 배열 반환 (UI 정상 표시)
+            console.error('⚠️ QA history 조회 에러:', error);
+            return [];
+        }
+
+        if (!data || data.length === 0) {
             return [];
         }
 
@@ -487,7 +528,18 @@ export async function getCategoryDistribution(): Promise<Array<{
             .from('qa_history')
             .select('category');
 
-        if (error || !data || data.length === 0) {
+        // 테이블이 없으면 빈 배열 반환
+        if (error) {
+            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                console.warn('⚠️ QA history 테이블이 없습니다.');
+                return [];
+            }
+            // 다른 에러도 로그만 남기고 빈 배열 반환 (UI 정상 표시)
+            console.error('⚠️ QA history 조회 에러:', error);
+            return [];
+        }
+
+        if (!data || data.length === 0) {
             return [];
         }
 
@@ -530,7 +582,18 @@ export async function getSourceContribution(): Promise<Array<{
             .from('qa_history')
             .select('sources');
 
-        if (error || !data || data.length === 0) {
+        // 테이블이 없으면 빈 배열 반환
+        if (error) {
+            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                console.warn('⚠️ QA history 테이블이 없습니다.');
+                return [];
+            }
+            // 다른 에러도 로그만 남기고 빈 배열 반환 (UI 정상 표시)
+            console.error('⚠️ QA history 조회 에러:', error);
+            return [];
+        }
+
+        if (!data || data.length === 0) {
             return [];
         }
 

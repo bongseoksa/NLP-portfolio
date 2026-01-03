@@ -37,9 +37,14 @@
     "skipLibCheck": true,
   },
   "include": [
-    "local-cli/**/*",
     "shared/**/*",
     "api/**/*",
     "scripts/**/*"
+  ],
+  "exclude": [
+    "src/**/*",
+    "node_modules",
+    "dist",
+    "styled-system"
   ]
 }

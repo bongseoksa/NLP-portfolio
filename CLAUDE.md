@@ -38,13 +38,13 @@ pnpm run start                 # Run compiled JS from dist/
 ```
 
 
-### Frontend (frontend/)
+### Frontend (Root Directory)
 
 ```bash
-cd frontend
-pnpm install                   # Install frontend dependencies
-pnpm run dev                   # Start dev server (:5173)
-pnpm run build                 # Production build (includes PandaCSS codegen)
+pnpm install                   # Install all dependencies (backend + frontend)
+pnpm run dev:frontend          # Start dev server (:5173)
+pnpm run build:frontend         # Production build (includes PandaCSS codegen)
+pnpm run preview:frontend       # Preview production build
 pnpm run panda                 # Generate PandaCSS utility classes
 ```
 
@@ -226,10 +226,10 @@ shared/                                # Shared libraries (API)
 - Splits large files (>5KB) into chunks to maintain context
 - Metadata includes: path, type, size, extension, SHA, chunkIndex
 
-### Frontend Structure (`frontend/src/`)
+### Frontend Structure (`src/`)
 
 ```
-frontend/src/
+src/
 ├── api/
 │   ├── client.ts             # Backend API wrapper (includes caching)
 │   └── supabase.ts           # Direct Supabase client

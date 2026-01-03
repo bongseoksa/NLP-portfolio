@@ -89,12 +89,15 @@ export default async function handler(
       return;
     }
 
-    // Serverless에서는 VECTOR_FILE_URL만 사용 (ChromaDB, Supabase는 사용 불가)
-    const vectorFileUrl = process.env.VECTOR_FILE_URL;
+    // 벡터 파일 URL 확인 (로컬 개발 시 기본값 사용)
+    const vectorFileUrl = process.env.VECTOR_FILE_URL || 'output/embeddings.json.gz';
+    
+    // 벡터 파일이 없으면 에러 (파일 존재 여부는 fileVectorStore에서 확인)
     if (!vectorFileUrl) {
       res.status(500).json({
-        error: 'Vector file URL not configured',
-        message: 'VECTOR_FILE_URL environment variable is required for serverless deployment'
+        error: 'Vector file not configured',
+        message: 'VECTOR_FILE_URL environment variable is required, or ensure output/embeddings.json.gz exists',
+        status: 'failed'
       });
       return;
     }
@@ -138,13 +141,27 @@ export default async function handler(
     const repo = process.env.TARGET_REPO_NAME || 'portfolio';
 
     const searchStart = Date.now();
-    const contexts = await searchVectorsFromFile(queryEmbedding, 5, {
-      threshold: 0.0,
-      filterMetadata: { owner, repo },
-      includeHistory: true,
-      historyWeight: 0.3,
-      category  // 카테고리 기반 검색 모드
-    });
+    let contexts;
+    try {
+      contexts = await searchVectorsFromFile(queryEmbedding, 5, {
+        threshold: 0.0,
+        filterMetadata: { owner, repo },
+        includeHistory: true,
+        historyWeight: 0.3,
+        category  // 카테고리 기반 검색 모드
+      });
+    } catch (searchError: any) {
+      console.error('❌ 벡터 검색 실패:', searchError.message);
+      // 벡터 파일이 없거나 로드 실패 시
+      if (searchError.message?.includes('Failed to load') || searchError.message?.includes('not found')) {
+        return res.status(500).json({
+          error: 'Vector file not found',
+          message: '임베딩 파일을 찾을 수 없습니다. VECTOR_FILE_URL을 확인하거나 output/embeddings.json.gz 파일이 존재하는지 확인해주세요.',
+          status: 'failed'
+        });
+      }
+      throw searchError;
+    }
     vectorSearchEndTime = Date.now();
     const vectorSearchTimeMs = vectorSearchEndTime - searchStart;
     console.log(`   [3] 벡터 검색 완료: ${vectorSearchTimeMs}ms (${contexts.length}개 문서)`);

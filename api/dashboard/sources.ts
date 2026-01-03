@@ -16,8 +16,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const contribution = await getSourceContribution();
-    res.json(contribution);
-  } catch (error) {
-    handleError(res, error, 'Source contribution retrieval failed');
+    res.json(contribution || []);
+  } catch (error: any) {
+    console.error('Dashboard sources error:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+    });
+    
+    // getSourceContribution는 에러를 throw하지 않고 빈 배열을 반환하므로,
+    // 여기에 도달했다면 예상치 못한 에러
+    // 안전하게 빈 배열 반환
+    res.json([]);
   }
 }

@@ -16,8 +16,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const distribution = await getCategoryDistribution();
-    res.json(distribution);
-  } catch (error) {
-    handleError(res, error, 'Category distribution retrieval failed');
+    res.json(distribution || []);
+  } catch (error: any) {
+    console.error('Dashboard categories error:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+    });
+    
+    // getCategoryDistribution는 에러를 throw하지 않고 빈 배열을 반환하므로,
+    // 여기에 도달했다면 예상치 못한 에러
+    // 안전하게 빈 배열 반환
+    res.json([]);
   }
 }

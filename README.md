@@ -16,7 +16,6 @@ GitHub 레포지토리를 분석하여 코드와 커밋 히스토리를 NLP 기�
 ```bash
 # 1. 의존성 설치
 pnpm install
-cd frontend && pnpm install && cd ..
 
 # 2. 환경 변수 설정 (.env 파일 생성)
 GITHUB_TOKEN=ghp_xxx
@@ -32,7 +31,7 @@ pnpm run server
 # → http://localhost:3001
 
 # 4. 프론트엔드 실행 (별도 터미널)
-cd frontend && pnpm run dev
+pnpm run dev:frontend
 # → http://localhost:5173
 ```
 
@@ -141,9 +140,10 @@ pnpm run chroma:start           # ChromaDB (:8000) - 로컬 개발 시 (선택�
 ### 프론트엔드
 
 ```bash
-cd frontend
-pnpm run dev      # 개발 서버 (:5173)
-pnpm run build    # 프로덕션 빌드
+pnpm run dev:frontend    # 개발 서버 (:5173)
+pnpm run build:frontend  # 프로덕션 빌드
+pnpm run preview:frontend # 빌드 미리보기
+pnpm run panda          # PandaCSS 코드 생성
 ```
 
 ---
