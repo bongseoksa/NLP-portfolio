@@ -27,7 +27,7 @@ OPENAI_API_KEY=sk-proj-xxx
 # 파일 기반 벡터 검색 (Serverless - 권장)
 VECTOR_FILE_URL=https://your-cdn.com/embeddings.json.gz
 
-# 3. 백엔드 실행
+# 3. 백엔드 실행 (Vercel Dev Server)
 pnpm run server
 # → http://localhost:3001
 

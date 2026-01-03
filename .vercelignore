@@ -1,0 +1,10 @@
+node_modules/
+.chroma_venv/
+.env
+.env.local
+dist/
+*.log
+chroma_data/
+.vscode/
+.idea/
+src/service/server/

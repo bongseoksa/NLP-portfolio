@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a GitHub repository analyzer that uses NLP/RAG to answer questions about code structure, commit history, and implementation details. The system collects repository data, generates embeddings, stores vectors, and provides a Q&A interface powered by OpenAI or Claude.
 
 **Tech Stack:**
-- Backend: Node.js + TypeScript + Express (ESM modules)
+- Backend: Node.js + TypeScript + Vercel Serverless Functions (ESM modules)
 - Frontend: React 19 + TypeScript + Vite + PandaCSS
 - State: Jotai (atoms) + TanStack Query (server state)
 - Vector Storage: **File-based (Serverless)** / Supabase pgvector (Cloud) / ChromaDB (Local)
@@ -37,7 +37,8 @@ pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel
 pnpm run ask "your question"   # Query via command line (auto-detects: File > Supabase > ChromaDB)
 
 # Servers
-pnpm run server                # Start API server (:3001) for Q&A and dashboard
+pnpm run server                # Start Vercel dev server (:3001) for Q&A and dashboard
+pnpm run vercel:dev            # Alternative: Start Vercel dev server (auto port)
 
 # Build
 pnpm run build                 # Compile TypeScript to dist/
@@ -85,13 +86,13 @@ The system supports **two vector storage modes** with automatic detection:
 ### Required Services
 
 **Production (Serverless)**:
-- API Server (port 3001 or Vercel Serverless Function)
+- Vercel Serverless Functions (15 API endpoints in `api/` directory)
 - GitHub repository (for hosting `output/embeddings.json.gz`)
 - No persistent database servers required
 - No CDN costs
 
 **Local Development**:
-- API Server (port 3001)
+- Vercel Dev Server (port 3001) - runs serverless functions locally
 - Supabase connection (for embedding pipeline only)
 - Local embeddings file (`output/embeddings.json.gz`)
 
@@ -175,36 +176,55 @@ SUPABASE_ANON_KEY=xxx            # For Q&A history only
 
 ## Code Architecture
 
-### Backend Structure (`src/`)
+### Backend Structure
 
 ```
+api/                                    # Vercel serverless functions
+├── ask.ts                             # POST /api/ask - Q&A endpoint
+├── health/
+│   ├── index.ts                       # GET /api/health
+│   ├── chromadb.ts                    # GET /api/health/chromadb
+│   └── status.ts                      # GET /api/health/status
+├── history/
+│   ├── index.ts                       # GET /api/history
+│   ├── [id].ts                        # GET /api/history/:id
+│   └── session/
+│       └── [sessionId].ts             # GET /api/history/session/:sessionId
+├── dashboard/
+│   ├── summary.ts                     # GET /api/dashboard/summary
+│   ├── daily.ts                       # GET /api/dashboard/daily
+│   ├── categories.ts                  # GET /api/dashboard/categories
+│   └── sources.ts                     # GET /api/dashboard/sources
+├── migration/
+│   ├── status.ts                      # GET /api/migration/status
+│   ├── run.ts                         # POST /api/migration/run
+│   ├── ensure.ts                      # POST /api/migration/ensure
+│   └── schema.ts                      # GET /api/migration/schema
+└── _lib/                              # Shared utilities (not exposed as endpoints)
+    ├── cors.ts                        # CORS configuration
+    ├── errorHandler.ts                # Error handling
+    ├── responseFormatter.ts           # Response formatting
+    └── healthCheck.ts                 # Health check logic
+
 src/
-├── index.ts                  # CLI entry point (commands: ask, reindex)
+├── lib/                               # Business logic (shared services)
+│   ├── supabase.ts                   # Supabase client & operations
+│   └── supabaseMigration.ts          # Database migrations
+├── index.ts                          # CLI entry point (commands: ask, reindex)
 ├── pipeline/
-│   ├── runPipeline.ts        # Orchestrates full data pipeline
+│   ├── runPipeline.ts                # Orchestrates full data pipeline
 │   └── steps/
-│       └── preprocessText.ts # Refines raw data for NLP
+│       └── preprocessText.ts         # Refines raw data for NLP
 ├── data_sources/
-│   ├── github/               # GitHub API integrations
-│   │   ├── fetchCommit.ts    # Fetch all commits
-│   │   ├── fetchFiles.ts     # Fetch changed files per commit
-│   │   └── fetchRepositoryFiles.ts  # Fetch all source code files
+│   └── github/                       # GitHub API integrations
 ├── nlp/embedding/
-│   └── openaiEmbedding.ts    # Embedding generation (OpenAI only)
+│   └── openaiEmbedding.ts            # Embedding generation (OpenAI only)
 ├── vector_store/
-│   ├── saveVectors.ts        # Save to Supabase
-│   ├── searchVectors.ts      # Query Supabase (pipeline only)
-│   └── fileVectorStore.ts    # File-based search (Q&A production)
-├── qa/
-│   └── answer.ts             # LLM answer generation (OpenAI → Claude fallback)
-└── server/                   # API Server (:3001)
-    ├── index.ts              # Express server setup
-    ├── routes/               # API endpoints
-    │   ├── ask.ts            # POST /api/ask - Q&A endpoint
-    │   ├── health.ts         # GET /api/health - Health checks & status
-    │   └── history.ts        # GET /api/history - Q&A history
-    └── services/
-        └── supabase.ts       # Supabase client
+│   ├── saveVectors.ts                # Save to Supabase
+│   ├── searchVectors.ts              # Query Supabase (pipeline only)
+│   └── fileVectorStore.ts            # File-based search (Q&A production)
+└── qa/
+    └── answer.ts                     # LLM answer generation (OpenAI → Claude fallback)
 ```
 
 **Key Pipeline Steps:**
@@ -326,13 +346,40 @@ ChromaDB stores two types of items:
 
 ## Common Development Patterns
 
-### Adding a New API Endpoint
+### Adding a New Serverless Endpoint
 
-1. Define route in `src/server/routes/yourRoute.ts`
-2. Register in `src/server/index.ts`: `app.use('/api/your-route', yourRouter)`
-3. Add client method in `frontend/src/api/client.ts`
-4. Add type definitions in `frontend/src/types/index.ts`
-5. Create TanStack Query hook in `frontend/src/hooks/useQueries.ts`
+1. Create serverless function in `api/your-endpoint.ts` or `api/your-category/endpoint.ts`
+2. Use file-based routing (Vercel convention):
+   - `api/endpoint.ts` → `/api/endpoint`
+   - `api/category/endpoint.ts` → `/api/category/endpoint`
+   - `api/category/[id].ts` → `/api/category/:id` (dynamic route)
+3. Import shared utilities from `api/_lib/` (CORS, error handling, etc.)
+4. Import business logic from `src/lib/` (Supabase, migrations, etc.)
+5. Add client method in `frontend/src/api/client.ts`
+6. Add type definitions in `frontend/src/types/index.ts`
+7. Create TanStack Query hook in `frontend/src/hooks/useQueries.ts`
+
+**Example:**
+```typescript
+// api/example.ts
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { setCorsHeaders, handleOptionsRequest } from './_lib/cors.js';
+import { handleError } from './_lib/errorHandler.js';
+import { getSupabaseClient } from '../src/lib/supabase.js';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCorsHeaders(res);
+  if (req.method === 'OPTIONS') return handleOptionsRequest(res);
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  try {
+    // Your logic here
+    res.json({ success: true });
+  } catch (error) {
+    handleError(res, error, 'Operation failed');
+  }
+}
+```
 
 ### Adding a New Pipeline Step
 
@@ -394,15 +441,18 @@ zcat output/embeddings.json.gz | jq '.vectors | length'
 ## Deployment Notes
 
 **Local Development:**
-- API server running on port 3001
+- Vercel Dev Server running on port 3001 (`pnpm run server`)
+- Runs serverless functions locally with same environment as production
 - Uses local embeddings file (`output/embeddings.json.gz`)
 - Settings page shows read-only server status
 
 **Production (Vercel Serverless):**
-- Serverless API deployed to Vercel
+- 15 serverless functions in `api/` directory deployed to Vercel
+- File-based routing: `api/health/status.ts` → `/api/health/status`
 - Uses GitHub Raw URL for embeddings:
   `VECTOR_FILE_URL=https://raw.githubusercontent.com/owner/repo/main/output/embeddings.json.gz`
 - No persistent database servers required
+- No Express server or Node.js runtime needed
 - Total cost: $0/month (GitHub Free + Vercel Hobby)
 
 **Environment Variables:**
