@@ -112,20 +112,10 @@ export default function SettingsPage() {
       {/* 서버 상태 카드 */}
       <div className={css({
         display: 'grid',
-        gridTemplateColumns: { base: '1fr', md: '1fr 1fr' },
+        gridTemplateColumns: { base: '1fr', md: '1fr' },
         gap: '6',
         mb: '30',
       })}>
-        {/* ChromaDB */}
-        <ServerCard
-          name="ChromaDB"
-          description="벡터 데이터베이스 (포트: 8000)"
-          icon="🗄️"
-          status={serverStatus?.chromadb.status || 'stopped'}
-          startedAt={serverStatus?.chromadb.startedAt ?? null}
-          pid={serverStatus?.chromadb.pid ?? null}
-        />
-
         {/* API Server */}
         <ServerCard
           name="API Server"

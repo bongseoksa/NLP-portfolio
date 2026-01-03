@@ -233,8 +233,8 @@ function buildIndex(vectors: QAHistoryVector[]): QAHistoryVectorFile['index'] {
 
     // 시간순 정렬 (오래된 순)
     byTimestamp.sort((a, b) => {
-        const timeA = new Date(vectors[a].metadata.timestamp).getTime();
-        const timeB = new Date(vectors[b].metadata.timestamp).getTime();
+        const timeA = new Date(vectors[a]?.metadata?.timestamp || 0).getTime();
+        const timeB = new Date(vectors[b]?.metadata?.timestamp || 0).getTime();
         return timeA - timeB;
     });
 

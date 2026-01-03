@@ -5,14 +5,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '../../../styled-system/css';
-import { checkAPIServerHealth, checkChromaDBHealth } from '../../api/client';
+import { checkAPIServerHealth } from '../../api/client';
 
 type Status = 'online' | 'offline' | 'checking';
 
 export default function ServerStatus() {
   const navigate = useNavigate();
   const [apiStatus, setApiStatus] = useState<Status>('checking');
-  const [chromaStatus, setChromaStatus] = useState<Status>('checking');
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -22,14 +21,6 @@ export default function ServerStatus() {
         setApiStatus(health ? 'online' : 'offline');
       } catch {
         setApiStatus('offline');
-      }
-
-      // ChromaDB 상태 체크 (포트 8000)
-      try {
-        const chromadbHealth = await checkChromaDBHealth();
-        setChromaStatus(chromadbHealth?.status === 'online' ? 'online' : 'offline');
-      } catch {
-        setChromaStatus('offline');
       }
     };
 
@@ -71,10 +62,6 @@ export default function ServerStatus() {
       <div className={css({ display: 'flex', alignItems: 'center', gap: '1' })}>
         <span className={css({ fontSize: 'xs' })}>{getStatusDot(apiStatus)}</span>
         <span className={css({ fontSize: 'xs', color: 'gray.400' })}>API</span>
-      </div>
-      <div className={css({ display: 'flex', alignItems: 'center', gap: '1' })}>
-        <span className={css({ fontSize: 'xs' })}>{getStatusDot(chromaStatus)}</span>
-        <span className={css({ fontSize: 'xs', color: 'gray.400' })}>DB</span>
       </div>
     </button>
   );

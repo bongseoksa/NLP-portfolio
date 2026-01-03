@@ -14,9 +14,7 @@
     "dev:frontend": "panda codegen && vite",
     "preview:frontend": "vite preview",
     "panda": "panda codegen",
-    "test:api": "tsx scripts/test-api.ts",
-    "chroma:setup": "./scripts/setup_chroma.sh",
-    "chroma:start": "./scripts/run_chroma.sh"
+    "test:api": "tsx scripts/test-api.ts"
   },
   "keywords": [],
   "author": "bongseok.sa",

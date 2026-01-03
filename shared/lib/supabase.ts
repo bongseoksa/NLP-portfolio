@@ -107,7 +107,7 @@ export interface QAHistoryRecord {
 
 export interface ServerStatusLog {
     id?: string;
-    server_type: 'chromadb' | 'api';
+    server_type: 'api';
     status: 'online' | 'offline' | 'error';
     message?: string;
     checked_at?: string;

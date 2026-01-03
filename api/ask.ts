@@ -13,7 +13,7 @@ import { saveQAHistory } from '../shared/lib/supabase.js';
 import { classifyQuestionWithConfidence } from '../shared/services/qa/classifier.js';
 import { addQAHistoryToVectors } from '../shared/services/vector-store/qaHistoryVectorStore.js';
 import { v4 as uuidv4 } from 'uuid';
-import { env, requireEnv } from '../shared/config/env.js';
+import { env } from '../shared/config/env.js';
 
 /**
  * Serverless Function Handler

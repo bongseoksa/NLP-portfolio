@@ -51,7 +51,7 @@ async function testEndpoint(
       statusCode: response.status,
       responseTime,
       data: data || null,
-      error: response.ok ? undefined : `HTTP ${response.status}: ${data?.error || data?.message || 'Unknown error'}`,
+      ...(response.ok ? {} : { error: `HTTP ${response.status}: ${data?.error || data?.message || 'Unknown error'}` }),
     };
   } catch (error: any) {
     return {

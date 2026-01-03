@@ -95,7 +95,7 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
         patterns: [
             /데이터|data|수집|저장|처리|가져오|fetch/i,
             /벡터|임베딩|embedding|벡터\s*스토어/i,
-            /데이터베이스|DB|Supabase|ChromaDB/i,
+            /데이터베이스|DB|Supabase/i,
             /파이프라인|pipeline|ETL/i,
         ],
     },
@@ -127,7 +127,7 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
         patterns: [
             /기술\s*스택|tech\s*stack|스택|사용.*기술/i,
             /라이브러리|library|프레임워크|framework/i,
-            /React|TypeScript|Node\.?js|Express|Vite|Supabase|ChromaDB/i,
+            /React|TypeScript|Node\.?js|Express|Vite|Supabase/i,
             /패키지|package|의존성|dependency/i,
             /뭐로\s*만들|무엇으로\s*개발|어떤.*사용/i,
         ],

@@ -41,6 +41,7 @@ async function applyMigration() {
 
     for (let i = 0; i < statements.length; i++) {
         const statement = statements[i];
+        if (!statement) continue;
         const statementPreview = statement.substring(0, 80).replace(/\n/g, ' ');
 
         try {

@@ -1,13 +1,13 @@
 /**
  * 파일 기반 벡터 스토어 (Serverless 환경용)
  *
- * ChromaDB 서버 없이 정적 파일에서 벡터를 로딩하여 메모리에서 검색
+ * 정적 파일에서 벡터를 로딩하여 메모리에서 검색
  * - 서버 비용 0원
  * - Cold Start: 100-300ms (파일 다운로드)
  * - Warm Start: 10-30ms (메모리 캐시)
  */
 
-import type { SearchResult } from "../../shared/models/SearchResult.js";
+import type { SearchResult } from "../../models/SearchResult.js";
 import { promisify } from "util";
 import { gunzip } from "zlib";
 import { env } from "../../config/env.js";

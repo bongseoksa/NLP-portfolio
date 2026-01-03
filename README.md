@@ -89,13 +89,6 @@ pnpm run dev:frontend
 │ Server   │ │ (Cloud)  │ │(Vercel   │
 │ :3001    │ │ History  │ │ Blob)    │
 └──────────┘ └──────────┘ └──────────┘
-     │
-     │ (로컬 개발 시)
-     ▼
-┌──────────┐
-│ ChromaDB │
-│  :8000   │
-└──────────┘
 ```
 
 ---
@@ -112,12 +105,14 @@ TARGET_REPO_NAME=repo-name
 OPENAI_API_KEY=sk-proj-xxx
 CLAUDE_API_KEY=sk-ant-xxx  # OpenAI 실패 시 fallback
 
-# 벡터 저장소 (아래 중 1개 선택)
-VECTOR_FILE_URL=https://xxx.vercel-storage.com/embeddings.json.gz  # 권장
+# 벡터 저장소
+VECTOR_FILE_URL=https://raw.githubusercontent.com/owner/repo/main/output/embeddings.json.gz  # GitHub Raw URL (권장)
+# 또는 로컬 파일: output/embeddings.json.gz (기본값)
+
+# Supabase (임베딩 파이프라인 및 Q&A 히스토리용)
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=xxx
-CHROMA_HOST=localhost  # 로컬 개발용
-CHROMA_PORT=8000
+SUPABASE_ANON_KEY=xxx
 ```
 
 ---
@@ -134,7 +129,6 @@ pnpm tsx scripts/export-embeddings.ts --source supabase --output output/embeddin
 
 # 서버 실행
 pnpm run server                 # API 서버 (:3001)
-pnpm run chroma:start           # ChromaDB (:8000) - 로컬 개발 시 (선택적)
 ```
 
 ### 프론트엔드
@@ -151,10 +145,10 @@ pnpm run panda          # PandaCSS 코드 생성
 ## 🎯 기술 스택
 
 **백엔드**
-- Node.js + TypeScript + Express
-- Vector Storage: File-based / Supabase pgvector / ChromaDB
-- Embeddings: OpenAI text-embedding-3-small
-- LLM: OpenAI GPT-4o (primary) / Claude Sonnet 4 (fallback)
+- Node.js + TypeScript + Vercel Serverless Functions
+- Vector Storage: File-based (GitHub Raw URL) / Supabase pgvector (CI only)
+- Embeddings: Hugging Face all-MiniLM-L6-v2 (384 dimensions)
+- LLM: Claude Sonnet 4 (primary) / Gemini 1.5 Flash (fallback 1) / Mistral-7B (fallback 2)
 
 **프론트엔드**
 - React 19 + TypeScript + Vite

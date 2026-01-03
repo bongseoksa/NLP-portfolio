@@ -5,8 +5,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fetch from "node-fetch";
-import type { SearchResult } from "../vector-store/searchVectors.js";
-import { env, requireEnv } from "../../config/env.js";
+import type { SearchResult } from "../../models/SearchResult.js";
+import { env } from "../../config/env.js";
 
 // Claude 클라이언트 (Primary - API 키가 없으면 null)
 const anthropicApiKey = env.CLAUDE_API_KEY();

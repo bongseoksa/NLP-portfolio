@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { setCorsHeaders, handleOptionsRequest } from '../_lib/cors.js';
 import { handleError } from '../_lib/errorHandler.js';
-import { checkSupabaseConnection, checkChromaDBHealth } from '../_lib/healthCheck.js';
+import { checkSupabaseConnection } from '../_lib/healthCheck.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res);
@@ -15,17 +15,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const [supabaseConnected, chromadbConnected] = await Promise.all([
-      checkSupabaseConnection(),
-      checkChromaDBHealth(),
-    ]);
+    const supabaseConnected = await checkSupabaseConnection();
 
     res.json({
-      chromadb: {
-        status: chromadbConnected ? 'running' : 'stopped',
-        startedAt: null,
-        pid: null,
-      },
       api: {
         status: 'running',
         startedAt: null,

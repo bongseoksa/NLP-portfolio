@@ -10,9 +10,9 @@ This is a GitHub repository analyzer that uses NLP/RAG to answer questions about
 - Backend: Node.js + TypeScript + Vercel Serverless Functions (ESM modules)
 - Frontend: React 19 + TypeScript + Vite + PandaCSS
 - State: Jotai (atoms) + TanStack Query (server state)
-- Vector Storage: **File-based (Serverless)** / Supabase pgvector (Cloud) / ChromaDB (Local)
-- LLM: OpenAI GPT-4o (primary) / Claude Sonnet 4 (fallback)
-- Embeddings: OpenAI text-embedding-3-small (primary) / Chroma default (fallback)
+- Vector Storage: **File-based (Serverless)** / Supabase pgvector (Cloud)
+- LLM: Claude Sonnet 4 (primary) / Gemini 1.5 Flash (fallback 1) / Mistral-7B (fallback 2)
+- Embeddings: Hugging Face all-MiniLM-L6-v2 (384 dimensions)
 - Storage: Supabase (Q&A history, embedding storage)
 
 ## Development Commands
@@ -22,8 +22,7 @@ This is a GitHub repository analyzer that uses NLP/RAG to answer questions about
 ```bash
 # Setup & Infrastructure
 pnpm install                    # Install dependencies
-pnpm run chroma:setup          # One-time ChromaDB installation (creates .chroma_venv) - OPTIONAL for local dev
-pnpm run chroma:start          # Start ChromaDB server (required for local ChromaDB mode) - OPTIONAL
+# Note: ChromaDB is deprecated and not used in the architecture
 
 # Export Embeddings
 pnpm run local_export          # Export embeddings to file (for serverless deployment)
@@ -272,7 +271,7 @@ src/
 
 ### Vector Store Items
 
-ChromaDB stores two types of items:
+File-based vector store contains two types of items:
 
 **Type 1: Commit Items**
 ```typescript
@@ -459,7 +458,7 @@ Analytics showing:
 
 ### `/settings` - Settings Page
 Server status monitoring:
-- Read-only status cards for ChromaDB, API Server, Supabase
+- Read-only status cards for API Server, Supabase
 - Environment information
 - Connection diagnostics
 

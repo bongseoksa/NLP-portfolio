@@ -1,6 +1,6 @@
 /**
  * 벡터 검색 결과 (공통 인터페이스)
- * ChromaDB와 Supabase 모두 이 타입을 반환
+ * 파일 기반 벡터 스토어와 Supabase 모두 이 타입을 반환
  */
 export interface SearchResult {
     /** 문서 고유 ID */

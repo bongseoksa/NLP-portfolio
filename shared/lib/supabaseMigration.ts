@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS qa_history (
 -- 서버 상태 로그 테이블
 CREATE TABLE IF NOT EXISTS server_status_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    server_type VARCHAR(20) NOT NULL CHECK (server_type IN ('chromadb', 'api')),
+    server_type VARCHAR(20) NOT NULL CHECK (server_type IN ('api')),
     status VARCHAR(20) NOT NULL CHECK (status IN ('online', 'offline', 'error')),
     message TEXT,
     checked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

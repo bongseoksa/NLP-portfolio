@@ -1,6 +1,17 @@
 import type { CommitItem } from "./Commit.js";
 import type { FileModel } from "./File.js";
-import type { RepositoryFile } from "../../embedding-pipeline/data_sources/github/fetchRepositoryFiles.js";
+
+// RepositoryFile 타입 정의 (local-cli 제거로 인한 임시 정의)
+export interface RepositoryFile {
+    path: string;
+    content: string;
+    sha: string;
+    size: number;
+    type: string;
+    extension?: string;
+    chunkIndex?: number;
+    totalChunks?: number;
+}
 
 /**
  * 전체 파이프라인 실행 결과 데이터를 집계하는 인터페이스입니다.
