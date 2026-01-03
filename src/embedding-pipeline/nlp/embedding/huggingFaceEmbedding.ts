@@ -53,15 +53,40 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
             // Tensor를 배열로 변환
             // @xenova/transformers는 Tensor 객체를 반환하므로 .data 또는 .tolist() 사용
             let embedding: number[];
+            
+            // result가 Tensor 객체인 경우
             if (result && typeof result.tolist === 'function') {
-                embedding = result.tolist() as number[];
+                const listResult = result.tolist();
+                // tolist()가 2차원 배열을 반환할 수 있으므로 평탄화
+                if (Array.isArray(listResult) && listResult.length > 0 && Array.isArray(listResult[0])) {
+                    embedding = listResult[0] as number[];
+                } else {
+                    embedding = listResult as number[];
+                }
             } else if (result && Array.isArray(result)) {
-                embedding = result as number[];
+                // 이미 배열인 경우
+                if (result.length > 0 && Array.isArray(result[0])) {
+                    // 2차원 배열인 경우 첫 번째 요소 사용
+                    embedding = result[0] as number[];
+                } else {
+                    embedding = result as number[];
+                }
             } else if (result && result.data) {
-                embedding = Array.from(result.data);
+                // Tensor.data 속성이 있는 경우
+                const data = result.data;
+                if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0])) {
+                    embedding = data[0] as number[];
+                } else {
+                    embedding = Array.from(data);
+                }
             } else {
                 // fallback: 직접 변환 시도
-                embedding = Array.from(result as any);
+                const converted = Array.from(result as any);
+                if (converted.length > 0 && Array.isArray(converted[0])) {
+                    embedding = converted[0] as number[];
+                } else {
+                    embedding = converted as number[];
+                }
             }
             
             // 차원 확인 (384)

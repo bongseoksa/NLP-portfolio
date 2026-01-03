@@ -539,10 +539,10 @@ interface EmbeddingItem {
 
 ### 9.2 다음 단계 (Next Steps)
 
-1. **Hugging Face 임베딩 모델 통합** (Week 7)
-   - OpenAI text-embedding-3-small 제거
-   - sentence-transformers/all-MiniLM-L6-v2 적용
-   - CI 파이프라인 테스트
+1. ~~**Hugging Face 임베딩 모델 통합**~~ ✅ 완료 (2026-01-03)
+   - ~~OpenAI text-embedding-3-small 제거~~ ✅ 완료
+   - ~~sentence-transformers/all-MiniLM-L6-v2 적용~~ ✅ 완료
+   - ~~CI 파이프라인 테스트~~ ✅ 완료 (로컬 테스트 성공)
 
 2. **Gemini + Mistral LLM Fallback 구현** (Week 7-8)
    - Gemini 1.5 Flash API 연동

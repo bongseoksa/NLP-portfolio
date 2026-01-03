@@ -260,7 +260,14 @@ export class SupabaseCommitStateManager {
             .order('last_processed_at', { ascending: false });
 
         if (error) {
-            throw new Error(`Failed to get all states: ${error.message}`);
+            // 테이블이 없으면 빈 배열 반환 (첫 실행으로 간주)
+            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                console.warn(`⚠️ commit_states 테이블이 없습니다. 빈 상태로 시작합니다.`);
+                return [];
+            }
+            // 다른 에러도 경고만 출력하고 빈 배열 반환 (에러로 인한 파이프라인 중단 방지)
+            console.warn(`⚠️ Failed to get all states: ${error.message}`);
+            return [];
         }
 
         if (!data) return [];

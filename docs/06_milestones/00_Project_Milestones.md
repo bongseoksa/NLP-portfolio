@@ -110,7 +110,7 @@ graph TD
 - [x] 메타데이터 구조화 ✅ 구현됨
 
 #### 3. 임베딩 생성
-- [x] OpenAI text-embedding-3-small 모델 사용 ✅ 구현됨 (1536 dimensions)
+- [x] Hugging Face sentence-transformers/all-MiniLM-L6-v2 모델 사용 ✅ 구현됨 (384 dimensions, 기획서 반영)
 - [x] 커밋 임베딩 생성 ✅ 구현됨
 - [x] 파일 임베딩 생성 ✅ 구현됨
 - [x] 배치 처리 구현 (메모리 최적화) ✅ 구현됨 (batchSize: 10)
