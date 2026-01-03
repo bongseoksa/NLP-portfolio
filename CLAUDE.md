@@ -24,8 +24,12 @@ This is a GitHub repository analyzer that uses NLP/RAG to answer questions about
 pnpm install                    # Install dependencies
 # Note: ChromaDB is deprecated and not used in the architecture
 
+# Embedding Pipeline (Local)
+pnpm run embed                  # Run embedding pipeline (incremental update)
+pnpm run embed:reset            # Run embedding pipeline (full reset, re-process all commits)
+
 # Export Embeddings
-pnpm run local_export          # Export embeddings to file (for serverless deployment)
+pnpm run local_export          # Export embeddings from Supabase to file (for serverless deployment)
 
 # Servers
 pnpm run server                # Start Vercel dev server (:3001) for Q&A and dashboard
@@ -35,6 +39,11 @@ pnpm run vercel:dev            # Alternative: Start Vercel dev server (auto port
 pnpm run build                 # Compile TypeScript to dist/
 pnpm run start                 # Run compiled JS from dist/
 ```
+
+**Embedding Pipeline Commands:**
+- `pnpm run embed`: Fetches commits and files from GitHub repositories (defined in `target-repos.json`), generates embeddings using Hugging Face all-MiniLM-L6-v2, and stores them in Supabase. Only processes new commits since last run (incremental update).
+- `pnpm run embed:reset`: Same as above but resets commit state and re-processes all commits from scratch.
+- `pnpm run local_export`: Exports all embeddings from Supabase to `output/embeddings.json.gz` file for serverless deployment.
 
 
 ### Frontend (Root Directory)

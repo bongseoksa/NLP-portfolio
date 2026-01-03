@@ -119,14 +119,33 @@ SUPABASE_ANON_KEY=xxx
 
 ## 🛠️ 주요 명령어
 
+### 임베딩 파이프라인
+
+```bash
+# 로컬에서 레포지토리 임베딩 생성
+pnpm run embed                  # 일반 모드 (증분 업데이트, 새 커밋만 처리)
+pnpm run embed:reset            # 리셋 모드 (전체 재생성, 모든 커밋 재처리)
+
+# 임베딩 파일 내보내기 (Supabase → 로컬 파일)
+pnpm run local_export           # Supabase에서 embeddings.json.gz로 내보내기
+```
+
+**임베딩 파이프라인 동작:**
+1. `target-repos.json`에서 대상 레포지토리 읽기
+2. GitHub API로 커밋 및 파일 가져오기
+3. Hugging Face 모델로 임베딩 생성 (all-MiniLM-L6-v2, 384차원)
+4. Supabase pgvector에 저장
+5. `commit-state.json`에 마지막 커밋 SHA 저장 (증분 업데이트)
+
+**필수 환경 변수:**
+- `GITHUB_TOKEN`: GitHub API 토큰
+- `OPENAI_API_KEY`: (선택) OpenAI API 키 (현재는 Hugging Face 사용)
+- `SUPABASE_URL`: Supabase 프로젝트 URL
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase Service Role Key
+
 ### 백엔드
 
 ```bash
-# 임베딩 내보내기 (Serverless 배포용)
-pnpm run local_export           # Export embeddings to file
-# 또는
-pnpm tsx scripts/export-embeddings.ts --source supabase --output output/embeddings.json.gz
-
 # 서버 실행
 pnpm run server                 # API 서버 (:3001)
 ```

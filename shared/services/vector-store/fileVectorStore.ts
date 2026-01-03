@@ -278,12 +278,74 @@ async function loadVectorFile(): Promise<VectorFile> {
 
         // 통합 스키마 vs 레거시 형식 자동 감지
         let vectorFile: VectorFile;
-        if ('statistics' in parsed && 'index' in parsed) {
-            // 통합 스키마 (v2.0.0+)
-            vectorFile = parsed as VectorFile;
+        // 새 형식 감지: statistics와 vectors가 있으면 새 형식 (export-embeddings.ts에서 생성)
+        if ('statistics' in parsed && 'vectors' in parsed) {
+            // export-embeddings.ts에서 생성한 형식 (index 없음)
+            if ('index' in parsed) {
+                // 통합 스키마 (v2.0.0+) - index 포함
+                vectorFile = parsed as VectorFile;
+            } else {
+                // export-embeddings.ts 형식 - index 생성 필요
+                const vectors = (parsed as any).vectors || [];
+                const codeIndices: number[] = [];
+                const qaIndices: number[] = [];
+                const byCategory: Record<string, number[]> = {};
+
+                vectors.forEach((v: any, idx: number) => {
+                    if (v.type === 'code' || v.type === 'commit' || v.type === 'file') {
+                        codeIndices.push(idx);
+                    } else if (v.type === 'qa') {
+                        qaIndices.push(idx);
+                    }
+                    
+                    const category = v.metadata?.category || 'etc';
+                    if (!byCategory[category]) {
+                        byCategory[category] = [];
+                    }
+                    byCategory[category].push(idx);
+                });
+
+                // VectorFile 형식으로 변환
+                const firstVector = vectors[0] as any;
+                const owner = (parsed as any).repository?.owner || firstVector?.metadata?.owner || '';
+                const repo = (parsed as any).repository?.name || firstVector?.metadata?.repo || '';
+                
+                vectorFile = {
+                    version: parsed.version || '1.0',
+                    createdAt: parsed.generatedAt || parsed.createdAt || new Date().toISOString(),
+                    repository: {
+                        owner: owner || 'unknown',
+                        name: repo || 'unknown',
+                        url: (parsed as any).repository?.url || (owner && repo ? `https://github.com/${owner}/${repo}` : '')
+                    },
+                    embedding: {
+                        model: (parsed as any).embedding?.model || 'all-MiniLM-L6-v2',
+                        provider: (parsed as any).embedding?.provider || 'huggingface',
+                        dimension: (parsed as any).embedding?.dimension || 384
+                    },
+                    statistics: parsed.statistics || {
+                        totalVectors: vectors.length,
+                        codeVectors: codeIndices.length,
+                        qaVectors: qaIndices.length,
+                        fileSize: 0,
+                        compressedSize: 0
+                    },
+                    index: {
+                        byType: {
+                            code: codeIndices,
+                            qa: qaIndices
+                        },
+                        byCategory
+                    },
+                    vectors: vectors as Vector[]
+                } as VectorFile;
+            }
         } else {
             // 레거시 형식 (v1.x) - 자동 변환
             console.log("⚠️  Legacy format detected, converting to unified schema...");
+            if (!(parsed as any).metadata?.owner) {
+                throw new Error("Legacy format requires metadata.owner in root level");
+            }
             vectorFile = convertLegacyToUnified(parsed as LegacyVectorIndex);
         }
 

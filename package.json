@@ -5,6 +5,8 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
+    "embed": "tsx scripts/run-embedding-pipeline.ts",
+    "embed:reset": "tsx scripts/run-embedding-pipeline.ts --reset",
     "local_export": "tsx scripts/export-embeddings.ts",
     "server": "vercel dev --listen 3001",
     "vercel:dev": "vercel dev",
@@ -14,7 +16,8 @@
     "dev:frontend": "panda codegen && vite",
     "preview:frontend": "vite preview",
     "panda": "panda codegen",
-    "test:api": "tsx scripts/test-api.ts"
+    "test:api": "tsx scripts/test-api.ts",
+    "test:cors": "tsx scripts/test-cors.ts"
   },
   "keywords": [],
   "author": "bongseok.sa",
