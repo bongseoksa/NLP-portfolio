@@ -9,7 +9,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { searchVectorsFromFile } from '../src/service/vector-store/fileVectorStore.js';
 import { generateQueryEmbedding } from '../src/service/vector-store/embeddingService.js';
 import { generateAnswerWithUsage } from '../src/service/qa/answer.js';
-import { saveQAHistory } from '../src/service/server/services/supabase.js';
+import { saveQAHistory } from '../src/lib/supabase.js';
 import { classifyQuestionWithConfidence } from '../src/service/qa/classifier.js';
 import { addQAHistoryToVectors } from '../src/service/vector-store/qaHistoryVectorStore.js';
 import { v4 as uuidv4 } from 'uuid';
