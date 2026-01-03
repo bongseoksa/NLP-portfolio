@@ -6,17 +6,18 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fetch from "node-fetch";
 import type { SearchResult } from "../vector-store/searchVectors.js";
+import { env, requireEnv } from "../../config/env.js";
 
 // Claude 클라이언트 (Primary - API 키가 없으면 null)
-const anthropicApiKey = process.env.CLAUDE_API_KEY;
+const anthropicApiKey = env.CLAUDE_API_KEY();
 const anthropic = anthropicApiKey ? new Anthropic({ apiKey: anthropicApiKey }) : null;
 
 // Gemini 클라이언트 (Fallback 1 - API 키가 없으면 null)
-const geminiApiKey = process.env.GEMINI_API_KEY;
+const geminiApiKey = env.GEMINI_API_KEY();
 const gemini = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 // Mistral-7B-Instruct (Fallback 2 - Hugging Face Inference API)
-const huggingFaceApiKey = process.env.HUGGING_FACE_API_KEY;
+const huggingFaceApiKey = env.HUGGING_FACE_API_KEY();
 
 const SYSTEM_PROMPT = `
 당신은 GitHub 레포지토리 분석 전문가입니다.

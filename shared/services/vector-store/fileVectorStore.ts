@@ -10,6 +10,7 @@
 import type { SearchResult } from "../../shared/models/SearchResult.js";
 import { promisify } from "util";
 import { gunzip } from "zlib";
+import { env } from "../../config/env.js";
 
 const gunzipAsync = promisify(gunzip);
 
@@ -200,8 +201,8 @@ async function loadVectorFile(): Promise<VectorFile> {
 
     const startTime = Date.now();
 
-    // 환경 변수로 URL 지정 (옵션)
-    const vectorFileUrl = process.env.VECTOR_FILE_URL;
+    // 환경 변수로 URL 지정 (기본값: output/embeddings.json.gz)
+    const vectorFileUrl = env.VECTOR_FILE_URL();
 
     let buffer: Buffer;
 

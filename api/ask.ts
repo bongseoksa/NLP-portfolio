@@ -13,6 +13,7 @@ import { saveQAHistory } from '../shared/lib/supabase.js';
 import { classifyQuestionWithConfidence } from '../shared/services/qa/classifier.js';
 import { addQAHistoryToVectors } from '../shared/services/vector-store/qaHistoryVectorStore.js';
 import { v4 as uuidv4 } from 'uuid';
+import { env, requireEnv } from '../shared/config/env.js';
 
 /**
  * Serverless Function Handler
@@ -89,18 +90,8 @@ export default async function handler(
       return;
     }
 
-    // 벡터 파일 URL 확인 (로컬 개발 시 기본값 사용)
-    const vectorFileUrl = process.env.VECTOR_FILE_URL || 'output/embeddings.json.gz';
-    
-    // 벡터 파일이 없으면 에러 (파일 존재 여부는 fileVectorStore에서 확인)
-    if (!vectorFileUrl) {
-      res.status(500).json({
-        error: 'Vector file not configured',
-        message: 'VECTOR_FILE_URL environment variable is required, or ensure output/embeddings.json.gz exists',
-        status: 'failed'
-      });
-      return;
-    }
+    // 벡터 파일 URL (기본값: output/embeddings.json.gz)
+    const vectorFileUrl = env.VECTOR_FILE_URL();
 
     console.log(`🔍 Serverless API 질의: "${question}"`);
 
@@ -137,8 +128,8 @@ export default async function handler(
     checkTimeRemaining(startTime);
 
     // [3] 벡터 검색 (파일 기반, 메모리 캐싱)
-    const owner = process.env.TARGET_REPO_OWNER || '';
-    const repo = process.env.TARGET_REPO_NAME || 'portfolio';
+    const owner = env.TARGET_REPO_OWNER();
+    const repo = env.TARGET_REPO_NAME();
 
     const searchStart = Date.now();
     let contexts;

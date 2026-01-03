@@ -3,6 +3,7 @@
  */
 import dotenv from 'dotenv';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { env } from '../config/env.js';
 
 // 환경 변수 로드 (이 파일이 import될 때 dotenv.config()가 실행되도록 보장)
 dotenv.config();
@@ -11,54 +12,54 @@ dotenv.config();
 let supabase: SupabaseClient | null = null;
 
 /**
- * 환경 변수에서 Supabase 설정 가져오기 (지연 평가)
+ * Supabase 클라이언트 가져오기 (읽기 전용 작업용)
+ * 선택적: 환경 변수가 없으면 null 반환 (에러 없음)
  */
-function getSupabaseConfig(): { url: string; key: string } | null {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+export function getSupabaseClient(): SupabaseClient | null {
+    try {
+        const supabaseUrl = env.SUPABASE_URL();
+        const supabaseAnonKey = env.SUPABASE_ANON_KEY();
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+        if (!supabaseUrl || !supabaseAnonKey) {
+            return null;
+        }
+
+        if (!supabase) {
+            supabase = createClient(supabaseUrl, supabaseAnonKey);
+        }
+
+        return supabase;
+    } catch (err) {
+        // env 모듈 로드 실패 시 null 반환 (에러를 throw하지 않음)
+        console.warn('⚠️ Supabase 클라이언트 생성 실패:', err);
         return null;
     }
-
-    return { url: supabaseUrl, key: supabaseAnonKey };
 }
 
 /**
  * Service Role Key로 Supabase 클라이언트 가져오기 (INSERT/UPDATE 작업용)
+ * 선택적: 환경 변수가 없으면 null 반환 (에러 없음)
  */
-function getSupabaseServiceClient(): SupabaseClient | null {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export function getSupabaseServiceClient(): SupabaseClient | null {
+    try {
+        const supabaseUrl = env.SUPABASE_URL();
+        const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY();
 
-    if (!supabaseUrl || !serviceRoleKey) {
+        if (!supabaseUrl || !serviceRoleKey) {
+            return null;
+        }
+
+        return createClient(supabaseUrl, serviceRoleKey, {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+            },
+        });
+    } catch (err) {
+        // env 모듈 로드 실패 시 null 반환 (에러를 throw하지 않음)
+        console.warn('⚠️ Supabase Service 클라이언트 생성 실패:', err);
         return null;
     }
-
-    return createClient(supabaseUrl, serviceRoleKey, {
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-        },
-    });
-}
-
-/**
- * Supabase 클라이언트 가져오기 (읽기 전용 작업용)
- */
-export function getSupabaseClient(): SupabaseClient | null {
-    const config = getSupabaseConfig();
-    
-    if (!config) {
-        console.warn('⚠️ Supabase 환경 변수가 설정되지 않았습니다. 이력 저장이 비활성화됩니다.');
-        return null;
-    }
-
-    if (!supabase) {
-        supabase = createClient(config.url, config.key);
-    }
-
-    return supabase;
 }
 
 /**
@@ -115,12 +116,11 @@ export interface ServerStatusLog {
 /**
  * 질문-응답 이력 저장
  * Service Role Key를 사용하여 INSERT 작업 수행
+ * 선택적: Service Role Key가 없으면 저장하지 않고 null 반환
  */
 export async function saveQAHistory(record: Omit<QAHistoryRecord, 'id' | 'created_at'>): Promise<QAHistoryRecord | null> {
-    // Service Role Key로 클라이언트 생성 (INSERT 작업용)
     const client = getSupabaseServiceClient();
     if (!client) {
-        console.warn('⚠️ Supabase Service Role Key가 설정되지 않았습니다. 이력 저장이 비활성화됩니다.');
         return null;
     }
 
@@ -302,20 +302,20 @@ export async function getDashboardStats(): Promise<{
     dailyTokenUsage: number;
     totalTokenUsage: number;
 }> {
-    const client = getSupabaseClient();
-    if (!client) {
-        return {
-            totalQuestions: 0,
-            successRate: 0,
-            failureRate: 0,
-            averageResponseTimeMs: 0,
-            todayQuestions: 0,
-            dailyTokenUsage: 0,
-            totalTokenUsage: 0,
-        };
-    }
-
     try {
+        const client = getSupabaseClient();
+        if (!client) {
+            return {
+                totalQuestions: 0,
+                successRate: 0,
+                failureRate: 0,
+                averageResponseTimeMs: 0,
+                todayQuestions: 0,
+                dailyTokenUsage: 0,
+                totalTokenUsage: 0,
+            };
+        }
+
         // 전체 통계
         const { data: allData, error: queryError } = await client
             .from('qa_history')
@@ -324,20 +324,6 @@ export async function getDashboardStats(): Promise<{
         // 테이블이 없거나 에러 발생 시
         if (queryError) {
             console.warn('⚠️ QA history 테이블 조회 실패:', queryError.message);
-            // 테이블이 없으면 기본값 반환
-            if (queryError.code === 'PGRST205' || queryError.message?.includes('does not exist')) {
-                return {
-                    totalQuestions: 0,
-                    successRate: 0,
-                    failureRate: 0,
-                    averageResponseTimeMs: 0,
-                    todayQuestions: 0,
-                    dailyTokenUsage: 0,
-                    totalTokenUsage: 0,
-                };
-            }
-            // 다른 에러는 로그만 남기고 기본값 반환 (UI 정상 표시)
-            console.error('⚠️ QA history 조회 에러:', queryError);
             return {
                 totalQuestions: 0,
                 successRate: 0,
@@ -390,8 +376,9 @@ export async function getDashboardStats(): Promise<{
             dailyTokenUsage,
             totalTokenUsage,
         };
-    } catch (err) {
-        console.error('❌ 대시보드 통계 조회 오류:', err);
+    } catch (err: any) {
+        // 모든 에러를 잡아서 기본값 반환 (에러를 throw하지 않음)
+        console.error('❌ 대시보드 통계 조회 오류:', err?.message || err);
         return {
             totalQuestions: 0,
             successRate: 0,
@@ -414,10 +401,9 @@ export async function getDailyStats(startDate?: string, endDate?: string): Promi
     failureCount: number;
     averageResponseTimeMs: number;
 }>> {
-    const client = getSupabaseClient();
-    if (!client) return [];
-
     try {
+        const client = getSupabaseClient();
+        if (!client) return [];
         let query = client
             .from('qa_history')
             .select('created_at, status, response_time_ms');
@@ -431,14 +417,9 @@ export async function getDailyStats(startDate?: string, endDate?: string): Promi
 
         const { data, error } = await query;
 
-        // 테이블이 없으면 빈 배열 반환
+        // 테이블이 없거나 에러 발생 시 빈 배열 반환
         if (error) {
-            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
-                console.warn('⚠️ QA history 테이블이 없습니다.');
-                return [];
-            }
-            // 다른 에러도 로그만 남기고 빈 배열 반환 (UI 정상 표시)
-            console.error('⚠️ QA history 조회 에러:', error);
+            console.warn('⚠️ QA history 테이블 조회 실패:', error.message);
             return [];
         }
 
@@ -506,8 +487,9 @@ export async function getDailyStats(startDate?: string, endDate?: string): Promi
                 }
                 return 0;
             });
-    } catch (err) {
-        console.error('❌ 일별 통계 조회 오류:', err);
+    } catch (err: any) {
+        // 모든 에러를 잡아서 빈 배열 반환 (에러를 throw하지 않음)
+        console.error('❌ 일별 통계 조회 오류:', err?.message || err);
         return [];
     }
 }
@@ -520,22 +502,16 @@ export async function getCategoryDistribution(): Promise<Array<{
     count: number;
     percentage: number;
 }>> {
-    const client = getSupabaseClient();
-    if (!client) return [];
-
     try {
+        const client = getSupabaseClient();
+        if (!client) return [];
         const { data, error } = await client
             .from('qa_history')
             .select('category');
 
-        // 테이블이 없으면 빈 배열 반환
+        // 테이블이 없거나 에러 발생 시 빈 배열 반환
         if (error) {
-            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
-                console.warn('⚠️ QA history 테이블이 없습니다.');
-                return [];
-            }
-            // 다른 에러도 로그만 남기고 빈 배열 반환 (UI 정상 표시)
-            console.error('⚠️ QA history 조회 에러:', error);
+            console.warn('⚠️ QA history 테이블 조회 실패:', error.message);
             return [];
         }
 
@@ -560,8 +536,9 @@ export async function getCategoryDistribution(): Promise<Array<{
                 percentage: Math.round((count / total) * 100 * 10) / 10, // 소수점 첫째 자리까지
             }))
             .sort((a, b) => b.count - a.count);
-    } catch (err) {
-        console.error('❌ 카테고리 분포 조회 오류:', err);
+    } catch (err: any) {
+        // 모든 에러를 잡아서 빈 배열 반환 (에러를 throw하지 않음)
+        console.error('❌ 카테고리 분포 조회 오류:', err?.message || err);
         return [];
     }
 }
@@ -574,22 +551,16 @@ export async function getSourceContribution(): Promise<Array<{
     count: number;
     percentage: number;
 }>> {
-    const client = getSupabaseClient();
-    if (!client) return [];
-
     try {
+        const client = getSupabaseClient();
+        if (!client) return [];
         const { data, error } = await client
             .from('qa_history')
             .select('sources');
 
-        // 테이블이 없으면 빈 배열 반환
+        // 테이블이 없거나 에러 발생 시 빈 배열 반환
         if (error) {
-            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
-                console.warn('⚠️ QA history 테이블이 없습니다.');
-                return [];
-            }
-            // 다른 에러도 로그만 남기고 빈 배열 반환 (UI 정상 표시)
-            console.error('⚠️ QA history 조회 에러:', error);
+            console.warn('⚠️ QA history 테이블 조회 실패:', error.message);
             return [];
         }
 
@@ -622,8 +593,9 @@ export async function getSourceContribution(): Promise<Array<{
                 percentage: Math.round((count / totalSources) * 100 * 10) / 10, // 소수점 첫째 자리까지
             }))
             .sort((a, b) => b.count - a.count);
-    } catch (err) {
-        console.error('❌ 소스 기여도 조회 오류:', err);
+    } catch (err: any) {
+        // 모든 에러를 잡아서 빈 배열 반환 (에러를 throw하지 않음)
+        console.error('❌ 소스 기여도 조회 오류:', err?.message || err);
         return [];
     }
 }

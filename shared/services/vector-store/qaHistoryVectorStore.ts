@@ -10,6 +10,7 @@
 import { promisify } from "util";
 import { gzip, gunzip } from "zlib";
 import { generateQueryEmbedding } from "./embeddingService.js";
+import { env } from "../../config/env.js";
 
 const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
@@ -97,8 +98,8 @@ async function loadHistoryFile(): Promise<QAHistoryVectorFile> {
         return cachedHistoryFile;
     }
 
-    const historyFileUrl = process.env.QA_HISTORY_FILE_URL || 
-                          process.env.VECTOR_FILE_URL?.replace('embeddings.json.gz', 'qa-history-embeddings-latest.json.gz');
+    const vectorFileUrl = env.VECTOR_FILE_URL();
+    const historyFileUrl = vectorFileUrl.replace('embeddings.json.gz', 'qa-history-embeddings-latest.json.gz');
 
     if (!historyFileUrl) {
         // 파일이 없으면 빈 파일 생성
@@ -169,8 +170,8 @@ async function loadHistoryFile(): Promise<QAHistoryVectorFile> {
  * 빈 히스토리 파일 생성
  */
 function createEmptyHistoryFile(): QAHistoryVectorFile {
-    const owner = process.env.TARGET_REPO_OWNER || '';
-    const repo = process.env.TARGET_REPO_NAME || 'portfolio';
+    const owner = env.TARGET_REPO_OWNER();
+    const repo = env.TARGET_REPO_NAME();
     const now = new Date().toISOString();
 
     return {

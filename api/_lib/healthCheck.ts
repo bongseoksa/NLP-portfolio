@@ -21,8 +21,9 @@ export async function checkSupabaseConnection(): Promise<boolean> {
     return supabaseCache.connected;
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
+  const { env } = await import('../../../shared/config/env.js');
+  const supabaseUrl = env.SUPABASE_URL();
+  const supabaseKey = env.SUPABASE_ANON_KEY();
 
   if (!supabaseUrl || !supabaseKey) {
     supabaseCache = { connected: false, timestamp: now };

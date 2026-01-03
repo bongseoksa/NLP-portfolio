@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import fetch from 'node-fetch';
 import { getSupabaseClient } from './supabase.js';
+import { env } from '../config/env.js';
 
 dotenv.config();
 
@@ -72,8 +73,8 @@ CREATE POLICY "Allow anonymous insert to server_status_log"
  * Service Role Key를 사용한 Supabase 클라이언트 생성
  */
 function getServiceRoleClient(): SupabaseClient | null {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = env.SUPABASE_URL();
+    const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY();
 
     if (!supabaseUrl || !serviceRoleKey) {
         return null;
@@ -116,8 +117,8 @@ export async function checkTableExists(tableName: string): Promise<boolean> {
  * Service Role Key가 필요합니다.
  */
 async function executeSQL(sql: string): Promise<{ success: boolean; message: string }> {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = env.SUPABASE_URL();
+    const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY();
 
     if (!supabaseUrl || !serviceRoleKey) {
         return {
@@ -236,7 +237,7 @@ export async function initializeTables(): Promise<{ success: boolean; message: s
     }
 
     // Service Role Key가 있으면 자동으로 테이블 생성 시도
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY();
     if (serviceRoleKey) {
         console.log('🔧 Service Role Key가 설정되어 있습니다. 자동 마이그레이션을 시도합니다...');
         
