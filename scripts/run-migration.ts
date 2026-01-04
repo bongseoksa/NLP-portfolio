@@ -64,7 +64,8 @@ async function runMigration() {
                     console.log('='.repeat(80));
                     console.log('');
                     console.log('Supabase Dashboard → SQL Editor:');
-                    console.log(`https://supabase.com/dashboard/project/${supabaseUrl.match(/https:\/\/([^.]+)/)?.[1]}/sql`);
+                    const projectId = supabaseUrl?.match(/https:\/\/([^.]+)/)?.[1] || 'unknown';
+                    console.log(`https://supabase.com/dashboard/project/${projectId}/sql`);
                     process.exit(0);
                 }
 

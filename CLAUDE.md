@@ -7,12 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a GitHub repository analyzer that uses NLP/RAG to answer questions about code structure, commit history, and implementation details. The system collects repository data, generates embeddings, stores vectors, and provides a Q&A interface powered by OpenAI or Claude.
 
 **Tech Stack:**
-- Backend: Node.js + TypeScript + Express (ESM modules)
+- Backend: Node.js + TypeScript + Vercel Serverless Functions (ESM modules)
 - Frontend: React 19 + TypeScript + Vite + PandaCSS
 - State: Jotai (atoms) + TanStack Query (server state)
-- Vector Storage: **File-based (Serverless)** / Supabase pgvector (Cloud) / ChromaDB (Local)
-- LLM: OpenAI GPT-4o (primary) / Claude Sonnet 4 (fallback)
-- Embeddings: OpenAI text-embedding-3-small (primary) / Chroma default (fallback)
+- Vector Storage: **File-based (Serverless)** / Supabase pgvector (Cloud)
+- LLM: Claude Sonnet 4 (primary) / Gemini 1.5 Flash (fallback 1) / Mistral-7B (fallback 2)
+- Embeddings: Hugging Face all-MiniLM-L6-v2 (384 dimensions)
 - Storage: Supabase (Q&A history, embedding storage)
 
 ## Development Commands
@@ -22,41 +22,37 @@ This is a GitHub repository analyzer that uses NLP/RAG to answer questions about
 ```bash
 # Setup & Infrastructure
 pnpm install                    # Install dependencies
-pnpm run chroma:setup          # One-time ChromaDB installation (creates .chroma_venv) - OPTIONAL for local dev
-pnpm run chroma:start          # Start ChromaDB server (required for local ChromaDB mode) - OPTIONAL
+# Note: ChromaDB is deprecated and not used in the architecture
 
-# Data Pipeline
-pnpm run dev                   # Full pipeline: fetch data → embed → store in Supabase/ChromaDB
-pnpm run dev --reset           # Reset vector collection, then run full pipeline
-pnpm run reindex               # Re-embed existing data without fetching (use when switching embedding providers)
+# Embedding Pipeline (Local)
+pnpm run embed                  # Run embedding pipeline (incremental update)
+pnpm run embed:reset            # Run embedding pipeline (full reset, re-process all commits)
 
-# Export Embeddings to File (for serverless deployment)
-pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel
-
-# Q&A (CLI)
-pnpm run ask "your question"   # Query via command line (auto-detects: File > Supabase > ChromaDB)
+# Export Embeddings
+pnpm run local_export          # Export embeddings from Supabase to file (for serverless deployment)
 
 # Servers
-pnpm run server                # Start API server (:3001) for Q&A and dashboard
+pnpm run server                # Start Vercel dev server (:3001) for Q&A and dashboard
+pnpm run vercel:dev            # Alternative: Start Vercel dev server (auto port)
 
 # Build
 pnpm run build                 # Compile TypeScript to dist/
 pnpm run start                 # Run compiled JS from dist/
 ```
 
-**Important zsh Note:** When using `pnpm run ask`, always quote questions containing special characters (`?`, `*`, etc.) to avoid shell glob expansion errors:
-```bash
-pnpm run ask "차트는 뭐로 만들어졌어?"  # Correct
-pnpm run ask 차트는 뭐로 만들어졌어?   # ERROR: zsh glob pattern
-```
+**Embedding Pipeline Commands:**
+- `pnpm run embed`: Fetches commits and files from GitHub repositories (defined in `target-repos.json`), generates embeddings using Hugging Face all-MiniLM-L6-v2, and stores them in Supabase. Only processes new commits since last run (incremental update).
+- `pnpm run embed:reset`: Same as above but resets commit state and re-processes all commits from scratch.
+- `pnpm run local_export`: Exports all embeddings from Supabase to `output/embeddings.json.gz` file for serverless deployment.
 
-### Frontend (frontend/)
+
+### Frontend (Root Directory)
 
 ```bash
-cd frontend
-pnpm install                   # Install frontend dependencies
-pnpm run dev                   # Start dev server (:5173)
-pnpm run build                 # Production build (includes PandaCSS codegen)
+pnpm install                   # Install all dependencies (backend + frontend)
+pnpm run dev:frontend          # Start dev server (:5173)
+pnpm run build:frontend         # Production build (includes PandaCSS codegen)
+pnpm run preview:frontend       # Preview production build
 pnpm run panda                 # Generate PandaCSS utility classes
 ```
 
@@ -85,13 +81,13 @@ The system supports **two vector storage modes** with automatic detection:
 ### Required Services
 
 **Production (Serverless)**:
-- API Server (port 3001 or Vercel Serverless Function)
+- Vercel Serverless Functions (15 API endpoints in `api/` directory)
 - GitHub repository (for hosting `output/embeddings.json.gz`)
 - No persistent database servers required
 - No CDN costs
 
 **Local Development**:
-- API Server (port 3001)
+- Vercel Dev Server (port 3001) - runs serverless functions locally
 - Supabase connection (for embedding pipeline only)
 - Local embeddings file (`output/embeddings.json.gz`)
 
@@ -175,36 +171,52 @@ SUPABASE_ANON_KEY=xxx            # For Q&A history only
 
 ## Code Architecture
 
-### Backend Structure (`src/`)
+### Backend Structure
 
 ```
-src/
-├── index.ts                  # CLI entry point (commands: ask, reindex)
-├── pipeline/
-│   ├── runPipeline.ts        # Orchestrates full data pipeline
-│   └── steps/
-│       └── preprocessText.ts # Refines raw data for NLP
-├── data_sources/
-│   ├── github/               # GitHub API integrations
-│   │   ├── fetchCommit.ts    # Fetch all commits
-│   │   ├── fetchFiles.ts     # Fetch changed files per commit
-│   │   └── fetchRepositoryFiles.ts  # Fetch all source code files
-├── nlp/embedding/
-│   └── openaiEmbedding.ts    # Embedding generation (OpenAI only)
-├── vector_store/
-│   ├── saveVectors.ts        # Save to Supabase
-│   ├── searchVectors.ts      # Query Supabase (pipeline only)
-│   └── fileVectorStore.ts    # File-based search (Q&A production)
-├── qa/
-│   └── answer.ts             # LLM answer generation (OpenAI → Claude fallback)
-└── server/                   # API Server (:3001)
-    ├── index.ts              # Express server setup
-    ├── routes/               # API endpoints
-    │   ├── ask.ts            # POST /api/ask - Q&A endpoint
-    │   ├── health.ts         # GET /api/health - Health checks & status
-    │   └── history.ts        # GET /api/history - Q&A history
-    └── services/
-        └── supabase.ts       # Supabase client
+api/                                    # Vercel serverless functions
+├── ask.ts                             # POST /api/ask - Q&A endpoint
+├── health/
+│   ├── index.ts                       # GET /api/health
+│   ├── chromadb.ts                    # GET /api/health/chromadb
+│   └── status.ts                      # GET /api/health/status
+├── history/
+│   ├── index.ts                       # GET /api/history
+│   ├── [id].ts                        # GET /api/history/:id
+│   └── session/
+│       └── [sessionId].ts             # GET /api/history/session/:sessionId
+├── dashboard/
+│   ├── summary.ts                     # GET /api/dashboard/summary
+│   ├── daily.ts                       # GET /api/dashboard/daily
+│   ├── categories.ts                  # GET /api/dashboard/categories
+│   └── sources.ts                     # GET /api/dashboard/sources
+├── migration/
+│   ├── status.ts                      # GET /api/migration/status
+│   ├── run.ts                         # POST /api/migration/run
+│   ├── ensure.ts                      # POST /api/migration/ensure
+│   └── schema.ts                      # GET /api/migration/schema
+└── _lib/                              # Shared utilities (not exposed as endpoints)
+    ├── cors.ts                        # CORS configuration
+    ├── errorHandler.ts                # Error handling
+    ├── responseFormatter.ts           # Response formatting
+    └── healthCheck.ts                 # Health check logic
+
+shared/                                # Shared libraries (API)
+├── lib/                              # Business logic
+│   ├── supabase.ts                   # Supabase client & operations
+│   └── supabaseMigration.ts          # Database migrations
+├── services/
+│   ├── qa/
+│   │   ├── answer.ts                 # LLM answer generation (shared)
+│   │   └── classifier.ts             # Question classification
+│   └── vector-store/
+│       ├── fileVectorStore.ts        # File-based search (serverless)
+│       ├── embeddingService.ts       # Query embedding generation
+│       └── qaHistoryVectorStore.ts   # Q&A history vector management
+└── models/                           # Type definitions (shared)
+    ├── EmbeddingItem.ts
+    ├── SearchResult.ts
+    └── ...
 ```
 
 **Key Pipeline Steps:**
@@ -222,10 +234,10 @@ src/
 - Splits large files (>5KB) into chunks to maintain context
 - Metadata includes: path, type, size, extension, SHA, chunkIndex
 
-### Frontend Structure (`frontend/src/`)
+### Frontend Structure (`src/`)
 
 ```
-frontend/src/
+src/
 ├── api/
 │   ├── client.ts             # Backend API wrapper (includes caching)
 │   └── supabase.ts           # Direct Supabase client
@@ -268,7 +280,7 @@ frontend/src/
 
 ### Vector Store Items
 
-ChromaDB stores two types of items:
+File-based vector store contains two types of items:
 
 **Type 1: Commit Items**
 ```typescript
@@ -326,13 +338,40 @@ ChromaDB stores two types of items:
 
 ## Common Development Patterns
 
-### Adding a New API Endpoint
+### Adding a New Serverless Endpoint
 
-1. Define route in `src/server/routes/yourRoute.ts`
-2. Register in `src/server/index.ts`: `app.use('/api/your-route', yourRouter)`
-3. Add client method in `frontend/src/api/client.ts`
-4. Add type definitions in `frontend/src/types/index.ts`
-5. Create TanStack Query hook in `frontend/src/hooks/useQueries.ts`
+1. Create serverless function in `api/your-endpoint.ts` or `api/your-category/endpoint.ts`
+2. Use file-based routing (Vercel convention):
+   - `api/endpoint.ts` → `/api/endpoint`
+   - `api/category/endpoint.ts` → `/api/category/endpoint`
+   - `api/category/[id].ts` → `/api/category/:id` (dynamic route)
+3. Import shared utilities from `api/_lib/` (CORS, error handling, etc.)
+4. Import business logic from `src/lib/` (Supabase, migrations, etc.)
+5. Add client method in `frontend/src/api/client.ts`
+6. Add type definitions in `frontend/src/types/index.ts`
+7. Create TanStack Query hook in `frontend/src/hooks/useQueries.ts`
+
+**Example:**
+```typescript
+// api/example.ts
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { setCorsHeaders, handleOptionsRequest } from './_lib/cors.js';
+import { handleError } from './_lib/errorHandler.js';
+import { getSupabaseClient } from '../src/lib/supabase.js';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCorsHeaders(res);
+  if (req.method === 'OPTIONS') return handleOptionsRequest(res);
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  try {
+    // Your logic here
+    res.json({ success: true });
+  } catch (error) {
+    handleError(res, error, 'Operation failed');
+  }
+}
+```
 
 ### Adding a New Pipeline Step
 
@@ -352,10 +391,7 @@ curl http://localhost:3001/api/health/status    # All services status
 
 ### Test Q&A Flow
 ```bash
-# CLI mode (fastest)
-pnpm run ask "프로젝트의 기술스택은?"
-
-# Or via HTTP
+# Via HTTP API
 curl -X POST http://localhost:3001/api/ask \
   -H "Content-Type: application/json" \
   -d '{"question": "프로젝트의 기술스택은?"}'
@@ -394,16 +430,20 @@ zcat output/embeddings.json.gz | jq '.vectors | length'
 ## Deployment Notes
 
 **Local Development:**
-- API server running on port 3001
+- Vercel Dev Server running on port 3001 (`pnpm run server`)
+- Runs serverless functions locally with same environment as production
 - Uses local embeddings file (`output/embeddings.json.gz`)
 - Settings page shows read-only server status
 
 **Production (Vercel Serverless):**
-- Serverless API deployed to Vercel
+- 15 serverless functions in `api/` directory deployed to Vercel
+- File-based routing: `api/health/status.ts` → `/api/health/status`
 - Uses GitHub Raw URL for embeddings:
   `VECTOR_FILE_URL=https://raw.githubusercontent.com/owner/repo/main/output/embeddings.json.gz`
 - No persistent database servers required
+- No Express server or Node.js runtime needed
 - Total cost: $0/month (GitHub Free + Vercel Hobby)
+- **Automatic deployment**: Pushes to `main` branch trigger automatic deployment via Vercel GitHub integration
 
 **Environment Variables:**
 - Frontend: Set `VITE_API_URL` to point to deployed API server
@@ -427,7 +467,7 @@ Analytics showing:
 
 ### `/settings` - Settings Page
 Server status monitoring:
-- Read-only status cards for ChromaDB, API Server, Supabase
+- Read-only status cards for API Server, Supabase
 - Environment information
 - Connection diagnostics
 
@@ -450,20 +490,54 @@ Do not update README.md before all tasks in claude.md are finished.
 
 The repository must keep only the following reference documents at the root level:
 
-CLAUD.md
+- `CLAUDE.md` (project instructions for Claude Code)
+- `README.md` (project overview and setup)
 
-README.md
+All other documentation files must be placed under the `docs/` directory.
 
-All other documentation files must be placed under the docs/ directory.
+### Documentation Directory Structure
 
-Documentation rules:
+```
+docs/
+├── README.md                    # Documentation guide
+├── 01_planning/                 # Planning documents
+│   ├── 00_Product_Plan.md      # Final PRD (Product Requirements Document)
+│   └── 01_Project_Specification_Archive.md  # Archived specifications
+├── 02_architecture/             # Architecture design
+│   ├── 01_System_Architecture.md
+│   └── 02_Environment_Variables.md
+├── 03_database/                 # Database schemas and docs
+│   ├── 00_Schema_Documentation.md
+│   └── [subdirectories for table-specific SQL files]
+├── 04_ci-cd/                    # CI/CD workflows
+│   └── 01_Workflows.md
+├── 05_api/                      # API specifications and tests
+│   └── ADR-*.md, TEST-*.md
+└── 06_milestones/               # Project milestones
+    └── 00_Project_Milestones.md
+```
 
-Do not create or keep any additional .md or documentation files in the root directory.
+### Documentation Rules
 
-Organize documents inside docs/ by purpose or structure (e.g. docs/architecture/, docs/api/, docs/setup/).
+1. **Root-level restrictions**
+   - Do not create or keep any additional `.md` or documentation files in the root directory
+   - Only `CLAUDE.md` and `README.md` are allowed at root level
 
-Create new subdirectories under docs/ when necessary to maintain clear structural separation.
+2. **Directory organization**
+   - Organize documents inside `docs/` by category using numbered prefixes (01_, 02_, etc.)
+   - Create new subdirectories under `docs/` when necessary to maintain clear structural separation
+   - Ensure each document is placed in the most appropriate subdirectory based on its content
 
-Ensure each document is placed in the most appropriate subdirectory based on its content.
+3. **File naming convention**
+   - Use numbered prefixes for ordered documents: `01_`, `02_`, etc.
+   - Use descriptive names with underscores: `01_System_Architecture.md`
+   - Archive files use higher numbers: `99_*_backup.md` or `01_*_Archive.md`
 
-If a document is mistakenly created outside docs/ (except CLAUD.md and README.md), it must be moved to the correct location under docs/.
+4. **Primary reference document**
+   - The final PRD is always `docs/01_planning/00_Product_Plan.md`
+   - Never rename this file to maintain consistency
+   - Always keep it up-to-date with latest project specifications
+
+5. **Moving misplaced files**
+   - If a document is mistakenly created outside `docs/` (except CLAUDE.md and README.md), move it to the correct location under `docs/`
+   - Update all internal references when moving files

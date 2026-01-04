@@ -626,7 +626,7 @@ graph TD
 - ✅ README 업데이트 완료
 
 ### 관련 문서
-- [프로젝트 기획서](../00_Product_Plan.md)
+- [프로젝트 기획서](../01_planning/00_Product_Plan.md)
 - [문서 가이드](../README.md)
 
 ---
@@ -673,7 +673,7 @@ graph TD
 
 ## 📚 관련 문서
 
-- [프로젝트 기획서](../00_Product_Plan.md)
+- [프로젝트 기획서](../01_planning/00_Product_Plan.md)
 - [시스템 아키텍처](../02_architecture/01_System_Architecture.md)
 - [데이터베이스 스키마](../03_database/00_Schema_Documentation.md)
 - [CI/CD 워크플로우](../04_ci-cd/01_Workflows.md)

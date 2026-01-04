@@ -1,0 +1,11 @@
+node_modules/
+.chroma_venv/
+.env
+.env.local
+dist/
+*.log
+chroma_data/
+.vscode/
+.idea/
+local-cli/
+scripts/

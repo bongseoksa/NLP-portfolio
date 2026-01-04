@@ -2,7 +2,7 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./dist",
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
@@ -37,6 +37,14 @@
     "skipLibCheck": true,
   },
   "include": [
-    "src/**/*"
+    "shared/**/*",
+    "api/**/*",
+    "scripts/**/*"
+  ],
+  "exclude": [
+    "src/**/*",
+    "node_modules",
+    "dist",
+    "styled-system"
   ]
 }

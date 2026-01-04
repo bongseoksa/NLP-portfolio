@@ -16,7 +16,6 @@ GitHub 레포지토리를 분석하여 코드와 커밋 히스토리를 NLP 기�
 ```bash
 # 1. 의존성 설치
 pnpm install
-cd frontend && pnpm install && cd ..
 
 # 2. 환경 변수 설정 (.env 파일 생성)
 GITHUB_TOKEN=ghp_xxx
@@ -27,12 +26,12 @@ OPENAI_API_KEY=sk-proj-xxx
 # 파일 기반 벡터 검색 (Serverless - 권장)
 VECTOR_FILE_URL=https://your-cdn.com/embeddings.json.gz
 
-# 3. 백엔드 실행
+# 3. 백엔드 실행 (Vercel Dev Server)
 pnpm run server
 # → http://localhost:3001
 
 # 4. 프론트엔드 실행 (별도 터미널)
-cd frontend && pnpm run dev
+pnpm run dev:frontend
 # → http://localhost:5173
 ```
 
@@ -90,13 +89,6 @@ cd frontend && pnpm run dev
 │ Server   │ │ (Cloud)  │ │(Vercel   │
 │ :3001    │ │ History  │ │ Blob)    │
 └──────────┘ └──────────┘ └──────────┘
-     │
-     │ (로컬 개발 시)
-     ▼
-┌──────────┐
-│ ChromaDB │
-│  :8000   │
-└──────────┘
 ```
 
 ---
@@ -113,42 +105,58 @@ TARGET_REPO_NAME=repo-name
 OPENAI_API_KEY=sk-proj-xxx
 CLAUDE_API_KEY=sk-ant-xxx  # OpenAI 실패 시 fallback
 
-# 벡터 저장소 (아래 중 1개 선택)
-VECTOR_FILE_URL=https://xxx.vercel-storage.com/embeddings.json.gz  # 권장
+# 벡터 저장소
+VECTOR_FILE_URL=https://raw.githubusercontent.com/owner/repo/main/output/embeddings.json.gz  # GitHub Raw URL (권장)
+# 또는 로컬 파일: output/embeddings.json.gz (기본값)
+
+# Supabase (임베딩 파이프라인 및 Q&A 히스토리용)
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=xxx
-CHROMA_HOST=localhost  # 로컬 개발용
-CHROMA_PORT=8000
+SUPABASE_ANON_KEY=xxx
 ```
 
 ---
 
 ## 🛠️ 주요 명령어
 
+### 임베딩 파이프라인
+
+```bash
+# 로컬에서 레포지토리 임베딩 생성
+pnpm run embed                  # 일반 모드 (증분 업데이트, 새 커밋만 처리)
+pnpm run embed:reset            # 리셋 모드 (전체 재생성, 모든 커밋 재처리)
+
+# 임베딩 파일 내보내기 (Supabase → 로컬 파일)
+pnpm run local_export           # Supabase에서 embeddings.json.gz로 내보내기
+```
+
+**임베딩 파이프라인 동작:**
+1. `target-repos.json`에서 대상 레포지토리 읽기
+2. GitHub API로 커밋 및 파일 가져오기
+3. Hugging Face 모델로 임베딩 생성 (all-MiniLM-L6-v2, 384차원)
+4. Supabase pgvector에 저장
+5. `commit-state.json`에 마지막 커밋 SHA 저장 (증분 업데이트)
+
+**필수 환경 변수:**
+- `GITHUB_TOKEN`: GitHub API 토큰
+- `OPENAI_API_KEY`: (선택) OpenAI API 키 (현재는 Hugging Face 사용)
+- `SUPABASE_URL`: Supabase 프로젝트 URL
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase Service Role Key
+
 ### 백엔드
 
 ```bash
-# 데이터 수집 및 임베딩
-pnpm run dev                    # 전체 파이프라인 실행
-pnpm run dev --reset            # 벡터 컬렉션 리셋 후 실행
-
-# 임베딩 내보내기 (Serverless 배포용)
-pnpm tsx scripts/export-embeddings.ts --source supabase --upload vercel
-
 # 서버 실행
 pnpm run server                 # API 서버 (:3001)
-pnpm run chroma:start           # ChromaDB (:8000) - 로컬 개발 시
-
-# CLI 질의응답
-pnpm run ask "질문"             # File/Supabase 모드는 서버 불필요
 ```
 
 ### 프론트엔드
 
 ```bash
-cd frontend
-pnpm run dev      # 개발 서버 (:5173)
-pnpm run build    # 프로덕션 빌드
+pnpm run dev:frontend    # 개발 서버 (:5173)
+pnpm run build:frontend  # 프로덕션 빌드
+pnpm run preview:frontend # 빌드 미리보기
+pnpm run panda          # PandaCSS 코드 생성
 ```
 
 ---
@@ -156,10 +164,10 @@ pnpm run build    # 프로덕션 빌드
 ## 🎯 기술 스택
 
 **백엔드**
-- Node.js + TypeScript + Express
-- Vector Storage: File-based / Supabase pgvector / ChromaDB
-- Embeddings: OpenAI text-embedding-3-small
-- LLM: OpenAI GPT-4o (primary) / Claude Sonnet 4 (fallback)
+- Node.js + TypeScript + Vercel Serverless Functions
+- Vector Storage: File-based (GitHub Raw URL) / Supabase pgvector (CI only)
+- Embeddings: Hugging Face all-MiniLM-L6-v2 (384 dimensions)
+- LLM: Claude Sonnet 4 (primary) / Gemini 1.5 Flash (fallback 1) / Mistral-7B (fallback 2)
 
 **프론트엔드**
 - React 19 + TypeScript + Vite
@@ -168,8 +176,8 @@ pnpm run build    # 프로덕션 빌드
 - Charts: Recharts
 
 **인프라**
-- Storage: Supabase (Q&A history), Vercel Blob (embeddings)
-- Deployment: Vercel (Serverless)
+- Storage: Supabase (Q&A history), GitHub Raw URL (embeddings)
+- Deployment: Vercel (Serverless) - 자동 배포 (main 브랜치 push 시)
 
 ---
 
@@ -235,19 +243,37 @@ cat .env | grep -E "OPENAI_API_KEY|CLAUDE_API_KEY"
 
 최소 1개의 API 키 필요 (OpenAI 또는 Claude)
 
-### zsh glob 오류
+### "API 서버에 연결할 수 없습니다"
 
-물음표(`?`), 별표(`*`) 포함 시 따옴표 필수:
-```bash
-pnpm run ask "차트는 뭐로 만들어졌어?"  # ✅
-pnpm run ask 차트는 뭐로 만들어졌어?   # ❌
-```
+- API 서버 실행 확인: `pnpm run server`
+- 포트 3001 사용 가능 여부 확인
+- `.env` 파일 설정 확인
+
+---
+
+## 🚀 배포
+
+### Vercel 자동 배포
+
+이 프로젝트는 Vercel과 GitHub가 연동되어 **자동으로 배포**됩니다:
+
+1. **GitHub 연동**: Vercel 프로젝트에 GitHub 저장소 연결
+2. **자동 배포**: `main` 브랜치에 push 시 자동으로 배포 시작
+3. **배포 완료**: 배포 후 프로덕션 URL 자동 생성
+
+**배포 설정 가이드**: [docs/04_ci-cd/02_Vercel_Deployment.md](docs/04_ci-cd/02_Vercel_Deployment.md)
+
+**주의사항**:
+- Vercel 대시보드에서 환경 변수 설정 필요
+- `VECTOR_FILE_URL`을 GitHub Raw URL로 설정 권장
 
 ---
 
 ## 📝 프로젝트 상세 문서
 
 - **전체 가이드**: [CLAUDE.md](CLAUDE.md)
+- **Vercel 배포 가이드**: [docs/04_ci-cd/02_Vercel_Deployment.md](docs/04_ci-cd/02_Vercel_Deployment.md)
+- **CI/CD 워크플로우**: [docs/04_ci-cd/01_Workflows.md](docs/04_ci-cd/01_Workflows.md)
 - **설계 판단 설명**: [docs/architecture/DESIGN-RATIONALE.md](docs/architecture/DESIGN-RATIONALE.md) ⭐
 - **파일 기반 벡터 스토어**: [docs/architecture/FILE-BASED-VECTOR-STORE.md](docs/architecture/FILE-BASED-VECTOR-STORE.md)
 - **Serverless API 흐름**: [docs/architecture/VERCEL-ASK-API-FLOW.md](docs/architecture/VERCEL-ASK-API-FLOW.md)

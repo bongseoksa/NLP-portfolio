@@ -3,7 +3,7 @@
  */
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import { classifyQuestionWithConfidence } from '../src/qa/classifier.js';
+import { classifyQuestionWithConfidence } from '../shared/services/qa/classifier.js';
 
 dotenv.config();
 

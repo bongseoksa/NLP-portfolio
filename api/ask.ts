@@ -6,13 +6,15 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { searchVectorsFromFile } from '../src/service/vector-store/fileVectorStore.js';
-import { generateQueryEmbedding } from '../src/service/vector-store/embeddingService.js';
-import { generateAnswerWithUsage } from '../src/service/qa/answer.js';
-import { saveQAHistory } from '../src/service/server/services/supabase.js';
-import { classifyQuestionWithConfidence } from '../src/service/qa/classifier.js';
-import { addQAHistoryToVectors } from '../src/service/vector-store/qaHistoryVectorStore.js';
+import { searchVectorsFromFile } from '../shared/services/vector-store/fileVectorStore.js';
+import { generateQueryEmbedding } from '../shared/services/vector-store/embeddingService.js';
+import { generateAnswerWithUsage } from '../shared/services/qa/answer.js';
+import { saveQAHistory } from '../shared/lib/supabase.js';
+import { classifyQuestionWithConfidence } from '../shared/services/qa/classifier.js';
+import { addQAHistoryToVectors } from '../shared/services/vector-store/qaHistoryVectorStore.js';
 import { v4 as uuidv4 } from 'uuid';
+import { env } from '../shared/config/env.js';
+import { setCorsHeaders, handleOptionsRequest } from './_lib/cors.js';
 
 /**
  * Serverless Function Handler
@@ -55,19 +57,12 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  // CORS 설정
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-Type'
-  );
+  // CORS 설정 (공통 함수 사용)
+  setCorsHeaders(req, res);
 
   // Preflight 요청 처리
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return handleOptionsRequest(req, res);
   }
 
   // POST만 허용
@@ -89,15 +84,8 @@ export default async function handler(
       return;
     }
 
-    // Serverless에서는 VECTOR_FILE_URL만 사용 (ChromaDB, Supabase는 사용 불가)
-    const vectorFileUrl = process.env.VECTOR_FILE_URL;
-    if (!vectorFileUrl) {
-      res.status(500).json({
-        error: 'Vector file URL not configured',
-        message: 'VECTOR_FILE_URL environment variable is required for serverless deployment'
-      });
-      return;
-    }
+    // 벡터 파일 URL (기본값: output/embeddings.json.gz)
+    const vectorFileUrl = env.VECTOR_FILE_URL();
 
     console.log(`🔍 Serverless API 질의: "${question}"`);
 
@@ -134,17 +122,31 @@ export default async function handler(
     checkTimeRemaining(startTime);
 
     // [3] 벡터 검색 (파일 기반, 메모리 캐싱)
-    const owner = process.env.TARGET_REPO_OWNER || '';
-    const repo = process.env.TARGET_REPO_NAME || 'portfolio';
+    const owner = env.TARGET_REPO_OWNER();
+    const repo = env.TARGET_REPO_NAME();
 
     const searchStart = Date.now();
-    const contexts = await searchVectorsFromFile(queryEmbedding, 5, {
-      threshold: 0.0,
-      filterMetadata: { owner, repo },
-      includeHistory: true,
-      historyWeight: 0.3,
-      category  // 카테고리 기반 검색 모드
-    });
+    let contexts;
+    try {
+      contexts = await searchVectorsFromFile(queryEmbedding, 5, {
+        threshold: 0.0,
+        filterMetadata: { owner, repo },
+        includeHistory: true,
+        historyWeight: 0.3,
+        category  // 카테고리 기반 검색 모드
+      });
+    } catch (searchError: any) {
+      console.error('❌ 벡터 검색 실패:', searchError.message);
+      // 벡터 파일이 없거나 로드 실패 시
+      if (searchError.message?.includes('Failed to load') || searchError.message?.includes('not found')) {
+        return res.status(500).json({
+          error: 'Vector file not found',
+          message: '임베딩 파일을 찾을 수 없습니다. VECTOR_FILE_URL을 확인하거나 output/embeddings.json.gz 파일이 존재하는지 확인해주세요.',
+          status: 'failed'
+        });
+      }
+      throw searchError;
+    }
     vectorSearchEndTime = Date.now();
     const vectorSearchTimeMs = vectorSearchEndTime - searchStart;
     console.log(`   [3] 벡터 검색 완료: ${vectorSearchTimeMs}ms (${contexts.length}개 문서)`);

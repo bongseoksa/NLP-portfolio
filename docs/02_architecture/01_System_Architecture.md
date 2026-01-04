@@ -277,6 +277,25 @@ TARGET_REPO_NAME=portfolio
 - ✅ Public/Private 레포지토리 읽기
 - ✅ 권한에 따라 쓰기 가능
 
+**로컬 임베딩 파이프라인 실행**:
+```bash
+# 일반 모드 (증분 업데이트, 새 커밋만 처리)
+pnpm run embed
+
+# 리셋 모드 (전체 재생성, 모든 커밋 재처리)
+pnpm run embed:reset
+```
+
+**동작 과정**:
+1. `target-repos.json`에서 대상 레포지토리 목록 읽기
+2. GitHub API로 커밋 목록 가져오기 (증분 업데이트: 마지막 처리 커밋 이후만)
+3. GitHub API로 레포지토리 파일 목록 가져오기
+4. Hugging Face 모델로 임베딩 생성 (`all-MiniLM-L6-v2`, 384차원)
+   - 커밋 메시지 임베딩 (최대 100개)
+   - 파일 내용 임베딩 (최대 200개, 5KB 이하)
+5. Supabase pgvector에 저장 (배치 처리, 100개씩)
+6. `commit-state.json`에 마지막 커밋 SHA 저장 (다음 실행 시 증분 업데이트)
+
 ### 4.3 코드 레벨 분기 처리
 
 ```typescript

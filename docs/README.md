@@ -9,11 +9,11 @@
 
 ```
 docs/
-├── 00_Product_Plan.md                        # 최종 기획서 (PRD)
 ├── README.md                                  # 문서 가이드 (현재 파일)
 │
 ├── 01_planning/                               # 기획 문서
-│   └── 99_PROJECT-SPECIFICATION_backup.md     # 이전 기획서 (백업)
+│   ├── 00_Product_Plan.md                     # 최종 기획서 (PRD)
+│   └── 01_Project_Specification_Archive.md    # 이전 기획서 (백업)
 │
 ├── 02_architecture/                           # 아키텍처 설계
 │   ├── 01_System_Architecture.md              # 시스템 아키텍처 상세
@@ -37,10 +37,10 @@ docs/
 ### 1단계: 프로젝트 이해
 
 **필수**:
-1. [00_Product_Plan.md](./00_Product_Plan.md) - 프로젝트 개요, 목표, 기술 스택
+1. [01_planning/00_Product_Plan.md](./01_planning/00_Product_Plan.md) - 프로젝트 개요, 목표, 기술 스택
 
 **선택**:
-- `01_planning/99_PROJECT-SPECIFICATION_backup.md` - 이전 기획서 (참고용)
+- [01_planning/01_Project_Specification_Archive.md](./01_planning/01_Project_Specification_Archive.md) - 이전 기획서 (참고용)
 
 ### 2단계: 시스템 설계 이해
 
@@ -108,7 +108,7 @@ docs/
 
 ## 📖 주요 문서 설명
 
-### [00_Product_Plan.md](./00_Product_Plan.md)
+### [01_planning/00_Product_Plan.md](./01_planning/00_Product_Plan.md)
 **최종 기획서 (Product Requirements Document)**
 
 - 프로젝트 개요 및 목표
@@ -192,9 +192,10 @@ docs/
 
 ### 절대 규칙
 
-1. **최종 기획서는 항상 `00_Product_Plan.md`로 유지**
+1. **최종 기획서는 항상 `01_planning/00_Product_Plan.md`로 유지**
    - 다른 이름으로 변경 금지
    - 최신 기획 내용으로 항상 업데이트
+   - 루트 디렉토리가 아닌 `01_planning/` 디렉토리 내에 위치
 
 2. **카테고리별 디렉토리 분리**
    - `01_planning`: 기획 문서
@@ -232,7 +233,7 @@ docs/
 
 ### 새로운 개발자 온보딩
 
-- [ ] `00_Product_Plan.md` 읽기
+- [ ] `01_planning/00_Product_Plan.md` 읽기
 - [ ] `02_architecture/01_System_Architecture.md` 읽기
 - [ ] `02_architecture/02_Environment_Variables.md` 읽고 로컬 환경 설정
 - [ ] `03_database/02_Schema_Documentation.md` 읽기
