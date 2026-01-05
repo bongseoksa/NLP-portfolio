@@ -8,11 +8,12 @@
  */
 
 import { promisify } from "util";
-import { gzip, gunzip } from "zlib";
+import { gunzip } from "zlib";
+import { readFileSync, existsSync } from "fs";
 import { generateQueryEmbedding } from "./embeddingService.js";
 import { env } from "../../config/env.js";
+import type { TargetRepositoriesConfig } from "../../models/TargetRepository.js";
 
-const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
 
 // Q&A 히스토리 벡터 타입
@@ -160,9 +161,49 @@ async function loadHistoryFile(): Promise<QAHistoryVectorFile> {
 
         return parsed;
 
-    } catch (error: any) {
-        console.error("❌ Failed to load history file:", error.message);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : (typeof error === 'string' ? error : 'Unknown error');
+        console.error("❌ Failed to load history file:", errorMessage);
         return createEmptyHistoryFile();
+    }
+}
+
+/**
+ * target-repos.json에서 레포지토리 정보 로드
+ * repositories 배열을 순회하여 첫 번째 enabled 레포지토리 반환
+ */
+function loadTargetRepos(): { owner: string; repo: string } | null {
+    const path = 'target-repos.json';
+    if (!existsSync(path)) {
+        console.error(`❌ ${path} 파일을 찾을 수 없습니다.`);
+        return null;
+    }
+
+    try {
+        const content = readFileSync(path, 'utf-8');
+        const data: TargetRepositoriesConfig = JSON.parse(content);
+        
+        if (!data.repositories || !Array.isArray(data.repositories)) {
+            console.error(`❌ ${path}의 repositories 필드가 유효하지 않습니다.`);
+            return null;
+        }
+
+        // repositories 배열을 순회하여 enabled된 레포지토리 찾기
+        for (const repo of data.repositories) {
+            if (repo.enabled !== false && repo.owner && repo.repo) {
+                return {
+                    owner: repo.owner,
+                    repo: repo.repo
+                };
+            }
+        }
+        
+        console.warn(`⚠️  ${path}에 enabled된 레포지토리가 없습니다.`);
+        return null;
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ ${path} 파일 읽기 실패:`, errorMessage);
+        return null;
     }
 }
 
@@ -170,8 +211,9 @@ async function loadHistoryFile(): Promise<QAHistoryVectorFile> {
  * 빈 히스토리 파일 생성
  */
 function createEmptyHistoryFile(): QAHistoryVectorFile {
-    const owner = env.TARGET_REPO_OWNER();
-    const repo = env.TARGET_REPO_NAME();
+    const repoInfo = loadTargetRepos();
+    const owner = repoInfo?.owner || 'unknown';
+    const repo = repoInfo?.repo || 'unknown';
     const now = new Date().toISOString();
 
     return {
@@ -342,11 +384,6 @@ async function pruneHistory(
             pruned = pruneByTime(pruned, maxAgeDays);
             break;
 
-        case "importance":
-            const searchCounts = new Map<string, number>(); // TODO: 실제 검색 빈도 데이터 로드
-            pruned = pruneByImportance(pruned, maxCount, searchCounts);
-            break;
-
         case "hybrid":
         default:
             pruned = pruneByTime(pruned, maxAgeDays);
@@ -444,8 +481,9 @@ export async function addQAHistoryToVectors(
         // 현재는 메모리 캐시에만 추가 (임시)
         await addToMemoryCache([questionVector, answerVector]);
 
-    } catch (error: any) {
-        console.error("❌ Failed to add history to vectors:", error.message);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : (typeof error === 'string' ? error : 'Unknown error');
+        console.error("❌ Failed to add history to vectors:", errorMessage);
         // 실패해도 API 응답은 정상적으로 반환
     }
 }
