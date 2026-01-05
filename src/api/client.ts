@@ -17,7 +17,6 @@ import type {
 // - Vercel 배포 (같은 프로젝트): 빈 문자열 또는 설정 안 함 (상대 경로 /api/* 사용)
 // - Vercel 배포 (별도 프로젝트): https://your-api-project.vercel.app
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const CONTROL_BASE_URL = import.meta.env.VITE_CONTROL_URL || 'http://localhost:3000';
 
 /**
  * API 요청 헬퍼
