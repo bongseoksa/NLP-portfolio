@@ -9,7 +9,8 @@
 import dotenv from "dotenv";
 import { gzip } from "zlib";
 import { promisify } from "util";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
+import { dirname } from "path";
 import { getSupabaseServiceClient } from "../shared/lib/supabase.js";
 import type { EmbeddingItem } from "../shared/models/EmbeddingItem.js";
 
@@ -66,7 +67,7 @@ async function exportFromSupabase(outputPath?: string, compress: boolean = true)
     }
 
     console.log("📥 Supabase에서 임베딩 조회 중...");
-    
+
     // 모든 임베딩 조회
     const { data, error } = await client
         .from('embeddings')
@@ -119,6 +120,9 @@ async function exportFromSupabase(outputPath?: string, compress: boolean = true)
     const filePath = outputPath || defaultPath;
 
     // 압축 여부에 따라 저장
+    const dir = dirname(filePath);
+    await mkdir(dir, { recursive: true });
+
     if (compress) {
         console.log("🗜️  압축 중...");
         const compressed = await gzipAsync(Buffer.from(jsonString, 'utf-8'));

@@ -84,6 +84,7 @@ jobs:
       - name: Export embeddings from Supabase
         id: export
         run: |
+          set -o pipefail
           pnpm tsx scripts/export-embeddings.ts --source supabase --output output/embeddings.json.gz 2>&1 | tee export.log
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -108,7 +109,7 @@ jobs:
           fi
 
           # JSON 구조 검증
-          count=$(zcat output/embeddings.json.gz | jq '.embeddings | length' || echo "0")
+          count=$(zcat output/embeddings.json.gz | jq '.vectors | length' || echo "0")
 
           echo "file_size=$size" >> $GITHUB_OUTPUT
           echo "embedding_count=$count" >> $GITHUB_OUTPUT
