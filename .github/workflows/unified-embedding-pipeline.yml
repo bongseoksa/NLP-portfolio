@@ -1,0 +1,293 @@
+name: Unified Embedding Pipeline
+
+# 목적: 완전 통합 임베딩 파이프라인
+# - 다중 레포지토리 커밋/파일 임베딩 생성
+# - Q&A 히스토리 임베딩 생성
+# - 자동 데이터 정리 (6개월 보존, 삭제된 파일, 용량 제한)
+# - embeddings.json.gz 파일 내보내기 및 Git 커밋
+#
+# 실행 주기:
+# - 매주 토요일 18:00 UTC (일요일 03:00 KST)
+# - 수동 실행 가능 (workflow_dispatch)
+#
+# 특징:
+# - Idempotent (중복 실행 안전)
+# - 증분 업데이트 (변경사항만 처리)
+# - 자동 정리 (오래된 데이터 삭제)
+# - Git 자동 커밋
+
+on:
+  # 매주 토요일 18:00 UTC (일요일 03:00 KST)
+  schedule:
+    - cron: "0 18 * * 6"
+
+  # 수동 실행 허용
+  workflow_dispatch:
+    inputs:
+      reset:
+        description: "Reset all states and force re-embed (--reset)"
+        required: false
+        type: boolean
+        default: false
+      skip_cleanup:
+        description: "Skip data cleanup step"
+        required: false
+        type: boolean
+        default: false
+      max_size_mb:
+        description: "Maximum compressed file size (MB)"
+        required: false
+        type: number
+        default: 10
+
+# 동시 실행 방지
+concurrency:
+  group: unified-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unified-pipeline:
+    name: Unified Embedding Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6시간 제한
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 전체 히스토리
+
+      # Step 2: Setup pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      # Step 3: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      # Step 4: Cache dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      # Step 5: Install dependencies
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Step 6: Download previous state
+      - name: Download previous commit state
+        uses: actions/download-artifact@v4
+        with:
+          name: commit-state
+          path: .
+        continue-on-error: true  # 첫 실행 시 없을 수 있음
+
+      # Step 7: Initialize state if missing
+      - name: Initialize state if missing
+        run: |
+          if [ ! -f "commit-state.json" ]; then
+            echo '{"version":"2.0","repositories":{},"lastQATimestamp":"1970-01-01T00:00:00.000Z","lastCleanupRun":"1970-01-01T00:00:00.000Z","lastUpdated":"'$(date -Iseconds)'"}' > commit-state.json
+            echo "✅ Created initial commit-state.json"
+          else
+            echo "✅ Found existing commit-state.json"
+            cat commit-state.json | jq '.repositories | keys' || echo "Invalid JSON, will reinitialize"
+          fi
+
+      # Step 8: Verify Supabase connection
+      - name: Verify Supabase connection
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 2
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: |
+            response=$(curl -s -w "%{http_code}" -o /dev/null \
+              -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              "${{ secrets.SUPABASE_URL }}/rest/v1/")
+
+            if [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
+              echo "✅ Supabase connection OK (HTTP $response)"
+            else
+              echo "❌ Supabase connection failed (HTTP $response)"
+              exit 1
+            fi
+
+      # Step 9: Run unified pipeline (normal mode)
+      - name: Run unified pipeline (normal mode)
+        if: ${{ !inputs.reset }}
+        id: run_pipeline
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SKIP_CLEANUP: ${{ inputs.skip_cleanup }}
+          MAX_SIZE_MB: ${{ inputs.max_size_mb }}
+        run: |
+          pnpm tsx scripts/unified-embedding-pipeline.ts 2>&1 | tee pipeline.log
+          echo "Pipeline execution completed"
+
+      # Step 10: Run unified pipeline (reset mode)
+      - name: Run unified pipeline (reset mode)
+        if: ${{ inputs.reset }}
+        id: run_pipeline_reset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SKIP_CLEANUP: ${{ inputs.skip_cleanup }}
+          MAX_SIZE_MB: ${{ inputs.max_size_mb }}
+        run: |
+          pnpm tsx scripts/unified-embedding-pipeline.ts --reset 2>&1 | tee pipeline.log
+          echo "Pipeline execution completed"
+
+      # Step 11: Parse execution results
+      - name: Parse execution results
+        if: always()
+        id: results
+        run: |
+          if [ -f "pipeline.log" ]; then
+            # Extract statistics from log
+            total=$(grep -oP 'Final embeddings: \K\d+' pipeline.log | tail -1 || echo "0")
+            size=$(grep -oP 'File size: \K[\d.]+' pipeline.log | tail -1 || echo "0")
+
+            echo "total_embeddings=$total" >> $GITHUB_OUTPUT
+            echo "file_size_mb=$size" >> $GITHUB_OUTPUT
+
+            echo "📊 Execution Results:"
+            echo "   Total embeddings: $total"
+            echo "   File size: ${size}MB"
+          else
+            echo "⚠️  No pipeline log found"
+            echo "total_embeddings=0" >> $GITHUB_OUTPUT
+            echo "file_size_mb=0" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 12: Commit embeddings and state files
+      - name: Commit embeddings and state files
+        if: success()
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add files
+          git add output/embeddings.json.gz commit-state.json
+
+          # Check if there are changes
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chore: Update embeddings [skip ci]
+
+            - Run: #${{ github.run_number }}
+            - Embeddings: ${{ steps.results.outputs.total_embeddings }}
+            - File size: ${{ steps.results.outputs.file_size_mb }}MB
+            - Triggered by: ${{ github.event_name }}
+            - Reset mode: ${{ inputs.reset || false }}"
+
+            git push
+            echo "✅ Committed and pushed changes"
+            echo "committed=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️  No changes to commit"
+            echo "committed=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 13: Upload state artifact
+      - name: Upload commit state artifact
+        if: always()
+        id: upload_state
+        uses: actions/upload-artifact@v4
+        with:
+          name: commit-state
+          path: commit-state.json
+          retention-days: 90
+        continue-on-error: true
+
+      # Step 14: Fallback state to repository (if artifact upload fails)
+      - name: Fallback commit state to repository
+        if: steps.upload_state.outcome == 'failure'
+        run: |
+          echo "⚠️  Artifact upload failed, ensuring state is in repository"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add commit-state.json
+          git commit -m "chore: Fallback commit state [skip ci]" || echo "No state changes"
+          git push || echo "Push failed, state may be lost"
+
+      # Step 15: Upload embeddings artifact (backup)
+      - name: Upload embeddings artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: embeddings-${{ github.run_number }}
+          path: output/embeddings.json.gz
+          retention-days: 30
+        continue-on-error: true
+
+      # Step 16: Upload pipeline logs (on failure)
+      - name: Upload pipeline logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-logs-${{ github.run_number }}
+          path: pipeline.log
+          retention-days: 7
+        continue-on-error: true
+
+      # Step 17: Generate summary
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## 🚀 Unified Embedding Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Embeddings**: ${{ steps.results.outputs.total_embeddings }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **File Size**: ${{ steps.results.outputs.file_size_mb }}MB" >> $GITHUB_STEP_SUMMARY
+          echo "- **Committed**: ${{ steps.commit.outputs.committed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reset mode**: ${{ inputs.reset || false }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### File Locations" >> $GITHUB_STEP_SUMMARY
+          echo "- \`output/embeddings.json.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`commit-state.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### GitHub Raw URL" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "VECTOR_FILE_URL=https://raw.githubusercontent.com/${{ github.repository }}/main/output/embeddings.json.gz" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      # Step 18: Notify on success
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Unified pipeline completed successfully!"
+          echo "📊 Statistics:"
+          echo "   - Total embeddings: ${{ steps.results.outputs.total_embeddings }}"
+          echo "   - File size: ${{ steps.results.outputs.file_size_mb }}MB"
+          echo "   - Committed: ${{ steps.commit.outputs.committed }}"
+          echo "📁 Files:"
+          echo "   - output/embeddings.json.gz"
+          echo "   - commit-state.json"
+          echo "🔗 GitHub Raw URL:"
+          echo "   https://raw.githubusercontent.com/${{ github.repository }}/main/output/embeddings.json.gz"
+
+      # Step 19: Notify on failure
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Unified pipeline failed. Check logs for details."
+          echo "📝 Download pipeline-logs-${{ github.run_number }} artifact for debugging"
+          exit 1

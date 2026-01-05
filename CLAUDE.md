@@ -24,7 +24,11 @@ This is a GitHub repository analyzer that uses NLP/RAG to answer questions about
 pnpm install                    # Install dependencies
 # Note: ChromaDB is deprecated and not used in the architecture
 
-# Embedding Pipeline (Local)
+# Embedding Pipeline (Unified - Recommended)
+pnpm run embed:unified          # Run unified pipeline (incremental update + cleanup + export)
+pnpm run embed:unified:reset    # Run unified pipeline (full reset mode)
+
+# Embedding Pipeline (Legacy)
 pnpm run embed                  # Run embedding pipeline (incremental update)
 pnpm run embed:reset            # Run embedding pipeline (full reset, re-process all commits)
 
@@ -40,7 +44,11 @@ pnpm run build                 # Compile TypeScript to dist/
 pnpm run start                 # Run compiled JS from dist/
 ```
 
-**Embedding Pipeline Commands:**
+**Unified Embedding Pipeline (Recommended):**
+- `pnpm run embed:unified`: Complete 20-step pipeline that fetches commits/files from GitHub, generates embeddings, collects Q&A history, performs automatic cleanup (6-month retention + deleted files + capacity limit), and exports to `output/embeddings.json.gz`. Incremental update mode (only processes new data).
+- `pnpm run embed:unified:reset`: Same as above but resets all state and re-processes everything from scratch.
+
+**Legacy Embedding Pipeline:**
 - `pnpm run embed`: Fetches commits and files from GitHub repositories (defined in `target-repos.json`), generates embeddings using Hugging Face all-MiniLM-L6-v2, and stores them in Supabase. Only processes new commits since last run (incremental update).
 - `pnpm run embed:reset`: Same as above but resets commit state and re-processes all commits from scratch.
 - `pnpm run local_export`: Exports all embeddings from Supabase to `output/embeddings.json.gz` file for serverless deployment.
@@ -93,17 +101,24 @@ The system supports **two vector storage modes** with automatic detection:
 
 ### Data Flow
 
-**Pipeline Mode (Offline - runs in GitHub Actions weekly):**
+**Unified Pipeline Mode (Offline - runs in GitHub Actions weekly):**
 ```
-GitHub API → Fetch commits + files (with patch) + repository source code
+GitHub API → Fetch commits + files + repository source code (multi-repo)
          ↓
-Data Refinement → Convert to NLP-friendly format (commit + diff + file types)
+Supabase → Fetch Q&A history (new items only)
          ↓
-Embedding Generation → OpenAI text-embedding-3-small
+Embedding Generation → Hugging Face all-MiniLM-L6-v2 (384 dimensions)
          ↓
-Vector Storage → Supabase pgvector (Cloud)
+Merge → Combine with existing embeddings (deduplication by ID)
          ↓
-Export to File → embeddings.json.gz → output/ directory
+Data Cleanup → 3-step process:
+  1. Age-based (6-month retention)
+  2. Deleted files (GitHub tree comparison)
+  3. Capacity limit (10MB max, priority-based pruning)
+         ↓
+Export to File → embeddings.json.gz → output/ directory (compressed)
+         ↓
+State Update → commit-state.json (track processed commits + Q&A timestamp)
          ↓
 Git Commit → Push to repository (automated via GitHub Actions)
 ```
@@ -168,6 +183,47 @@ SUPABASE_ANON_KEY=xxx            # For Q&A history only
 **Note**:
 - Q&A queries **always** use file-based vector search (local or remote)
 - Supabase is **only** used for embedding generation pipeline and Q&A history storage
+
+### Data Retention & Cleanup Policies
+
+The unified pipeline automatically manages data cleanup with three strategies:
+
+**1. Age-Based Retention (6 months)**
+- Removes embeddings older than 6 months
+- Applies to: commit embeddings (by commit date), Q&A embeddings (by timestamp)
+- Cleanup runs on both file and Supabase database
+- Configurable via `cutoffMonths` parameter
+
+**2. Deleted Files Detection**
+- Fetches current file tree from GitHub API for each repository
+- Compares with existing file embeddings
+- Removes embeddings for files that no longer exist
+- Prevents stale data from removed/renamed files
+
+**3. Capacity Limit Enforcement (10MB compressed)**
+- Enforces maximum file size limit (default: 10MB after gzip compression)
+- Priority-based pruning when limit exceeded:
+  - High priority (90-100 points): Recent commits (<3 months), recent Q&A (<1 month)
+  - Medium priority (40-80 points): Source code files (.ts, .tsx, .js, .py, etc.)
+  - Low priority (0-40 points): Old data, non-source files, file chunks (chunkIndex > 0)
+- Keeps approximately 95% of limit to prevent frequent pruning
+
+**State Tracking (commit-state.json v2.0)**
+```json
+{
+  "version": "2.0",
+  "repositories": {
+    "owner/repo": {
+      "lastCommitSha": "abc123...",
+      "lastTreeSha": "def456...",
+      "lastUpdated": "2026-01-05T..."
+    }
+  },
+  "lastQATimestamp": "2026-01-05T...",
+  "lastCleanupRun": "2026-01-05T...",
+  "lastUpdated": "2026-01-05T..."
+}
+```
 
 ## Code Architecture
 
