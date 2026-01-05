@@ -274,7 +274,7 @@ export async function getServerStatus(): Promise<ServerStatus | null> {
   // 새로운 요청 생성
   serverStatusCache.pending = (async () => {
     try {
-      const result = await apiRequest<ServerStatus>('/api/health/status', undefined, API_BASE_URL, true);
+      const result = await apiRequest<ServerStatus>('/api/health?type=status', undefined, API_BASE_URL, true);
       if (result) {
         serverStatusCache.data = result;
         serverStatusCache.timestamp = now;
@@ -314,7 +314,7 @@ export async function checkMigrationStatus(): Promise<{
       qa_history: boolean;
       server_status_log: boolean;
       allTablesExist: boolean;
-    }>('/api/migration/status', undefined, API_BASE_URL, true);
+    }>('/api/migration', undefined, API_BASE_URL, true);
   } catch {
     return null;
   }
@@ -322,15 +322,10 @@ export async function checkMigrationStatus(): Promise<{
 
 /**
  * 마이그레이션 스키마 조회
+ * Note: /api/migration/schema endpoint has been removed to reduce function count.
+ * This function is deprecated and will return null.
  */
 export async function getMigrationSchema(): Promise<string | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/migration/schema`);
-    if (!response.ok) {
-      return null;
-    }
-    return response.text();
-  } catch {
-    return null;
-  }
+  console.warn('getMigrationSchema is deprecated: /api/migration/schema endpoint removed');
+  return null;
 }
