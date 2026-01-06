@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__notion__notion-fetch",
+      "mcp__notion__notion-update-page",
+      "Bash(find:*)",
+      "Bash(tsx src/qa/classifier.test.ts:*)",
+      "Bash(pnpm tsx:*)",
+      "Bash(pnpm run build:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(mkdir:*)",
+      "Bash(tsx scripts/analyze-categories.ts:*)",
+      "Bash(pnpm exec tsx:*)",
+      "Bash(pnpm run dev:*)",
+      "Bash(if [ -f \"refined_data.json\" ])",
+      "Bash(then cat refined_data.json)",
+      "Bash(fi)",
+      "Bash(then echo \"✅ refined_data.json 생성 완료\")",
+      "Bash(else echo \"⏳ 아직 생성 중...\")",
+      "Bash(pnpm add:*)",
+      "Bash(cat:*)",
+      "Bash(pkill:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash({} ;)",
+      "Bash(__NEW_LINE__ echo \"✅ Updated service imports\")",
+      "Bash(__NEW_LINE__ echo \"✅ Final import path updates completed\")",
+      "Bash(__NEW_LINE__ echo \"✅ Fixed remaining import paths\")",
+      "Bash(__NEW_LINE__ echo \"✅ Fixed utils imports\")",
+      "Bash(__NEW_LINE__ echo \"✅ Fixed refinedData imports\")",
+      "Bash(__NEW_LINE__ echo \"✅ Fixed utils path\")",
+      "Bash(tree:*)",
+      "Bash(ls:*)",
+      "Bash(pnpm run server:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}

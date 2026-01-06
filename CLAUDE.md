@@ -25,19 +25,14 @@ pnpm install                    # Install dependencies
 # Note: ChromaDB is deprecated and not used in the architecture
 
 # Embedding Pipeline (Unified - Recommended)
-pnpm run embed:unified          # Run unified pipeline (incremental update + cleanup + export)
-pnpm run embed:unified:reset    # Run unified pipeline (full reset mode)
-
-# Embedding Pipeline (Legacy)
-pnpm run embed                  # Run embedding pipeline (incremental update)
-pnpm run embed:reset            # Run embedding pipeline (full reset, re-process all commits)
+pnpm run embed          # Run unified pipeline (incremental update + cleanup + export)
+pnpm run embed:reset    # Run unified pipeline (full reset mode)
 
 # Export Embeddings
 pnpm run local_export          # Export embeddings from Supabase to file (for serverless deployment)
 
 # Servers
 pnpm run server                # Start Vercel dev server (:3001) for Q&A and dashboard
-pnpm run vercel:dev            # Alternative: Start Vercel dev server (auto port)
 
 # Build
 pnpm run build                 # Compile TypeScript to dist/
@@ -45,8 +40,8 @@ pnpm run start                 # Run compiled JS from dist/
 ```
 
 **Unified Embedding Pipeline (Recommended):**
-- `pnpm run embed:unified`: Complete 20-step pipeline that fetches commits/files from GitHub, generates embeddings, collects Q&A history, performs automatic cleanup (6-month retention + deleted files + capacity limit), and exports to `output/embeddings.json.gz`. Incremental update mode (only processes new data).
-- `pnpm run embed:unified:reset`: Same as above but resets all state and re-processes everything from scratch.
+- `pnpm run embed`: Complete 20-step pipeline that fetches commits/files from GitHub, generates embeddings, collects Q&A history, performs automatic cleanup (6-month retention + deleted files + capacity limit), and exports to `output/embeddings.json.gz`. Incremental update mode (only processes new data).
+- `pnpm run embed:reset`: Same as above but resets all state and re-processes everything from scratch.
 
 **Legacy Embedding Pipeline:**
 - `pnpm run embed`: Fetches commits and files from GitHub repositories (defined in `target-repos.json`), generates embeddings using Hugging Face all-MiniLM-L6-v2, and stores them in Supabase. Only processes new commits since last run (incremental update).
@@ -287,8 +282,15 @@ shared/                                # Shared libraries (API)
 **Repository File Collection:**
 - Automatically fetches all source files from default branch (main/master auto-detected)
 - Excludes: `node_modules`, `.git`, `dist`, `build`, binary files, files >500KB
-- Splits large files (>5KB) into chunks to maintain context
-- Metadata includes: path, type, size, extension, SHA, chunkIndex
+- **Chunking Strategy:**
+  - **Size**: Auto-adjusted based on file content and structure
+  - **Overlap**: Default 8% overlap between adjacent chunks for context continuity
+  - **Semantic splitting**: Class and method boundaries prioritized
+    - Splits at class/interface boundaries
+    - Splits at method/function boundaries
+    - Long methods/functions are further split at internal logic blocks (if/for/while)
+  - **Long code handling**: Very long methods are split internally while preserving minimum semantic units
+- Metadata includes: path, type, size, extension, SHA, chunkIndex, totalChunks
 
 ### Frontend Structure (`src/`)
 
