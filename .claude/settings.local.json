@@ -33,7 +33,18 @@
       "Bash(ls:*)",
       "Bash(pnpm run server:*)",
       "Bash(pnpm remove:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git show:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm test:supabase:*)",
+      "Bash(pnpm run embed:*)",
+      "Bash(pnpm rebuild:*)",
+      "Bash(pnpm approve-builds:*)",
+      "Bash(pnpm store prune:*)",
+      "Bash(npm run install:*)",
+      "Bash(./node_modules/.bin/tsx:*)",
+      "Bash(npx tsx:*)"
     ]
   }
 }
