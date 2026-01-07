@@ -6,7 +6,8 @@
   "scripts": {
     "test:supabase": "tsx scripts/test-supabase.ts",
     "embed": "tsx scripts/unified-embedding-pipeline.ts",
-    "embed:reset": "tsx scripts/unified-embedding-pipeline.ts --reset"
+    "embed:reset": "tsx scripts/unified-embedding-pipeline.ts --reset",
+    "migrate:vector": "tsx scripts/migrate-vector-dimension.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
