@@ -1,0 +1,14 @@
+{
+  "repositories": [
+    {
+      "owner": "bongseoksa",
+      "repo": "portfolio",
+      "enabled": true
+    },
+    {
+      "owner": "bongseoksa",
+      "repo": "NLP-portfolio",
+      "enabled": true
+    }
+  ]
+}

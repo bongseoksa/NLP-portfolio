@@ -92,7 +92,7 @@ docs/
 
    필수 Secrets:
    - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_ANON_KEY`
    - `CLAUDE_API_KEY`
    - `GEMINI_API_KEY`
 

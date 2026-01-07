@@ -154,7 +154,6 @@ pnpm run dev:frontend  # 개발 서버 시작 확인 (포트 5173)
 4. RLS (Row Level Security) 정책 설정
 5. API 키 복사:
    - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
    - `SUPABASE_ANON_KEY`
 6. `.env` 파일에 API 키 저장
 
@@ -305,7 +304,6 @@ http://localhost:5173
    - `OPENAI_API_KEY`
    - `CLAUDE_API_KEY`
    - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
    - `SUPABASE_ANON_KEY`
 4. `vercel.json` 설정
 5. GitHub `main` 브랜치 푸시 → 자동 배포
@@ -328,7 +326,7 @@ http://localhost:5173
 1. `.github/workflows/unified-embedding-pipeline.yml` 생성
 2. GitHub Secrets 설정:
    - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_ANON_KEY`
    - `OPENAI_API_KEY`
    - `CLAUDE_API_KEY`
 3. 스케줄 트리거 설정 (매주 토요일 18:00 UTC)
@@ -425,7 +423,7 @@ pnpm run embed  # 로컬에서 임베딩 생성
 **해결**:
 1. `.env` 파일 확인
 2. Supabase Dashboard에서 API 키 재확인
-3. `SUPABASE_SERVICE_ROLE_KEY` 사용 (ANON_KEY 아님)
+3. `SUPABASE_ANON_KEY` 사용 (ANON_KEY 아님)
 
 ### 문제: "LLM API 실패"
 **원인**: API 키 없음 또는 할당량 초과
@@ -440,7 +438,7 @@ pnpm run embed  # 로컬에서 임베딩 생성
 1. GitHub 레포지토리 → Settings → Secrets and variables → Actions
 2. 필수 Secret 추가:
    - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_ANON_KEY`
    - `OPENAI_API_KEY` (또는 `CLAUDE_API_KEY`)
 
 ---

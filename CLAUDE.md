@@ -78,7 +78,7 @@ The system supports **two vector storage modes** with automatic detection:
    - Managed PostgreSQL with pgvector extension
    - Used during embedding generation (write operations)
    - $25-30/month for Pro plan
-   - Enabled by: `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
+   - Enabled by: `SUPABASE_URL` + `SUPABASE_ANON_KEY`
    - **Note**: Not used for Q&A queries (file-based is used instead)
 
 ### Required Services
@@ -171,8 +171,7 @@ VECTOR_FILE_URL=https://raw.githubusercontent.com/owner/repo/main/output/embeddi
 
 # Supabase (Required for embedding pipeline, optional for Q&A history)
 SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=xxx    # For embedding pipeline
-SUPABASE_ANON_KEY=xxx            # For Q&A history only
+SUPABASE_ANON_KEY=xxx    # For embedding pipeline
 ```
 
 **Note**:
