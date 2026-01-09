@@ -5,6 +5,7 @@
   "description": "GitHub Repository Analyzer with NLP/RAG",
   "scripts": {
     "test:supabase": "tsx scripts/test-supabase.ts",
+    "test:api": "tsx scripts/test-api.ts",
     "embed": "tsx scripts/unified-embedding-pipeline.ts",
     "embed:reset": "tsx scripts/unified-embedding-pipeline.ts --reset",
     "migrate:vector": "tsx scripts/migrate-vector-dimension.ts",

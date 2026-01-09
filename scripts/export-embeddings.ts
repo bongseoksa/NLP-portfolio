@@ -109,6 +109,24 @@ async function exportEmbeddings() {
     // Step 3: Create vector file structure
     console.log('\n📦 Step 3: Creating vector file...');
 
+    // Parse embedding strings from pgvector format "[0.1,0.2,...]" to number[]
+    function parseEmbedding(embedding: any, id: string): number[] {
+      if (embedding === null || embedding === undefined) {
+        console.warn(`   ⚠️  Null embedding for ${id}, using empty array`);
+        return [];
+      }
+      if (Array.isArray(embedding)) {
+        return embedding;
+      }
+      if (typeof embedding === 'string') {
+        // pgvector returns embeddings as "[0.1,0.2,0.3,...]" string
+        const trimmed = embedding.replace(/^\[|\]$/g, '');
+        return trimmed.split(',').map(v => parseFloat(v.trim()));
+      }
+      console.warn(`   ⚠️  Unexpected embedding format for ${id}: ${typeof embedding}`);
+      return [];
+    }
+
     const vectorFile: VectorFile = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
@@ -117,10 +135,16 @@ async function exportEmbeddings() {
         id: e.id,
         type: e.type as 'commit' | 'file' | 'qa',
         content: e.content,
-        embedding: e.embedding,
+        embedding: parseEmbedding(e.embedding, e.id),
         metadata: e.metadata || {},
       })),
     };
+
+    // Validate embedding dimensions
+    const sampleEmbedding = vectorFile.vectors[0]?.embedding;
+    if (sampleEmbedding) {
+      console.log(`   - Embedding dimensions: ${sampleEmbedding.length}`);
+    }
 
     // Step 4: Ensure output directory exists
     const outputDir = path.join(process.cwd(), 'output');
