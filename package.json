@@ -9,7 +9,7 @@
     "embed:reset": "tsx scripts/unified-embedding-pipeline.ts --reset",
     "migrate:vector": "tsx scripts/migrate-vector-dimension.ts",
     "local_export": "tsx scripts/export-embeddings.ts",
-    "server": "vercel dev --listen 3001",
+    "server": "vercel dev --listen 3001 --yes",
     "setup:git": "bash scripts/setup-git-commit-template.sh"
   },
   "dependencies": {
