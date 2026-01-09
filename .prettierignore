@@ -1,0 +1,7 @@
+node_modules
+dist
+output
+styled-system
+.vercel
+pnpm-lock.yaml
+*.md
