@@ -162,11 +162,14 @@ async function runPipeline(resetMode: boolean = false) {
 
         // Update commit state
         if (commits.length > 0) {
-          commitState.repositories[repoKey] = {
-            lastCommitSha: commits[0].sha,
-            lastTreeSha: commits[0].commit.tree.sha,
-            lastUpdated: new Date().toISOString(),
-          };
+          const latestCommit = commits[0];
+          if (latestCommit) {
+            commitState.repositories[repoKey] = {
+              lastCommitSha: latestCommit.sha,
+              lastTreeSha: latestCommit.commit.tree.sha,
+              lastUpdated: new Date().toISOString(),
+            };
+          }
         }
       } catch (error: any) {
         console.error(`     ❌ Error fetching ${repoKey}:`, error.message);
