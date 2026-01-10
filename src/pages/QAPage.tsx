@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react';
-import { styled } from '../../styled-system/jsx';
+import { styled } from 'styled-system/jsx';
 import { useAskQuestion } from '../hooks/useQueries';
 
 const PageContainer = styled('div', {

@@ -5,6 +5,7 @@ export default defineConfig({
   include: ['./src/**/*.{js,jsx,ts,tsx}'],
   exclude: [],
   outdir: 'styled-system',
+  jsxFramework: 'react',
   theme: {
     extend: {
       tokens: {

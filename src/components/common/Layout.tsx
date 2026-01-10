@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { styled } from '../../../styled-system/jsx';
+import { styled } from 'styled-system/jsx';
 import ServerStatus from './ServerStatus';
 
 const Container = styled('div', {
