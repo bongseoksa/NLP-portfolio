@@ -1,0 +1,63 @@
+name: Supabase Ping
+
+on:
+  schedule:
+    # Every Sunday at 15:00 UTC (24:00 KST)
+    - cron: '0 15 * * 0'
+  workflow_dispatch: # Manual trigger
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        id: ping
+        run: |
+          START_TIME=$(date +%s%3N)
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${SUPABASE_URL}/rest/v1/ping" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d '{"status": "success", "http_code": 200, "response_time_ms": 0, "triggered_by": "github_actions"}')
+
+          END_TIME=$(date +%s%3N)
+          RESPONSE_TIME=$((END_TIME - START_TIME))
+
+          echo "http_code=${HTTP_CODE}" >> $GITHUB_OUTPUT
+          echo "response_time=${RESPONSE_TIME}" >> $GITHUB_OUTPUT
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "Ping successful: HTTP ${HTTP_CODE} (${RESPONSE_TIME}ms)"
+          else
+            echo "status=error" >> $GITHUB_OUTPUT
+            echo "Ping failed: HTTP ${HTTP_CODE}"
+            exit 1
+          fi
+
+      - name: Update ping record with response time
+        if: steps.ping.outputs.status == 'success'
+        run: |
+          # Update the most recent ping record with actual response time
+          curl -s -X PATCH "${SUPABASE_URL}/rest/v1/ping?order=created_at.desc&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"response_time_ms\": ${{ steps.ping.outputs.response_time }}}"
+
+      - name: Log error on failure
+        if: failure()
+        run: |
+          curl -s -X POST "${SUPABASE_URL}/rest/v1/ping" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"status\": \"error\", \"http_code\": ${{ steps.ping.outputs.http_code }}, \"response_time_ms\": ${{ steps.ping.outputs.response_time }}, \"error_message\": \"HTTP ${{ steps.ping.outputs.http_code }}\", \"triggered_by\": \"github_actions\"}"
