@@ -25,8 +25,8 @@ pnpm install                    # Install dependencies
 # Note: ChromaDB is deprecated and not used in the architecture
 
 # Embedding Pipeline (Unified - Recommended)
-pnpm run embed          # Run unified pipeline (incremental update + cleanup + export)
-pnpm run embed:reset    # Run unified pipeline (full reset mode)
+pnpm run embed          # Run unified pipeline (fetch + embed + save to Supabase + export to file)
+pnpm run embed:reset    # Run unified pipeline (full reset mode + export)
 
 # Export Embeddings
 pnpm run local_export          # Export embeddings from Supabase to file (for serverless deployment)
@@ -40,13 +40,11 @@ pnpm run start                 # Run compiled JS from dist/
 ```
 
 **Unified Embedding Pipeline (Recommended):**
-- `pnpm run embed`: Complete 20-step pipeline that fetches commits/files from GitHub, generates embeddings, collects Q&A history, performs automatic cleanup (6-month retention + deleted files + capacity limit), and exports to `output/embeddings.json.gz`. Incremental update mode (only processes new data).
+- `pnpm run embed`: Complete 21-step pipeline that fetches commits/files from GitHub, generates embeddings using Gemini text-embedding-004 (768 dimensions), saves to Supabase, and **automatically exports to `output/embeddings.json.gz`**. Incremental update mode (only processes new data).
 - `pnpm run embed:reset`: Same as above but resets all state and re-processes everything from scratch.
 
-**Legacy Embedding Pipeline:**
-- `pnpm run embed`: Fetches commits and files from GitHub repositories (defined in `target-repos.json`), generates embeddings using Hugging Face all-MiniLM-L6-v2, and stores them in Supabase. Only processes new commits since last run (incremental update).
-- `pnpm run embed:reset`: Same as above but resets commit state and re-processes all commits from scratch.
-- `pnpm run local_export`: Exports all embeddings from Supabase to `output/embeddings.json.gz` file for serverless deployment.
+**Manual Export (Optional):**
+- `pnpm run local_export`: Manually exports embeddings from Supabase to `output/embeddings.json.gz` (not needed if using unified pipeline).
 
 
 ### Frontend (Root Directory)

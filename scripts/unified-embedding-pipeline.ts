@@ -5,6 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -91,6 +92,98 @@ function loadCommitState(): CommitState {
 function saveCommitState(state: CommitState) {
   const statePath = path.join(process.cwd(), 'commit-state.json');
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+}
+
+// Export embeddings to file
+async function exportEmbeddingsToFile() {
+  try {
+    // Fetch all embeddings from Supabase
+    const allEmbeddings: any[] = [];
+    const pageSize = 1000;
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data: embeddings, error } = await supabase
+        .from('embeddings')
+        .select('id, type, content, embedding, metadata')
+        .order('id')
+        .range(offset, offset + pageSize - 1);
+
+      if (error) {
+        throw new Error(`Failed to fetch embeddings: ${error.message}`);
+      }
+
+      if (!embeddings || embeddings.length === 0) {
+        hasMore = false;
+      } else {
+        allEmbeddings.push(...embeddings);
+        offset += pageSize;
+        hasMore = embeddings.length === pageSize;
+      }
+    }
+
+    if (allEmbeddings.length === 0) {
+      console.log('   ⚠️  No embeddings found in database');
+      return;
+    }
+
+    console.log(`   Found ${allEmbeddings.length} embeddings to export`);
+
+    // Parse embedding strings
+    function parseEmbedding(embedding: any): number[] {
+      if (embedding === null || embedding === undefined) return [];
+      if (Array.isArray(embedding)) return embedding;
+      if (typeof embedding === 'string') {
+        const trimmed = embedding.replace(/^\[|\]$/g, '');
+        return trimmed.split(',').map(v => parseFloat(v.trim()));
+      }
+      return [];
+    }
+
+    // Calculate statistics
+    const stats = {
+      totalVectors: allEmbeddings.length,
+      commitCount: allEmbeddings.filter(e => e.type === 'commit').length,
+      fileCount: allEmbeddings.filter(e => e.type === 'file').length,
+      qaCount: allEmbeddings.filter(e => e.type === 'qa').length,
+    };
+
+    // Create vector file
+    const vectorFile = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      statistics: stats,
+      vectors: allEmbeddings.map(e => ({
+        id: e.id,
+        type: e.type,
+        content: e.content,
+        embedding: parseEmbedding(e.embedding),
+        metadata: e.metadata || {},
+      })),
+    };
+
+    // Ensure output directory exists
+    const outputDir = path.join(process.cwd(), 'output');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Compress and save
+    const jsonString = JSON.stringify(vectorFile);
+    const compressed = zlib.gzipSync(jsonString);
+    const outputPath = path.join(outputDir, 'embeddings.json.gz');
+    fs.writeFileSync(outputPath, compressed);
+
+    const compressedSize = compressed.length;
+    console.log(`   Exported to: ${outputPath}`);
+    console.log(`   File size: ${(compressedSize / 1024 / 1024).toFixed(2)} MB (compressed)`);
+    console.log(`   Vectors: ${stats.totalVectors} (commit: ${stats.commitCount}, file: ${stats.fileCount}, qa: ${stats.qaCount})`);
+
+  } catch (error: any) {
+    console.error('   ❌ Export failed:', error.message);
+    throw error;
+  }
 }
 
 // Main pipeline
@@ -259,15 +352,20 @@ async function runPipeline(resetMode: boolean = false) {
     }
     console.log('\n');
 
-    // Phase 7: Finalization
-    console.log('\n[Phase 7: Finalization]');
-    console.log('✅ Step 19: Updating commit-state.json...');
+    // Phase 7: Export to file
+    console.log('\n[Phase 7: Export to file]');
+    console.log('✅ Step 19: Exporting embeddings to file...');
+    await exportEmbeddingsToFile();
+
+    // Phase 8: Finalization
+    console.log('\n[Phase 8: Finalization]');
+    console.log('✅ Step 20: Updating commit-state.json...');
     commitState.lastUpdated = new Date().toISOString();
     saveCommitState(commitState);
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
-    console.log('✅ Step 20: Pipeline completed successfully!\n');
+    console.log('✅ Step 21: Pipeline completed successfully!\n');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📊 Final Statistics:');
     console.log(`   - Repositories: ${enabledRepos.length}`);
