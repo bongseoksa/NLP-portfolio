@@ -8,7 +8,7 @@ on:
 
 env:
   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
 jobs:
   ping:
@@ -21,8 +21,8 @@ jobs:
 
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST "${SUPABASE_URL}/rest/v1/ping" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
             -d '{"status": "success", "http_code": 200, "response_time_ms": 0, "triggered_by": "github_actions"}')
@@ -47,8 +47,8 @@ jobs:
         run: |
           # Update the most recent ping record with actual response time
           curl -s -X PATCH "${SUPABASE_URL}/rest/v1/ping?order=created_at.desc&limit=1" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/json" \
             -d "{\"response_time_ms\": ${{ steps.ping.outputs.response_time }}}"
 
@@ -56,8 +56,8 @@ jobs:
         if: failure()
         run: |
           curl -s -X POST "${SUPABASE_URL}/rest/v1/ping" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
             -d "{\"status\": \"error\", \"http_code\": ${{ steps.ping.outputs.http_code }}, \"response_time_ms\": ${{ steps.ping.outputs.response_time }}, \"error_message\": \"HTTP ${{ steps.ping.outputs.http_code }}\", \"triggered_by\": \"github_actions\"}"
