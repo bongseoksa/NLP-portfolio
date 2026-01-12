@@ -39,3 +39,4 @@ pnpm-debug.log*
 # Optional: Add any project specific files here
 # target-repos.json
 styled-system/*
+.vercel

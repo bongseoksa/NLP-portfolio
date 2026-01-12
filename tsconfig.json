@@ -16,8 +16,7 @@
     "sourceMap": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": false,
-    "verbatimModuleSyntax": false
+    "noPropertyAccessFromIndexSignature": false
   },
   "include": [
     "api/**/*.ts",
