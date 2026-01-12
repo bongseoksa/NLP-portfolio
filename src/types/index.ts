@@ -2,6 +2,25 @@
  * Frontend Type Definitions
  */
 
+// Question Category Types
+export type QuestionCategory =
+  | 'planning'
+  | 'technical'
+  | 'history'
+  | 'cs'
+  | 'status'
+  | 'issue'
+  | 'implementation'
+  | 'structure'
+  | 'data'
+  | 'techStack'
+  | 'testing'
+  | 'summary'
+  | 'etc';
+
+// Response Status
+export type ResponseStatus = 'success' | 'partial' | 'failed';
+
 // API Response Types
 export interface SearchResult {
   id: string;
@@ -15,7 +34,7 @@ export interface QAResponse {
   answer: string;
   sources: SearchResult[];
   processingTime: number;
-  status: 'success' | 'partial' | 'failed';
+  status: ResponseStatus;
 }
 
 export interface HealthStatus {
@@ -47,21 +66,45 @@ export interface QASession {
   createdAt: Date;
 }
 
+// Q&A Record (from database)
+export interface QARecord {
+  id: string;
+  sessionId?: string;
+  question: string;
+  questionSummary?: string;
+  answer: string;
+  category?: QuestionCategory;
+  sources?: SearchResult[];
+  status: ResponseStatus;
+  responseTimeMs?: number;
+  createdAt: string;
+}
+
 // Dashboard Types
 export interface DashboardSummary {
   totalQuestions: number;
   successRate: number;
-  avgResponseTime: number;
-  totalVectors: number;
+  averageResponseTimeMs: number;
+  serverStatus: 'online' | 'offline';
 }
 
 export interface DailyStats {
   date: string;
-  count: number;
+  questionCount: number;
+  successCount: number;
+  failureCount: number;
 }
 
-export interface CategoryStats {
+export interface CategoryDistribution {
   category: string;
   count: number;
   percentage: number;
+  [key: string]: string | number;
+}
+
+export interface SourceContribution {
+  type: 'code' | 'commit' | 'history';
+  count: number;
+  percentage: number;
+  [key: string]: string | number;
 }

@@ -3,7 +3,15 @@
  * Backend API 통신 래퍼
  */
 
-import type { QAResponse, HealthStatus } from '../types';
+import type {
+  QAResponse,
+  HealthStatus,
+  QARecord,
+  DashboardSummary,
+  DailyStats,
+  CategoryDistribution,
+  SourceContribution,
+} from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -18,27 +26,41 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+async function request<T>(
+  endpoint: string,
+  options?: RequestInit,
+  silent = false
+): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new ApiError(
-      error.error || `HTTP ${response.status}`,
-      response.status,
-      error.details
-    );
+    if (!response.ok) {
+      if (silent) {
+        return null as T;
+      }
+      const error = await response.json().catch(() => ({}));
+      throw new ApiError(
+        error.error || `HTTP ${response.status}`,
+        response.status,
+        error.details
+      );
+    }
+
+    return response.json();
+  } catch (error) {
+    if (silent) {
+      return null as T;
+    }
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
@@ -64,29 +86,64 @@ export async function askQuestion(
 /**
  * Q&A History API
  */
-export async function getHistory(
-  limit = 50,
-  sessionId?: string
-): Promise<unknown[]> {
-  const params = new URLSearchParams({ limit: String(limit) });
-  if (sessionId) params.append('sessionId', sessionId);
+export async function getHistory(params?: {
+  limit?: number;
+  sessionId?: string;
+}): Promise<QARecord[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit) searchParams.set('limit', String(params.limit));
+  if (params?.sessionId) searchParams.set('sessionId', params.sessionId);
 
-  return request<unknown[]>(`/history?${params}`);
+  const query = searchParams.toString();
+  const result = await request<QARecord[]>(
+    `/history${query ? `?${query}` : ''}`,
+    undefined,
+    true
+  );
+  return result || [];
 }
 
 /**
- * Dashboard API
+ * Dashboard Summary API
  */
-export async function getDashboardSummary(): Promise<unknown> {
-  return request<unknown>('/dashboard/summary');
+export async function getDashboardSummary(): Promise<DashboardSummary | null> {
+  return request<DashboardSummary>('/dashboard/summary', undefined, true);
 }
 
-export async function getDailyStats(): Promise<unknown> {
-  return request<unknown>('/dashboard/daily');
+/**
+ * Daily Stats API
+ */
+export async function getDailyStats(): Promise<DailyStats[]> {
+  const result = await request<DailyStats[]>(
+    '/dashboard/daily',
+    undefined,
+    true
+  );
+  return result || [];
 }
 
-export async function getCategoryStats(): Promise<unknown> {
-  return request<unknown>('/dashboard/categories');
+/**
+ * Category Distribution API
+ */
+export async function getCategoryDistribution(): Promise<CategoryDistribution[]> {
+  const result = await request<CategoryDistribution[]>(
+    '/dashboard/categories',
+    undefined,
+    true
+  );
+  return result || [];
+}
+
+/**
+ * Source Contribution API
+ */
+export async function getSourceContribution(): Promise<SourceContribution[]> {
+  const result = await request<SourceContribution[]>(
+    '/dashboard/sources',
+    undefined,
+    true
+  );
+  return result || [];
 }
 
 export { ApiError };

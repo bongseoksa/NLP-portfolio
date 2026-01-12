@@ -7,16 +7,26 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import * as api from '../api/client';
 
-import type { QAResponse, HealthStatus } from '../types';
+import type {
+  QAResponse,
+  HealthStatus,
+  QARecord,
+  DashboardSummary,
+  DailyStats,
+  CategoryDistribution,
+  SourceContribution,
+} from '../types';
 
 // Query Keys
 export const queryKeys = {
   health: ['health'] as const,
-  history: (sessionId?: string) => ['history', sessionId] as const,
+  history: (params?: { limit?: number; sessionId?: string }) =>
+    ['history', params] as const,
   dashboard: {
     summary: ['dashboard', 'summary'] as const,
     daily: ['dashboard', 'daily'] as const,
     categories: ['dashboard', 'categories'] as const,
+    sources: ['dashboard', 'sources'] as const,
   },
 };
 
@@ -49,6 +59,7 @@ export function useAskQuestion() {
     mutationFn: (question: string) => api.askQuestion(question),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['history'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary });
     },
   });
 }
@@ -56,10 +67,10 @@ export function useAskQuestion() {
 /**
  * History Hook
  */
-export function useHistory(limit = 50, sessionId?: string) {
-  return useQuery({
-    queryKey: queryKeys.history(sessionId),
-    queryFn: () => api.getHistory(limit, sessionId),
+export function useHistory(params?: { limit?: number; sessionId?: string }) {
+  return useQuery<QARecord[]>({
+    queryKey: queryKeys.history(params),
+    queryFn: () => api.getHistory(params),
     staleTime: 30000, // 30초
   });
 }
@@ -68,10 +79,11 @@ export function useHistory(limit = 50, sessionId?: string) {
  * Dashboard Summary Hook
  */
 export function useDashboardSummary() {
-  return useQuery({
+  return useQuery<DashboardSummary | null>({
     queryKey: queryKeys.dashboard.summary,
     queryFn: api.getDashboardSummary,
-    staleTime: 60000, // 1분
+    staleTime: 30000, // 30초
+    refetchInterval: 60000, // 1분마다 자동 갱신
   });
 }
 
@@ -79,20 +91,31 @@ export function useDashboardSummary() {
  * Daily Stats Hook
  */
 export function useDailyStats() {
-  return useQuery({
+  return useQuery<DailyStats[]>({
     queryKey: queryKeys.dashboard.daily,
     queryFn: api.getDailyStats,
-    staleTime: 60000,
+    staleTime: 300000, // 5분
   });
 }
 
 /**
- * Category Stats Hook
+ * Category Distribution Hook
  */
-export function useCategoryStats() {
-  return useQuery({
+export function useCategoryDistribution() {
+  return useQuery<CategoryDistribution[]>({
     queryKey: queryKeys.dashboard.categories,
-    queryFn: api.getCategoryStats,
-    staleTime: 60000,
+    queryFn: api.getCategoryDistribution,
+    staleTime: 300000, // 5분
+  });
+}
+
+/**
+ * Source Contribution Hook
+ */
+export function useSourceContribution() {
+  return useQuery<SourceContribution[]>({
+    queryKey: queryKeys.dashboard.sources,
+    queryFn: api.getSourceContribution,
+    staleTime: 300000, // 5분
   });
 }
