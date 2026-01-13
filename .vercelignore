@@ -1,0 +1,4 @@
+# Vercel dev에서 빌드 제외
+dist/
+build/
+*.log
