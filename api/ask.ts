@@ -14,6 +14,27 @@ import { generateAnswer } from '../shared/services/qa/answer.js';
 import { classifyQuestion } from '../shared/services/qa/classifier.js';
 import { saveQAHistory } from '../shared/lib/supabase.js';
 import type { QAResponse, QARequest } from '../shared/models/SearchResult.js';
+import { encoding_for_model } from 'tiktoken';
+
+// Token counter using tiktoken
+let tokenEncoder: ReturnType<typeof encoding_for_model> | null = null;
+
+function getTokenEncoder() {
+  if (!tokenEncoder) {
+    tokenEncoder = encoding_for_model('gpt-4o');
+  }
+  return tokenEncoder;
+}
+
+function countTokens(text: string): number {
+  try {
+    const encoder = getTokenEncoder();
+    return encoder.encode(text).length;
+  } catch {
+    // Fallback: rough estimate (1 token ≈ 4 characters for English, 2 for Korean)
+    return Math.ceil(text.length / 3);
+  }
+}
 
 export default async function handler(
   req: VercelRequest,
@@ -112,6 +133,13 @@ export default async function handler(
 
     const processingTime = Date.now() - startTime;
 
+    // Calculate token usage
+    const contextText = sources.map((s) => s.content).join('\n');
+    const promptTokens = countTokens(question + contextText);
+    const completionTokens = countTokens(answer);
+    const embeddingTokens = countTokens(question);
+    const totalTokens = promptTokens + completionTokens;
+
     // Step 5: Save to Q&A history (await to ensure completion before response)
     console.log('[Q&A] Step 5: Saving to history...');
     const dbSaveStart = Date.now();
@@ -131,6 +159,10 @@ export default async function handler(
           vectorSearchTimeMs: timings.vectorSearch,
           llmGenerationTimeMs: timings.llmGeneration,
           llmProvider: getLLMProvider(),
+          tokenUsage: totalTokens,
+          promptTokens,
+          completionTokens,
+          embeddingTokens,
         }
       );
       timings.dbSave = Date.now() - dbSaveStart;

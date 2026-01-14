@@ -2,7 +2,7 @@
  * Dashboard Page
  * 시스템 모니터링 및 분석
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { css } from 'styled-system/css';
 import {
   LineChart,
@@ -27,7 +27,7 @@ import {
   useServerStatus,
   useHistory,
 } from '../hooks/useQueries';
-import type { QuestionCategory } from '../types';
+import type { QuestionCategory, QARecord } from '../types';
 
 // Category colors (known categories)
 const CATEGORY_COLORS: Record<QuestionCategory, string> = {
@@ -95,6 +95,8 @@ export default function DashboardPage() {
   const { data: sourceDist = [] } = useSourceContribution();
   const { data: serverHealth } = useServerStatus();
   const { data: recentHistory = [] } = useHistory({ limit: 10 });
+
+  const [selectedRecord, setSelectedRecord] = useState<QARecord | null>(null);
 
   const isServerOnline = serverHealth?.status === 'healthy' || summary?.serverStatus === 'online';
 
@@ -307,6 +309,7 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={record.id || idx}
+                    onClick={() => setSelectedRecord(record)}
                     className={css({
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -314,6 +317,9 @@ export default function DashboardPage() {
                       py: '2',
                       borderBottom: '1px solid',
                       borderColor: 'gray.100',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s',
+                      _hover: { bg: 'gray.50' },
                     })}
                   >
                     <span className={css({
@@ -349,6 +355,321 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Detail Modal */}
+      {selectedRecord && (
+        <RecordDetailModal
+          record={selectedRecord}
+          onClose={() => setSelectedRecord(null)}
+          getCategoryLabel={getCategoryLabel}
+        />
+      )}
+    </div>
+  );
+}
+
+// Record Detail Modal Component
+function RecordDetailModal({
+  record,
+  onClose,
+  getCategoryLabel,
+}: {
+  record: QARecord;
+  onClose: () => void;
+  getCategoryLabel: (category: string) => string;
+}) {
+  const statusColors = {
+    success: 'green',
+    partial: 'yellow',
+    failed: 'red',
+  };
+  const statusLabels = {
+    success: '성공',
+    partial: '부분 성공',
+    failed: '실패',
+  };
+
+  return (
+    <div
+      className={css({
+        position: 'fixed',
+        inset: '0',
+        bg: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: '1000',
+        p: '4',
+      })}
+      onClick={onClose}
+    >
+      <div
+        className={css({
+          bg: 'white',
+          borderRadius: 'xl',
+          boxShadow: 'xl',
+          maxW: '700px',
+          w: '100%',
+          maxH: '85vh',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        })}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className={css({
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: '4',
+          borderBottom: '1px solid',
+          borderColor: 'gray.200',
+        })}>
+          <h2 className={css({ fontSize: 'lg', fontWeight: 'bold' })}>
+            Q&A 상세 정보
+          </h2>
+          <button
+            onClick={onClose}
+            className={css({
+              p: '2',
+              borderRadius: 'md',
+              cursor: 'pointer',
+              _hover: { bg: 'gray.100' },
+            })}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className={css({
+          p: '4',
+          overflow: 'auto',
+          flex: '1',
+        })}>
+          {/* Basic Info */}
+          <Section title="기본 정보">
+            <InfoRow label="ID" value={record.id} mono />
+            <InfoRow label="세션 ID" value={record.sessionId || '-'} mono />
+            <InfoRow
+              label="상태"
+              value={
+                <span className={css({
+                  px: '2',
+                  py: '0.5',
+                  borderRadius: 'full',
+                  fontSize: 'xs',
+                  fontWeight: '500',
+                  bg: `${statusColors[record.status]}.100`,
+                  color: `${statusColors[record.status]}.700`,
+                })}>
+                  {statusLabels[record.status]}
+                </span>
+              }
+            />
+            <InfoRow
+              label="카테고리"
+              value={`${getCategoryLabel(record.category || 'etc')} (${((record.categoryConfidence ?? 0) * 100).toFixed(0)}%)`}
+            />
+            <InfoRow label="생성일시" value={new Date(record.createdAt).toLocaleString('ko-KR')} />
+            <InfoRow label="LLM 제공자" value={record.llmProvider || '-'} />
+          </Section>
+
+          {/* Question & Answer */}
+          <Section title="질문">
+            <div className={css({
+              bg: 'blue.50',
+              p: '3',
+              borderRadius: 'md',
+              fontSize: 'sm',
+              whiteSpace: 'pre-wrap',
+            })}>
+              {record.question}
+            </div>
+          </Section>
+
+          <Section title="답변">
+            <div className={css({
+              bg: 'gray.50',
+              p: '3',
+              borderRadius: 'md',
+              fontSize: 'sm',
+              whiteSpace: 'pre-wrap',
+              maxH: '200px',
+              overflow: 'auto',
+            })}>
+              {record.answer}
+            </div>
+          </Section>
+
+          {/* Performance Metrics */}
+          <Section title="성능 지표">
+            <div className={css({
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '2',
+            })}>
+              <MetricCard label="총 응답 시간" value={record.responseTimeMs} unit="ms" />
+              <MetricCard label="분류 시간" value={record.classificationTimeMs} unit="ms" />
+              <MetricCard label="벡터 검색 시간" value={record.vectorSearchTimeMs} unit="ms" />
+              <MetricCard label="LLM 생성 시간" value={record.llmGenerationTimeMs} unit="ms" />
+              <MetricCard label="DB 저장 시간" value={record.dbSaveTimeMs} unit="ms" />
+            </div>
+          </Section>
+
+          {/* Token Usage */}
+          <Section title="토큰 사용량">
+            <div className={css({
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '2',
+            })}>
+              <MetricCard label="총 토큰" value={record.tokenUsage} />
+              <MetricCard label="프롬프트 토큰" value={record.promptTokens} />
+              <MetricCard label="완료 토큰" value={record.completionTokens} />
+              <MetricCard label="임베딩 토큰" value={record.embeddingTokens} />
+            </div>
+          </Section>
+
+          {/* Sources */}
+          {record.sources && record.sources.length > 0 && (
+            <Section title={`참조 소스 (${record.sources.length})`}>
+              <div className={css({ display: 'flex', flexDirection: 'column', gap: '2' })}>
+                {record.sources.map((source, idx) => (
+                  <div
+                    key={idx}
+                    className={css({
+                      bg: 'gray.50',
+                      p: '2',
+                      borderRadius: 'md',
+                      fontSize: 'xs',
+                    })}
+                  >
+                    <div className={css({ display: 'flex', justifyContent: 'space-between', mb: '1' })}>
+                      <span className={css({
+                        px: '1.5',
+                        py: '0.5',
+                        borderRadius: 'sm',
+                        bg: source.type === 'commit' ? 'green.100' : source.type === 'file' ? 'blue.100' : 'yellow.100',
+                        color: source.type === 'commit' ? 'green.700' : source.type === 'file' ? 'blue.700' : 'yellow.700',
+                        fontWeight: '500',
+                      })}>
+                        {source.type}
+                      </span>
+                      <span className={css({ color: 'gray.500' })}>
+                        유사도: {(source.score * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className={css({
+                      color: 'gray.600',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    })}>
+                      {source.content?.slice(0, 100)}...
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Metadata */}
+          {record.metadata && Object.keys(record.metadata).length > 0 && (
+            <Section title="메타데이터">
+              <pre className={css({
+                bg: 'gray.100',
+                p: '3',
+                borderRadius: 'md',
+                fontSize: 'xs',
+                overflow: 'auto',
+              })}>
+                {JSON.stringify(record.metadata, null, 2)}
+              </pre>
+            </Section>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Section Component
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className={css({ mb: '4' })}>
+      <h3 className={css({
+        fontSize: 'sm',
+        fontWeight: '600',
+        color: 'gray.700',
+        mb: '2',
+        pb: '1',
+        borderBottom: '1px solid',
+        borderColor: 'gray.200',
+      })}>
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+// Info Row Component
+function InfoRow({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className={css({
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      py: '1.5',
+      fontSize: 'sm',
+    })}>
+      <span className={css({ color: 'gray.600' })}>{label}</span>
+      <span className={css({
+        fontFamily: mono ? 'monospace' : 'inherit',
+        fontSize: mono ? 'xs' : 'sm',
+        color: 'gray.800',
+        maxW: '300px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      })}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// Metric Card Component
+function MetricCard({
+  label,
+  value,
+  unit = '',
+}: {
+  label: string;
+  value?: number;
+  unit?: string;
+}) {
+  return (
+    <div className={css({
+      bg: 'gray.50',
+      p: '2',
+      borderRadius: 'md',
+      textAlign: 'center',
+    })}>
+      <div className={css({ fontSize: 'xs', color: 'gray.500', mb: '0.5' })}>{label}</div>
+      <div className={css({ fontSize: 'lg', fontWeight: '600', color: 'gray.800' })}>
+        {value != null ? `${value.toLocaleString()}${unit}` : '-'}
       </div>
     </div>
   );

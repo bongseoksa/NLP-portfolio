@@ -74,9 +74,20 @@ export interface QARecord {
   questionSummary?: string;
   answer: string;
   category?: QuestionCategory;
+  categoryConfidence?: number;
   sources?: SearchResult[];
   status: ResponseStatus;
   responseTimeMs?: number;
+  classificationTimeMs?: number;
+  vectorSearchTimeMs?: number;
+  llmGenerationTimeMs?: number;
+  dbSaveTimeMs?: number;
+  tokenUsage?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  embeddingTokens?: number;
+  llmProvider?: string;
+  metadata?: Record<string, unknown>;
   createdAt: string;
 }
 
