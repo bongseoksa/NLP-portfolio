@@ -15,10 +15,14 @@ export function getSupabaseClient(): SupabaseClient {
   // Falls back to anon key for read-only operations
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-  if (!url || !key) {
-    throw new Error('Missing Supabase credentials: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY/SUPABASE_ANON_KEY');
+  if (!url) {
+    throw new Error('Missing SUPABASE_URL environment variable');
+  }
+  if (!key) {
+    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY environment variable');
   }
 
+  console.log(`[Supabase] Connecting to: ${url.substring(0, 30)}...`);
   supabaseClient = createClient(url, key);
   return supabaseClient;
 }
