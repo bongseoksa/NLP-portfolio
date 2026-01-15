@@ -2,17 +2,17 @@
   "version": "2.0",
   "repositories": {
     "bongseoksa/portfolio": {
-      "lastCommitSha": "6370a8cbaa726fa955fc00ffc88e891d35219510",
-      "lastTreeSha": "7e19ac3b8a784dc144b333d508b2cfd3126f1b35",
-      "lastUpdated": "2026-01-12T10:56:26.948Z"
+      "lastCommitSha": "c37fd3de7428c661726136e93e90d477fab1897a",
+      "lastTreeSha": "4f5ee099f7b755afd674a0af8a3262bdb6bf9b76",
+      "lastUpdated": "2026-01-14T23:33:54.998Z"
     },
     "bongseoksa/NLP-portfolio": {
-      "lastCommitSha": "015526b380dc77fc910df7f16bc6c818c6c1869a",
-      "lastTreeSha": "c0dae29bfe711410cd3bfb3ddb33df6d31a0e017",
-      "lastUpdated": "2026-01-12T10:56:27.510Z"
+      "lastCommitSha": "948ab869c40273fc23cf157fc7938fde8be3378f",
+      "lastTreeSha": "ef165cc797822b5d76271d283a4890f63511e355",
+      "lastUpdated": "2026-01-14T23:33:55.653Z"
     }
   },
   "lastQATimestamp": "1970-01-01T00:00:00.000Z",
   "lastCleanupRun": "1970-01-01T00:00:00.000Z",
-  "lastUpdated": "2026-01-12T11:08:56.872Z"
+  "lastUpdated": "2026-01-14T23:43:50.518Z"
 }

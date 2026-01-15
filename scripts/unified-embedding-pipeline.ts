@@ -1,4 +1,13 @@
 #!/usr/bin/env tsx
+/**
+ * Unified Embedding Pipeline v2.0
+ *
+ * 주요 기능:
+ * 1. 커밋 메시지 임베딩
+ * 2. 소스 코드 파일 수집 및 의미 단위 청킹
+ * 3. chunkIndex/totalChunks 메타데이터 포함
+ */
+
 import { Octokit } from '@octokit/rest';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -7,9 +16,10 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import { fileURLToPath } from 'url';
+import { chunkSourceCode, type CodeChunk } from './lib/semantic-chunker.js';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const _dirname = path.dirname(__filename); // eslint-disable-line @typescript-eslint/no-unused-vars
 
 dotenv.config();
 
@@ -29,6 +39,21 @@ if (!GITHUB_TOKEN || !SUPABASE_URL || !SUPABASE_ANON_KEY || !GEMINI_API_KEY) {
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// Configuration
+const CONFIG = {
+  // 파일 수집 설정
+  maxFileSize: 500 * 1024, // 500KB
+  excludeDirs: ['node_modules', '.git', 'dist', 'build', '.next', 'coverage', '__pycache__', '.cache'],
+  includeExtensions: ['.ts', '.tsx', '.js', '.jsx', '.py', '.md', '.json', '.yaml', '.yml'],
+  // 청킹 설정
+  maxChunkSize: 4000,
+  minChunkSize: 200,
+  overlapPercent: 0.08,
+  // API 설정
+  embeddingDelay: 1000, // 1초 (Gemini rate limit 고려)
+  batchSize: 100,
+};
 
 // Types
 interface Repository {
@@ -63,6 +88,14 @@ interface EmbeddingItem {
   metadata: Record<string, any>;
 }
 
+interface FileInfo {
+  path: string;
+  content: string;
+  sha: string;
+  size: number;
+  repository: string;
+}
+
 // Load target repositories
 function loadTargetRepos(): TargetRepos {
   const configPath = path.join(process.cwd(), 'target-repos.json');
@@ -92,6 +125,143 @@ function loadCommitState(): CommitState {
 function saveCommitState(state: CommitState) {
   const statePath = path.join(process.cwd(), 'commit-state.json');
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+}
+
+// Determine file type category
+function getFileType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+
+  if (filePath.includes('api/') || filePath.includes('/api')) return 'api';
+  if (filePath.includes('components/') || filePath.includes('/components')) return 'component';
+  if (filePath.includes('lib/') || filePath.includes('services/')) return 'service';
+  if (filePath.includes('hooks/')) return 'hook';
+  if (filePath.includes('models/') || filePath.includes('types/')) return 'model';
+  if (filePath.includes('test') || filePath.includes('spec')) return 'test';
+  if (ext === '.md') return 'docs';
+  if (['.json', '.yaml', '.yml'].includes(ext)) return 'config';
+  if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) return 'src';
+  if (ext === '.py') return 'python';
+
+  return 'other';
+}
+
+// Check if file should be included
+function shouldIncludeFile(filePath: string, size: number): boolean {
+  // Size check
+  if (size > CONFIG.maxFileSize) return false;
+
+  // Directory exclusion
+  for (const excludeDir of CONFIG.excludeDirs) {
+    if (filePath.includes(`/${excludeDir}/`) || filePath.startsWith(`${excludeDir}/`)) {
+      return false;
+    }
+  }
+
+  // Extension check
+  const ext = path.extname(filePath).toLowerCase();
+  if (!CONFIG.includeExtensions.includes(ext)) return false;
+
+  // Skip lock files and generated files
+  if (filePath.includes('package-lock.json') || filePath.includes('pnpm-lock.yaml')) return false;
+  if (filePath.includes('.min.js') || filePath.includes('.min.css')) return false;
+
+  return true;
+}
+
+// Fetch repository tree and file contents
+async function fetchRepositoryFiles(owner: string, repo: string): Promise<FileInfo[]> {
+  const files: FileInfo[] = [];
+  const repoKey = `${owner}/${repo}`;
+
+  try {
+    // Get default branch
+    const { data: repoInfo } = await octokit.repos.get({ owner, repo });
+    const defaultBranch = repoInfo.default_branch;
+
+    // Get repository tree
+    const { data: tree } = await octokit.git.getTree({
+      owner,
+      repo,
+      tree_sha: defaultBranch,
+      recursive: 'true',
+    });
+
+    // Filter files
+    const fileEntries = tree.tree.filter(item => {
+      if (item.type !== 'blob' || !item.path || !item.sha || !item.size) return false;
+      return shouldIncludeFile(item.path, item.size);
+    });
+
+    console.log(`     Found ${fileEntries.length} files to process`);
+
+    // Fetch file contents (with rate limiting)
+    for (let i = 0; i < fileEntries.length; i++) {
+      const entry = fileEntries[i];
+      if (!entry || !entry.path || !entry.sha || !entry.size) continue;
+
+      const entryPath = entry.path;
+      const entrySha = entry.sha;
+      const entrySize = entry.size;
+
+      try {
+        const { data: blob } = await octokit.git.getBlob({
+          owner,
+          repo,
+          file_sha: entrySha,
+        });
+
+        // Decode content
+        const content = Buffer.from(blob.content, 'base64').toString('utf-8');
+
+        // Skip binary files
+        if (content.includes('\u0000')) continue;
+
+        files.push({
+          path: entryPath,
+          content,
+          sha: entrySha,
+          size: entrySize,
+          repository: repoKey,
+        });
+
+        if ((i + 1) % 20 === 0) {
+          process.stdout.write(`\r     Fetched ${i + 1}/${fileEntries.length} files`);
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 50));
+      } catch {
+        // Skip files that can't be fetched
+        continue;
+      }
+    }
+
+    console.log(`\n     Successfully fetched ${files.length} files`);
+    return files;
+  } catch (error: any) {
+    console.error(`     ❌ Error fetching files from ${repoKey}:`, error.message);
+    return [];
+  }
+}
+
+// Generate embedding with retry
+async function generateEmbedding(
+  model: any,
+  content: string,
+  retries: number = 3
+): Promise<number[] | null> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const result = await model.embedContent(content);
+      return result.embedding.values;
+    } catch (error: any) {
+      if (attempt < retries - 1) {
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
+  }
+  return null;
 }
 
 // Export embeddings to file
@@ -151,7 +321,7 @@ async function exportEmbeddingsToFile() {
 
     // Create vector file
     const vectorFile = {
-      version: '1.0',
+      version: '2.0',
       exportedAt: new Date().toISOString(),
       statistics: stats,
       vectors: allEmbeddings.map(e => ({
@@ -188,13 +358,21 @@ async function exportEmbeddingsToFile() {
 
 // Main pipeline
 async function runPipeline(resetMode: boolean = false) {
-  console.log('🚀 Starting Unified Embedding Pipeline');
+  console.log('🚀 Starting Unified Embedding Pipeline v2.0');
+  console.log('   Features: Semantic code chunking, chunkIndex/totalChunks metadata');
   if (resetMode) {
     console.log('   Mode: RESET (full re-generation)');
   }
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   const startTime = Date.now();
+  const stats = {
+    repos: 0,
+    commits: 0,
+    files: 0,
+    chunks: 0,
+    embeddings: 0,
+  };
 
   try {
     // Phase 1: Setup & Validation
@@ -203,12 +381,14 @@ async function runPipeline(resetMode: boolean = false) {
     console.log('✅ Step 1: Loading configuration...');
     const targetRepos = loadTargetRepos();
     const enabledRepos = targetRepos.repositories.filter(r => r.enabled);
+    stats.repos = enabledRepos.length;
     console.log(`   - Repositories: ${enabledRepos.length}`);
 
     console.log('✅ Step 2: Validating environment...');
     console.log('   - GITHUB_TOKEN: ✓');
     console.log('   - SUPABASE_URL: ✓');
     console.log('   - SUPABASE_ANON_KEY: ✓');
+    console.log('   - GEMINI_API_KEY: ✓');
 
     console.log('✅ Step 3: Loading commit state...');
     let commitState = loadCommitState();
@@ -216,11 +396,23 @@ async function runPipeline(resetMode: boolean = false) {
       console.log('   - Reset mode: clearing state');
       commitState.repositories = {};
       commitState.lastQATimestamp = new Date(0).toISOString();
+
+      // Clear existing embeddings in reset mode
+      console.log('   - Clearing existing embeddings...');
+      const { error: deleteError } = await supabase
+        .from('embeddings')
+        .delete()
+        .neq('id', 'placeholder'); // Delete all
+
+      if (deleteError) {
+        console.warn(`   ⚠️  Could not clear embeddings: ${deleteError.message}`);
+      }
     }
 
     // Phase 2: Data Collection
     console.log('\n[Phase 2: Data Collection]');
 
+    // Step 4: Fetch commits
     console.log('✅ Step 4: Fetching commits from GitHub...');
     const allCommits: any[] = [];
 
@@ -269,71 +461,167 @@ async function runPipeline(resetMode: boolean = false) {
       }
     }
 
+    stats.commits = allCommits.length;
     console.log(`   Total new commits: ${allCommits.length}`);
 
-    if (allCommits.length === 0 && !resetMode) {
-      console.log('\nℹ️  No new commits found. Skipping embedding generation.');
+    // Step 5: Fetch source files
+    console.log('\n✅ Step 5: Fetching source files from repositories...');
+    const allFiles: FileInfo[] = [];
+
+    for (const repo of enabledRepos) {
+      const repoKey = `${repo.owner}/${repo.repo}`;
+      console.log(`   - Fetching files from ${repoKey}...`);
+
+      const files = await fetchRepositoryFiles(repo.owner, repo.repo);
+      allFiles.push(...files);
+    }
+
+    stats.files = allFiles.length;
+    console.log(`   Total files collected: ${allFiles.length}`);
+
+    // Check if we have any work to do
+    if (allCommits.length === 0 && allFiles.length === 0 && !resetMode) {
+      console.log('\nℹ️  No new data found. Skipping embedding generation.');
       console.log('✅ Pipeline completed (no changes)\n');
       return;
     }
 
-    // Phase 3: Embedding Generation
-    console.log('\n[Phase 3: Embedding Generation]');
-    console.log('✅ Step 8: Initializing Gemini embedding model...');
+    // Phase 3: Semantic Chunking
+    console.log('\n[Phase 3: Semantic Chunking]');
+    console.log('✅ Step 6: Chunking source files with semantic boundaries...');
+
+    interface ChunkedFile {
+      fileInfo: FileInfo;
+      chunks: CodeChunk[];
+    }
+
+    const chunkedFiles: ChunkedFile[] = [];
+    let totalChunks = 0;
+
+    for (const file of allFiles) {
+      const chunks = chunkSourceCode(file.content, file.path, {
+        maxChunkSize: CONFIG.maxChunkSize,
+        minChunkSize: CONFIG.minChunkSize,
+        overlapPercent: CONFIG.overlapPercent,
+      });
+
+      chunkedFiles.push({ fileInfo: file, chunks });
+      totalChunks += chunks.length;
+    }
+
+    stats.chunks = totalChunks;
+    console.log(`   - Files processed: ${allFiles.length}`);
+    console.log(`   - Total chunks created: ${totalChunks}`);
+    console.log(`   - Average chunks per file: ${(totalChunks / Math.max(allFiles.length, 1)).toFixed(1)}`);
+
+    // Phase 4: Embedding Generation
+    console.log('\n[Phase 4: Embedding Generation]');
+    console.log('✅ Step 7: Initializing Gemini embedding model...');
     console.log('   - Model: text-embedding-004');
     console.log('   - Dimensions: 768');
 
-    console.log('✅ Step 9: Generating commit embeddings...');
-    const embeddings: EmbeddingItem[] = [];
     const embeddingModel = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+    const embeddings: EmbeddingItem[] = [];
 
-    // Process one at a time to avoid rate limits
-    for (let i = 0; i < allCommits.length; i++) {
-      const commit = allCommits[i];
-      const content = `${commit.commit.message} | Repo: ${commit.repoOwner}/${commit.repoName}`;
+    // Generate commit embeddings
+    if (allCommits.length > 0) {
+      console.log(`\n✅ Step 8: Generating commit embeddings (${allCommits.length})...`);
 
-      try {
-        const result = await embeddingModel.embedContent(content);
-        const embedding = result.embedding.values;
+      for (let i = 0; i < allCommits.length; i++) {
+        const commit = allCommits[i];
+        const content = `Commit: ${commit.commit.message}\nRepository: ${commit.repoOwner}/${commit.repoName}\nAuthor: ${commit.commit.author?.name || 'Unknown'}`;
 
-        embeddings.push({
-          id: `commit-${commit.sha}`,
-          type: 'commit',
-          content,
-          embedding,
-          metadata: {
+        const embedding = await generateEmbedding(embeddingModel, content);
+        if (embedding) {
+          embeddings.push({
+            id: `commit-${commit.sha}`,
             type: 'commit',
-            sha: commit.sha,
-            author: commit.commit.author?.name || 'Unknown',
-            date: commit.commit.author?.date || new Date().toISOString(),
-            message: commit.commit.message,
-            repository: `${commit.repoOwner}/${commit.repoName}`,
-          },
-        });
+            content,
+            embedding,
+            metadata: {
+              type: 'commit',
+              sha: commit.sha,
+              author: commit.commit.author?.name || 'Unknown',
+              date: commit.commit.author?.date || new Date().toISOString(),
+              message: commit.commit.message,
+              repository: `${commit.repoOwner}/${commit.repoName}`,
+            },
+          });
+        }
 
         if ((i + 1) % 10 === 0 || i === allCommits.length - 1) {
           process.stdout.write(`\r   Progress: ${i + 1}/${allCommits.length}`);
         }
 
-        // Small delay to avoid rate limits (15 RPM limit)
-        if (i < allCommits.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 4000)); // 4초 대기 (15 RPM)
-        }
-      } catch (error: any) {
-        console.error(`\n   ❌ Commit ${i + 1} failed:`, error.message);
-        // Continue with next commit even if one fails
+        await new Promise(resolve => setTimeout(resolve, CONFIG.embeddingDelay));
       }
+      console.log('');
     }
-    console.log('\n');
 
-    // Phase 4: Vector Storage
-    console.log('\n[Phase 4: Vector Storage]');
-    console.log('✅ Step 12: Saving to Supabase pgvector...');
-    console.log(`   - Total vectors: ${embeddings.length}`);
+    // Generate file chunk embeddings
+    if (totalChunks > 0) {
+      console.log(`\n✅ Step 9: Generating file chunk embeddings (${totalChunks})...`);
 
-    const saveBatchSize = 100;
-    for (let i = 0; i < embeddings.length; i += saveBatchSize) {
-      const batch = embeddings.slice(i, i + saveBatchSize);
+      let processedChunks = 0;
+      for (const { fileInfo, chunks } of chunkedFiles) {
+        for (const chunk of chunks) {
+          // Create descriptive content for embedding
+          const chunkHeader = chunk.totalChunks > 1
+            ? `[Chunk ${chunk.chunkIndex + 1}/${chunk.totalChunks}] `
+            : '';
+          const chunkTypeInfo = chunk.name ? `${chunk.type}: ${chunk.name}` : chunk.type;
+
+          const content = `File: ${fileInfo.path}\n${chunkHeader}${chunkTypeInfo}\nLines ${chunk.startLine}-${chunk.endLine}\n\n${chunk.content}`;
+
+          // Generate unique ID
+          const chunkId = chunk.totalChunks > 1
+            ? `file-${fileInfo.sha}-chunk${chunk.chunkIndex}`
+            : `file-${fileInfo.sha}`;
+
+          const embedding = await generateEmbedding(embeddingModel, content.slice(0, 8000)); // Gemini limit
+          if (embedding) {
+            embeddings.push({
+              id: chunkId,
+              type: 'file',
+              content,
+              embedding,
+              metadata: {
+                type: 'file',
+                path: fileInfo.path,
+                fileType: getFileType(fileInfo.path),
+                size: fileInfo.size,
+                extension: path.extname(fileInfo.path),
+                repository: fileInfo.repository,
+                sha: fileInfo.sha,
+                chunkIndex: chunk.chunkIndex,
+                totalChunks: chunk.totalChunks,
+                startLine: chunk.startLine,
+                endLine: chunk.endLine,
+                chunkType: chunk.type,
+                chunkName: chunk.name,
+              },
+            });
+          }
+
+          processedChunks++;
+          if (processedChunks % 20 === 0 || processedChunks === totalChunks) {
+            process.stdout.write(`\r   Progress: ${processedChunks}/${totalChunks}`);
+          }
+
+          await new Promise(resolve => setTimeout(resolve, CONFIG.embeddingDelay));
+        }
+      }
+      console.log('');
+    }
+
+    stats.embeddings = embeddings.length;
+
+    // Phase 5: Vector Storage
+    console.log('\n[Phase 5: Vector Storage]');
+    console.log(`✅ Step 10: Saving ${embeddings.length} embeddings to Supabase...`);
+
+    for (let i = 0; i < embeddings.length; i += CONFIG.batchSize) {
+      const batch = embeddings.slice(i, i + CONFIG.batchSize);
       const { error } = await supabase.from('embeddings').upsert(
         batch.map(e => ({
           id: e.id,
@@ -345,32 +633,34 @@ async function runPipeline(resetMode: boolean = false) {
       );
 
       if (error) {
-        console.error(`   ❌ Batch ${i / saveBatchSize + 1} failed:`, error.message);
+        console.error(`   ❌ Batch ${Math.floor(i / CONFIG.batchSize) + 1} failed:`, error.message);
       } else {
-        process.stdout.write(`\r   Progress: ${Math.min(i + saveBatchSize, embeddings.length)}/${embeddings.length}`);
+        process.stdout.write(`\r   Progress: ${Math.min(i + CONFIG.batchSize, embeddings.length)}/${embeddings.length}`);
       }
     }
-    console.log('\n');
+    console.log('');
 
-    // Phase 7: Export to file
-    console.log('\n[Phase 7: Export to file]');
-    console.log('✅ Step 19: Exporting embeddings to file...');
+    // Phase 6: Export
+    console.log('\n[Phase 6: Export to File]');
+    console.log('✅ Step 11: Exporting embeddings to file...');
     await exportEmbeddingsToFile();
 
-    // Phase 8: Finalization
-    console.log('\n[Phase 8: Finalization]');
-    console.log('✅ Step 20: Updating commit-state.json...');
+    // Phase 7: Finalization
+    console.log('\n[Phase 7: Finalization]');
+    console.log('✅ Step 12: Updating commit-state.json...');
     commitState.lastUpdated = new Date().toISOString();
     saveCommitState(commitState);
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
-    console.log('✅ Step 21: Pipeline completed successfully!\n');
+    console.log('✅ Step 13: Pipeline completed successfully!\n');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📊 Final Statistics:');
-    console.log(`   - Repositories: ${enabledRepos.length}`);
-    console.log(`   - Commits processed: ${allCommits.length}`);
-    console.log(`   - Embeddings created: ${embeddings.length}`);
+    console.log('�� Final Statistics:');
+    console.log(`   - Repositories processed: ${stats.repos}`);
+    console.log(`   - Commits processed: ${stats.commits}`);
+    console.log(`   - Source files processed: ${stats.files}`);
+    console.log(`   - Code chunks created: ${stats.chunks}`);
+    console.log(`   - Total embeddings generated: ${stats.embeddings}`);
     console.log(`   - Execution time: ${duration}s`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
